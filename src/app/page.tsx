@@ -242,16 +242,27 @@ export default function Login() {
             >
               <Button
                 sx={{ minWidth: 0, width: 50, height: 50, borderRadius: "50%" }}
+                onClick={() =>
+                  (window.location.href = "https://accounts.google.com")
+                }
               >
                 <GoogleIcon sx={{ color: "#DB4437" }} />
               </Button>
+
               <Button
                 sx={{ minWidth: 0, width: 50, height: 50, borderRadius: "50%" }}
+                onClick={() =>
+                  (window.location.href = "https://www.facebook.com/")
+                }
               >
                 <FacebookIcon sx={{ color: "#1877F2" }} />
               </Button>
+
               <Button
                 sx={{ minWidth: 0, width: 50, height: 50, borderRadius: "50%" }}
+                onClick={() =>
+                  (window.location.href = "https://twitter.com/")
+                }
               >
                 <TwitterIcon sx={{ color: "#1DA1F2" }} />
               </Button>
