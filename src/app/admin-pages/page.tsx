@@ -3,7 +3,7 @@
 import { Box, Typography, Button } from "@mui/material";
 import { logout } from "@/utils/auth";
 
-export default function StudentDashboard() {
+export default function AdminDashboard() {
   return (
     <Box sx={{ p: 4 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
