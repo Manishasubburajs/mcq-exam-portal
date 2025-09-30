@@ -1,0 +1,14 @@
+.actionCard {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.actionCard:hover {
+  border-color: #6a11cb;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
