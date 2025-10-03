@@ -10,8 +10,21 @@ import {
 } from '@mui/icons-material';
 import styles from './StatsCard.module.css';
 
-const StatsCard = ({ stat }) => {
-  const getIcon = (iconName) => {
+interface Stat {
+  title: string;
+  subtitle: string;
+  icon: string;
+  bgColor: string;
+  trendUp: boolean;
+  trend: string;
+}
+
+interface Props {
+  stat: Stat;
+}
+
+const StatsCard: React.FC<Props> = ({ stat }) => {
+  const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'School': return <School sx={{ fontSize: 28, color: 'white' }} />;
       case 'Assignment': return <Assignment sx={{ fontSize: 28, color: 'white' }} />;

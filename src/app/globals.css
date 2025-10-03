@@ -40,3 +40,175 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Responsive CSS Grid Layouts */
+.stats-grid {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.charts-grid {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.actions-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .charts-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .actions-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .actions-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Image scaling */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Main content layout */
+.main-content {
+  flex: 1;
+  padding: 30px;
+  transition: margin-left 0.3s ease;
+  overflow-x: auto;
+}
+
+/* Chart containers */
+.chart-container {
+  min-width: 300px;
+}
+
+.main-content.sidebar-open {
+  margin-left: 220px;
+}
+
+.main-content.sidebar-closed {
+  margin-left: 0;
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 15px;
+  }
+
+  .main-content.sidebar-open {
+    margin-left: 0;
+  }
+
+  /* Enable horizontal scrolling globally on mobile */
+  .MuiTableContainer-root,
+  .MuiPaper-root,
+  .chart-container,
+  .wide-content {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Make tables swipeable on mobile */
+  .MuiTable-root {
+    min-width: 800px;
+  }
+
+  /* Ensure charts and analytics blocks are scrollable */
+  .MuiTableContainer-root .MuiTable-root,
+  .analytics-chart {
+    min-width: 600px;
+  }
+
+  /* Allow charts to be fully responsive */
+  .chart-container canvas {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  /* Add scroll indicators */
+  .MuiTableContainer-root::-webkit-scrollbar,
+  .MuiPaper-root::-webkit-scrollbar,
+  .chart-container::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .MuiTableContainer-root::-webkit-scrollbar-track,
+  .MuiPaper-root::-webkit-scrollbar-track,
+  .chart-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  .MuiTableContainer-root::-webkit-scrollbar-thumb,
+  .MuiPaper-root::-webkit-scrollbar-thumb,
+  .chart-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+  }
+
+  .MuiTableContainer-root::-webkit-scrollbar-thumb:hover,
+  .MuiPaper-root::-webkit-scrollbar-thumb:hover,
+  .chart-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 10px;
+  }
+}
