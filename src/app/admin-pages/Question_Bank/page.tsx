@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -32,7 +32,10 @@ import {
   Menu,
 } from '@mui/icons-material';
 import { useMediaQuery } from '@mui/material';
+import dynamic from 'next/dynamic';
 import Sidebar from '../../components/Sidebar';
+
+const Header = dynamic(() => import('../../components/Header'), { ssr: false });
 
 interface Question {
   id: number;
@@ -127,6 +130,10 @@ export default function QuestionBankPage() {
   const [searchFilter, setSearchFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    setSidebarOpen(isDesktop);
+  }, [isDesktop]);
+
   const handleApplyFilters = () => {
     // In a real application, this would filter the questions
     console.log('Applying filters:', { subjectFilter, difficultyFilter, searchFilter });
@@ -154,34 +161,22 @@ export default function QuestionBankPage() {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
       <Sidebar activeItem="Question Bank" isOpen={sidebarOpen} />
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        {/* Custom Header */}
+      {sidebarOpen && !isDesktop && (
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '30px',
-            paddingBottom: '15px',
-            borderBottom: '1px solid #e0e0e0',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
           }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ mr: 1 }}>
-              <Menu />
-            </IconButton>
-            <Typography variant="h4" sx={{ color: '#2c3e50' }}>
-              Question Bank
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
-              sx={{ width: 40, height: 40, marginRight: '10px', border: '2px solid #6a11cb' }}
-            />
-            <Typography>Admin User</Typography>
-          </Box>
-        </Box>
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Question Bank" sidebarOpen={sidebarOpen} />
 
         {/* Filters Section */}
         <Paper
