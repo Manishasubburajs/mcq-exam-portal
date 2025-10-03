@@ -42,8 +42,12 @@ export default function Login() {
         return;
       }
 
-      // Save token (localStorage for demo, but better: httpOnly cookie)
-      localStorage.setItem("token", data.token);
+      // ✅ Remember Me implementation
+    if (rememberMe) {
+      localStorage.setItem("token", data.token); // persist
+    } else {
+      sessionStorage.setItem("token", data.token); // session-only
+    }
 
       // Redirect based on role
       if (data.role === "student") {
@@ -213,7 +217,7 @@ export default function Login() {
                 label="Remember me"
               />
               <Link
-                href="#"
+                href="/forgot-password"
                 style={{ textDecoration: "none", color: "#2575fc" }}
               >
                 Forgot Password?
