@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -37,8 +37,10 @@ import {
   Menu,
 } from '@mui/icons-material';
 import { useMediaQuery } from '@mui/material';
+import dynamic from 'next/dynamic';
 import Sidebar from '../../components/Sidebar';
-import Header from '../../components/Header';
+
+const Header = dynamic(() => import('../../components/Header'), { ssr: false });
 
 interface User {
   id: number;
@@ -63,6 +65,10 @@ const UserManagement: React.FC = () => {
   const [editUserOpen, setEditUserOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setSidebarOpen(isDesktop);
+  }, [isDesktop]);
 
   // Sample user data
   const [users] = useState<User[]>([
@@ -181,25 +187,22 @@ const UserManagement: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
       <Sidebar activeItem="User Management" isOpen={sidebarOpen} />
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ mr: 1 }}>
-              <Menu />
-            </IconButton>
-            <Typography variant="h4" sx={{ color: '#2c3e50' }}>
-              User Management
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
-              alt="Admin User"
-              sx={{ width: 40, height: 40, border: '2px solid #6a11cb', mr: 1 }}
-            />
-            <Typography variant="body1">Administrator</Typography>
-          </Box>
-        </Box>
+      {sidebarOpen && !isDesktop && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="User Management" sidebarOpen={sidebarOpen} />
 
         {/* Tabs */}
         <Paper sx={{ mb: 3, borderRadius: 2 }}>

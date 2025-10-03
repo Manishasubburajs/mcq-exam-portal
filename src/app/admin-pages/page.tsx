@@ -16,12 +16,14 @@ import {
 } from 'chart.js';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 
+import dynamic from 'next/dynamic';
 import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
 import StatsCard from '../components/StatsCard';
 import ChartCard from '../components/ChartCard';
 import ActivityList from '../components/ActivityList';
 import QuickActionCard from '../components/QuickActionCard';
+
+const Header = dynamic(() => import('../components/Header'), { ssr: false });
 
 ChartJS.register(
   CategoryScale,
@@ -281,8 +283,8 @@ export default function Home() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
 
         {/* Stats Cards */}
         <div className="stats-grid">

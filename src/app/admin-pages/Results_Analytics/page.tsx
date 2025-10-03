@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -46,7 +46,10 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 
+import dynamic from 'next/dynamic';
 import Sidebar from '../../components/Sidebar';
+
+const Header = dynamic(() => import('../../components/Header'), { ssr: false });
 
 ChartJS.register(
   CategoryScale,
@@ -83,6 +86,10 @@ const ResultsAnalytics: React.FC = () => {
   const [dateFilter, setDateFilter] = useState('month');
   const [classFilter, setClassFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setSidebarOpen(isDesktop);
+  }, [isDesktop]);
 
   const summaryStats = [
     {
@@ -287,34 +294,22 @@ const ResultsAnalytics: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
       <Sidebar activeItem="Results Analytics" isOpen={sidebarOpen} />
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      {sidebarOpen && !isDesktop && (
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '30px',
-            paddingBottom: '15px',
-            borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
           }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ mr: 1 }}>
-              <Menu />
-            </IconButton>
-            <Typography variant="h4" sx={{ color: 'text.primary' }}>
-              Results Analytics
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
-              alt="Admin User"
-              sx={{ width: 40, height: 40, border: '2px solid #6a11cb', mr: 1 }}
-            />
-            <Typography variant="body1">Administrator</Typography>
-          </Box>
-        </Box>
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Results Analytics" sidebarOpen={sidebarOpen} />
 
         {/* Filters Section */}
         <Paper elevation={1} sx={{ padding: '20px', marginBottom: '25px', borderRadius: '10px' }}>
