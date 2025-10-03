@@ -213,7 +213,7 @@ export default function Login() {
                 label="Remember me"
               />
               <Link
-                href="/Forgot_Password"
+                href="/forgot-password"
                 style={{ textDecoration: "none", color: "#2575fc" }}
               >
                 Forgot Password?
