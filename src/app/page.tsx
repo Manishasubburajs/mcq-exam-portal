@@ -213,7 +213,7 @@ export default function Login() {
                 label="Remember me"
               />
               <Link
-                href="#"
+                href="/Forgot_Password"
                 style={{ textDecoration: "none", color: "#2575fc" }}
               >
                 Forgot Password?
@@ -271,7 +271,7 @@ export default function Login() {
             <Typography variant="body2" align="center" sx={{ color: "#666" }}>
               Don't have an account?{" "}
               <Link
-                href="/register"
+                href="/Registration"
                 style={{ color: "#2575fc", fontWeight: 600 }}
               >
                 Register here

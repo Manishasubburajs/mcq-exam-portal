@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Grid,
   Paper,
   Typography,
   TextField,
@@ -25,6 +24,7 @@ import {
   DialogActions,
   Pagination,
   Stack,
+  Avatar,
 } from '@mui/material';
 import {
   Edit,
@@ -34,7 +34,9 @@ import {
   Add,
   Search,
   FilterList,
+  Menu,
 } from '@mui/icons-material';
+import { useMediaQuery } from '@mui/material';
 
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
@@ -52,6 +54,8 @@ interface Exam {
 }
 
 const ExamManagement: React.FC = () => {
+  const isDesktop = useMediaQuery('(min-width:769px)');
+  const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
   const [searchTerm, setSearchTerm] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -188,8 +192,8 @@ const ExamManagement: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Sidebar activeItem="Exam Management" />
-      <Box sx={{ flex: 1, padding: '30px' }}>
+      <Sidebar activeItem="Exam Management" isOpen={sidebarOpen} />
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         <Box
           sx={{
             display: 'flex',
@@ -200,17 +204,32 @@ const ExamManagement: React.FC = () => {
             borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Typography variant="h4" sx={{ color: 'text.primary' }}>
-            Exam Management
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<Add />}
-            onClick={handleCreateExam}
-          >
-            Create New Exam
-          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ mr: 1 }}>
+              <Menu />
+            </IconButton>
+            <Typography variant="h4" sx={{ color: 'text.primary' }}>
+              Exam Management
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Avatar
+                src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
+                alt="Admin User"
+                sx={{ width: 40, height: 40, border: '2px solid #6a11cb', mr: 1 }}
+              />
+              <Typography variant="body1">Administrator</Typography>
+            </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              onClick={handleCreateExam}
+            >
+              Create New Exam
+            </Button>
+          </Box>
         </Box>
 
         {/* Filters Section */}
@@ -218,54 +237,48 @@ const ExamManagement: React.FC = () => {
           <Typography variant="h6" sx={{ marginBottom: '15px', color: 'text.primary' }}>
             Filter Exams
           </Typography>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                fullWidth
-                label="Search"
-                placeholder="Search exams by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: <Search sx={{ color: 'action.active', mr: 1 }} />,
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <FormControl fullWidth>
-                <InputLabel>Subject</InputLabel>
-                <Select
-                  value={subjectFilter}
-                  label="Subject"
-                  onChange={(e) => setSubjectFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Subjects</MenuItem>
-                  {subjects.map((subject) => (
-                    <MenuItem key={subject} value={subject}>
-                      {subject}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  label="Status"
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Statuses</MenuItem>
-                  {statuses.map((status) => (
-                    <MenuItem key={status} value={status}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2 }}>
+            <TextField
+              fullWidth
+              label="Search"
+              placeholder="Search exams by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <Search sx={{ color: 'action.active', mr: 1 }} />,
+              }}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Subject</InputLabel>
+              <Select
+                value={subjectFilter}
+                label="Subject"
+                onChange={(e) => setSubjectFilter(e.target.value)}
+              >
+                <MenuItem value="">All Subjects</MenuItem>
+                {subjects.map((subject) => (
+                  <MenuItem key={subject} value={subject}>
+                    {subject}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="">All Statuses</MenuItem>
+                {statuses.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
             <Button variant="outlined" onClick={handleResetFilters}>
               Reset Filters
@@ -380,16 +393,14 @@ const ExamManagement: React.FC = () => {
           <DialogTitle>Edit Exam</DialogTitle>
           <DialogContent>
             <Box component="form" onSubmit={handleEditSubmit} sx={{ mt: 2 }}>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    label="Exam Title"
-                    defaultValue={selectedExam?.name}
-                    required
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Exam Title"
+                  defaultValue={selectedExam?.name}
+                  required
+                />
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
                   <FormControl fullWidth>
                     <InputLabel>Subject</InputLabel>
                     <Select defaultValue={selectedExam?.subject} label="Subject" required>
@@ -400,8 +411,6 @@ const ExamManagement: React.FC = () => {
                       ))}
                     </Select>
                   </FormControl>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth>
                     <InputLabel>Status</InputLabel>
                     <Select defaultValue={selectedExam?.status} label="Status" required>
@@ -412,8 +421,6 @@ const ExamManagement: React.FC = () => {
                       ))}
                     </Select>
                   </FormControl>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Time Limit (minutes)"
@@ -422,8 +429,6 @@ const ExamManagement: React.FC = () => {
                     inputProps={{ min: 5 }}
                     required
                   />
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
                     label="Total Questions"
@@ -432,8 +437,8 @@ const ExamManagement: React.FC = () => {
                     inputProps={{ min: 1 }}
                     required
                   />
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </Box>
           </DialogContent>
           <DialogActions>

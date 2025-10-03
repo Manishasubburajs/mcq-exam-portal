@@ -1,6 +1,7 @@
 "use client"
-import React from 'react';
-import { Box, Grid, Paper, Typography } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Box, Paper, Typography, useMediaQuery } from '@mui/material';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -35,6 +36,15 @@ ChartJS.register(
 );
 
 export default function Home() {
+  const router = useRouter();
+  const isDesktop = useMediaQuery('(min-width:768px)');
+  const isMobile = useMediaQuery('(max-width:767px)');
+  const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
+
+  useEffect(() => {
+    setSidebarOpen(isDesktop);
+  }, [isDesktop]);
+
   const stats = [
     {
       title: '1,247',
@@ -167,7 +177,7 @@ export default function Home() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: "top" as const,
+        position: "bottom" as const,
       },
     },
     scales: {
@@ -256,37 +266,43 @@ export default function Home() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Sidebar />
-      <Box sx={{ flex: 1, padding: '30px' }}>
-        <Header />
+      <Sidebar isOpen={sidebarOpen} />
+      {sidebarOpen && !isDesktop && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ marginBottom: '30px' }}>
+        <div className="stats-grid">
           {stats.map((stat) => (
-            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.subtitle}>
-              <StatsCard stat={stat} />
-            </Grid>
+            <StatsCard key={stat.subtitle} stat={stat} />
           ))}
-        </Grid>
+        </div>
 
         {/* Charts */}
-        <Grid container spacing={3} sx={{ marginBottom: '30px' }}>
-          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-            <ChartCard title="Exam Activity Overview">
-              <Bar data={examActivityData} options={examActivityOptions} />
-            </ChartCard>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-            <ChartCard title="Subject Performance">
-              <Doughnut data={subjectPerformanceData} options={subjectPerformanceOptions} />
-            </ChartCard>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 4 }}>
-            <ChartCard title="Performance Trend">
-              <Line data={performanceTrendData} options={performanceTrendOptions} />
-            </ChartCard>
-          </Grid>
-        </Grid>
+        <div className="charts-grid">
+          <ChartCard title="Exam Activity Overview" height={isMobile ? 200 : 300}>
+            <Bar data={examActivityData} options={examActivityOptions} />
+          </ChartCard>
+          <ChartCard title="Subject Performance" height={isMobile ? 200 : 300}>
+            <Doughnut data={subjectPerformanceData} options={subjectPerformanceOptions} />
+          </ChartCard>
+          <ChartCard title="Performance Trend" height={isMobile ? 200 : 300}>
+            <Line data={performanceTrendData} options={performanceTrendOptions} />
+          </ChartCard>
+        </div>
 
         {/* Recent Activity */}
         <Paper
@@ -300,10 +316,10 @@ export default function Home() {
           <Typography
             variant="h6"
             sx={{
-              fontSize: '20px',
-              marginBottom: '20px',
+              fontSize: '1.25rem',
+              marginBottom: '1.25rem',
               color: '#2c3e50',
-              paddingBottom: '10px',
+              paddingBottom: '0.625rem',
               borderBottom: '2px solid #f0f0f0',
             }}
           >
@@ -317,22 +333,20 @@ export default function Home() {
           <Typography
             variant="h6"
             sx={{
-              fontSize: '20px',
-              marginBottom: '20px',
+              fontSize: '1.25rem',
+              marginBottom: '1.25rem',
               color: '#2c3e50',
-              paddingBottom: '10px',
+              paddingBottom: '0.625rem',
               borderBottom: '2px solid #f0f0f0',
             }}
           >
             Quick Actions
           </Typography>
-          <Grid container spacing={2}>
+          <div className="actions-grid">
             {actions.map((action) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={action.title}>
-                <QuickActionCard action={action} onClick={handleActionClick} />
-              </Grid>
+              <QuickActionCard key={action.title} action={action} onClick={handleActionClick} />
             ))}
-          </Grid>
+          </div>
         </Paper>
       </Box>
     </Box>

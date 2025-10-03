@@ -1,10 +1,19 @@
 .sidebar {
-  width: 250px;
+  width: 220px;
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
   color: white;
   padding: 20px 0;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
   min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  transition: left 0.3s ease;
+}
+
+.closed {
+  left: -220px;
 }
 
 .logo {
@@ -49,4 +58,20 @@
 
 .active {
   background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    width: 180px;
+    left: -180px;
+    top: 0;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    height: 100vh;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
 }

@@ -10,8 +10,19 @@ import {
 import { FaQuestionCircle } from 'react-icons/fa';
 import styles from './QuickActionCard.module.css';
 
-const QuickActionCard = ({ action, onClick }) => {
-  const getIcon = (iconName) => {
+interface Action {
+  title: string;
+  description: string;
+  icon: string;
+}
+
+interface Props {
+  action: Action;
+  onClick: (title: string) => void;
+}
+
+const QuickActionCard: React.FC<Props> = ({ action, onClick }) => {
+  const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'AddCircle': return <AddCircle />;
       case 'Person': return <Person />;
