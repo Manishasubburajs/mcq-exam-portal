@@ -19,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { FaTachometerAlt, FaSignOutAlt, FaQuestionCircle, FaPlusCircle } from 'react-icons/fa';
 import styles from './Sidebar.module.css';
+import { logout } from '@/utils/auth';
 
 interface Props {
   activeItem?: string;
@@ -35,12 +36,17 @@ const Sidebar: React.FC<Props> = ({ activeItem = 'Dashboard', isOpen = true }) =
     { text: 'User Management', icon: <People />, route: '/admin-pages/User_Management' },
     { text: 'Question Bank', icon: <FaQuestionCircle />, route: '/admin-pages/Question_Bank' },
     { text: 'Settings', icon: <Settings />, route: '/admin-pages/Settings' },
-    { text: 'Logout', icon: <FaSignOutAlt />, route: '/login' },
+    { text: 'Logout', icon: <FaSignOutAlt /> },
   ];
 
-  const handleMenuClick = (route: string) => {
-    router.push(route);
+  const handleMenuClick = (item: { text: string; route?: string }) => {
+    if (item.text === 'Logout') {
+      logout(); // ✅ Direct call
+    } else if (item.route) {
+      router.push(item.route);
+    }
   };
+
 
   return (
     <Box className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}>
@@ -54,7 +60,7 @@ const Sidebar: React.FC<Props> = ({ activeItem = 'Dashboard', isOpen = true }) =
           <ListItem key={index} disablePadding className={styles.menuItem}>
             <ListItemButton
               className={`${styles.menuLink} ${item.text === activeItem ? styles.active : ''}`}
-              onClick={() => handleMenuClick(item.route)}
+              onClick={() => handleMenuClick(item)}
             >
               <ListItemIcon sx={{ color: 'white', minWidth: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {item.icon}

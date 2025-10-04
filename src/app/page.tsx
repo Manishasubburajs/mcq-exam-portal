@@ -275,7 +275,7 @@ export default function Login() {
             <Typography variant="body2" align="center" sx={{ color: "#666" }}>
               Don't have an account?{" "}
               <Link
-                href="/Registration"
+                href="/register"
                 style={{ color: "#2575fc", fontWeight: 600 }}
               >
                 Register here
