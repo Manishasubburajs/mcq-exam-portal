@@ -9,6 +9,18 @@ import {
   ReportProblem,
 } from '@mui/icons-material';
 
+interface Activity {
+  title: string;
+  time: string;
+  icon: string;
+  bgColor: string;
+  color: string;
+}
+
+interface Props {
+  activities: Activity[];
+}
+
 const ActivityItem = styled(ListItem)(({ theme }) => ({
   padding: '15px 0',
   borderBottom: `1px solid ${theme.palette.divider}`,
@@ -18,8 +30,8 @@ const ActivityItem = styled(ListItem)(({ theme }) => ({
   alignItems: 'flex-start',
 }));
 
-const ActivityList = ({ activities }) => {
-  const getIcon = (iconName) => {
+const ActivityList: React.FC<Props> = ({ activities }) => {
+  const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Assignment': return <Assignment />;
       case 'PersonAdd': return <PersonAdd />;

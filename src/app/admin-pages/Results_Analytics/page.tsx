@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Grid,
   Paper,
   Typography,
   TextField,
@@ -32,7 +31,9 @@ import {
   Download,
   Visibility,
   FilterList,
+  Menu,
 } from '@mui/icons-material';
+import { useMediaQuery } from '@mui/material';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -75,6 +76,8 @@ interface PerformanceData {
 }
 
 const ResultsAnalytics: React.FC = () => {
+  const isDesktop = useMediaQuery('(min-width:769px)');
+  const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
   const [examFilter, setExamFilter] = useState('math-midterm');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('month');
@@ -283,8 +286,8 @@ const ResultsAnalytics: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Sidebar activeItem="Results Analytics" />
-      <Box sx={{ flex: 1, padding: '30px' }}>
+      <Sidebar activeItem="Results Analytics" isOpen={sidebarOpen} />
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
         <Box
           sx={{
             display: 'flex',
@@ -295,9 +298,14 @@ const ResultsAnalytics: React.FC = () => {
             borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Typography variant="h4" sx={{ color: 'text.primary' }}>
-            Results Analytics
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ mr: 1 }}>
+              <Menu />
+            </IconButton>
+            <Typography variant="h4" sx={{ color: 'text.primary' }}>
+              Results Analytics
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Avatar
               src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
@@ -313,68 +321,60 @@ const ResultsAnalytics: React.FC = () => {
           <Typography variant="h6" sx={{ marginBottom: '15px', color: 'text.primary' }}>
             Filter Results
           </Typography>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel>Exam</InputLabel>
-                <Select
-                  value={examFilter}
-                  label="Exam"
-                  onChange={(e) => setExamFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Exams</MenuItem>
-                  <MenuItem value="math-midterm">Mathematics Midterm</MenuItem>
-                  <MenuItem value="science-quiz">Science Quiz</MenuItem>
-                  <MenuItem value="history-final">History Final</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel>Subject</InputLabel>
-                <Select
-                  value={subjectFilter}
-                  label="Subject"
-                  onChange={(e) => setSubjectFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Subjects</MenuItem>
-                  <MenuItem value="math">Mathematics</MenuItem>
-                  <MenuItem value="science">Science</MenuItem>
-                  <MenuItem value="history">History</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel>Date Range</InputLabel>
-                <Select
-                  value={dateFilter}
-                  label="Date Range"
-                  onChange={(e) => setDateFilter(e.target.value)}
-                >
-                  <MenuItem value="all">All Time</MenuItem>
-                  <MenuItem value="week">Last 7 Days</MenuItem>
-                  <MenuItem value="month">Last 30 Days</MenuItem>
-                  <MenuItem value="quarter">Last 3 Months</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel>Class</InputLabel>
-                <Select
-                  value={classFilter}
-                  label="Class"
-                  onChange={(e) => setClassFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Classes</MenuItem>
-                  <MenuItem value="10a">10th Grade - Section A</MenuItem>
-                  <MenuItem value="10b">10th Grade - Section B</MenuItem>
-                  <MenuItem value="10c">10th Grade - Section C</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+            <FormControl fullWidth>
+              <InputLabel>Exam</InputLabel>
+              <Select
+                value={examFilter}
+                label="Exam"
+                onChange={(e) => setExamFilter(e.target.value)}
+              >
+                <MenuItem value="">All Exams</MenuItem>
+                <MenuItem value="math-midterm">Mathematics Midterm</MenuItem>
+                <MenuItem value="science-quiz">Science Quiz</MenuItem>
+                <MenuItem value="history-final">History Final</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Subject</InputLabel>
+              <Select
+                value={subjectFilter}
+                label="Subject"
+                onChange={(e) => setSubjectFilter(e.target.value)}
+              >
+                <MenuItem value="">All Subjects</MenuItem>
+                <MenuItem value="math">Mathematics</MenuItem>
+                <MenuItem value="science">Science</MenuItem>
+                <MenuItem value="history">History</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Date Range</InputLabel>
+              <Select
+                value={dateFilter}
+                label="Date Range"
+                onChange={(e) => setDateFilter(e.target.value)}
+              >
+                <MenuItem value="all">All Time</MenuItem>
+                <MenuItem value="week">Last 7 Days</MenuItem>
+                <MenuItem value="month">Last 30 Days</MenuItem>
+                <MenuItem value="quarter">Last 3 Months</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Class</InputLabel>
+              <Select
+                value={classFilter}
+                label="Class"
+                onChange={(e) => setClassFilter(e.target.value)}
+              >
+                <MenuItem value="">All Classes</MenuItem>
+                <MenuItem value="10a">10th Grade - Section A</MenuItem>
+                <MenuItem value="10b">10th Grade - Section B</MenuItem>
+                <MenuItem value="10c">10th Grade - Section C</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
             <Button variant="outlined" onClick={handleResetFilters}>
               Reset Filters
@@ -394,91 +394,83 @@ const ResultsAnalytics: React.FC = () => {
         </Paper>
 
         {/* Summary Stats */}
-        <Grid container spacing={3} sx={{ marginBottom: '30px' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, marginBottom: '30px' }}>
           {summaryStats.map((stat, index) => (
-            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-              <Card elevation={1} sx={{ borderRadius: '10px' }}>
-                <CardContent sx={{ textAlign: 'center', padding: '20px' }}>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', marginBottom: '5px' }}>
-                    {stat.value}
+            <Card elevation={1} sx={{ borderRadius: '10px' }} key={index}>
+              <CardContent sx={{ textAlign: 'center', padding: '20px' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', marginBottom: '5px' }}>
+                  {stat.value}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ marginBottom: '10px' }}>
+                  {stat.label}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                  {stat.trendUp ? (
+                    <TrendingUp color="success" fontSize="small" />
+                  ) : (
+                    <TrendingDown color="error" fontSize="small" />
+                  )}
+                  <Typography
+                    variant="body2"
+                    color={stat.trendUp ? 'success.main' : 'error.main'}
+                    sx={{ fontWeight: 'medium' }}
+                  >
+                    {stat.trend} {stat.description}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ marginBottom: '10px' }}>
-                    {stat.label}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                    {stat.trendUp ? (
-                      <TrendingUp color="success" fontSize="small" />
-                    ) : (
-                      <TrendingDown color="error" fontSize="small" />
-                    )}
-                    <Typography
-                      variant="body2"
-                      color={stat.trendUp ? 'success.main' : 'error.main'}
-                      sx={{ fontWeight: 'medium' }}
-                    >
-                      {stat.trend} {stat.description}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                </Box>
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
+        </Box>
 
         {/* Charts Section */}
-        <Grid container spacing={3} sx={{ marginBottom: '30px' }}>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
-              <Typography variant="h6" sx={{ marginBottom: '20px', color: 'text.primary' }}>
-                Score Distribution
-              </Typography>
-              <Box sx={{ height: '300px' }}>
-                <Bar data={scoreDistributionData} options={scoreDistributionOptions} />
-              </Box>
-            </Paper>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
-              <Typography variant="h6" sx={{ marginBottom: '20px', color: 'text.primary' }}>
-                Subject Performance
-              </Typography>
-              <Box sx={{ height: '300px' }}>
-                <Doughnut data={subjectPerformanceData} options={subjectPerformanceOptions} />
-              </Box>
-            </Paper>
-          </Grid>
-        </Grid>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 3, marginBottom: '30px' }}>
+          <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
+            <Typography variant="h6" sx={{ marginBottom: '20px', color: 'text.primary' }}>
+              Score Distribution
+            </Typography>
+            <Box className="chart-container" sx={{ height: '300px' }}>
+              <Bar data={scoreDistributionData} options={scoreDistributionOptions} />
+            </Box>
+          </Paper>
+          <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
+            <Typography variant="h6" sx={{ marginBottom: '20px', color: 'text.primary' }}>
+              Subject Performance
+            </Typography>
+            <Box className="chart-container" sx={{ height: '300px' }}>
+              <Doughnut data={subjectPerformanceData} options={subjectPerformanceOptions} />
+            </Box>
+          </Paper>
+        </Box>
 
         {/* Performance Breakdown */}
         <Paper elevation={1} sx={{ padding: '25px', marginBottom: '30px', borderRadius: '10px' }}>
           <Typography variant="h6" sx={{ marginBottom: '20px', color: 'text.primary' }}>
             Performance Breakdown
           </Typography>
-          <Grid container spacing={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2 }}>
             {performanceData.map((item, index) => (
-              <Grid size={{ xs: 12, md: 4 }} key={index}>
-                <Box sx={{ padding: '15px', backgroundColor: 'grey.50', borderRadius: '8px' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                      {item.subject}
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                      {item.score}%
-                    </Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={item.score}
-                    color={item.color}
-                    sx={{ height: '8px', borderRadius: '4px', marginBottom: '5px' }}
-                  />
-                  <Typography variant="body2" color="text.secondary">
-                    {item.correct}
+              <Box sx={{ padding: '15px', backgroundColor: 'grey.50', borderRadius: '8px' }} key={index}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                    {item.subject}
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    {item.score}%
                   </Typography>
                 </Box>
-              </Grid>
+                <LinearProgress
+                  variant="determinate"
+                  value={item.score}
+                  color={item.color}
+                  sx={{ height: '8px', borderRadius: '4px', marginBottom: '5px' }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {item.correct}
+                </Typography>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         </Paper>
 
         {/* Results Table */}

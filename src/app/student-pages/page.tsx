@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< HEAD
 import type { ReactNode } from "react";
 import { Box, Typography, Card, Button, useTheme, useMediaQuery, Avatar, Chip } from "@mui/material";
 // use CSS grid with Box for consistent layout and spacing
@@ -15,6 +16,10 @@ import GradeIcon from "@mui/icons-material/Grade";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import FooterSection from "../components/FooterSection";
+=======
+import { logout } from "@/utils/auth";
+import { Box, Typography, Button, Paper, useMediaQuery } from "@mui/material";
+>>>>>>> 325d99aa9db450f3ca3f1eeedbaf60b356d95327
 
 const MAIN_BG = "#f8f9fa";
 const CARD_BG = "#ffffff";
@@ -378,6 +383,7 @@ const upcomingExams: UpcomingExam[] = [
 ];
 
 export default function StudentDashboard() {
+<<<<<<< HEAD
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -554,6 +560,49 @@ export default function StudentDashboard() {
       </Box>
 
       <FooterSection />
+=======
+  const isMobile = useMediaQuery('(max-width:767px)');
+
+  return (
+    <Box sx={{ p: isMobile ? 2 : 4, minHeight: '100vh', backgroundColor: 'grey.50' }}>
+      <Box sx={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        justifyContent: isMobile ? "center" : "space-between",
+        alignItems: isMobile ? "center" : "flex-start",
+        mb: 3,
+        gap: isMobile ? 2 : 0
+      }}>
+        <Typography variant={isMobile ? "h5" : "h4"} sx={{ textAlign: isMobile ? "center" : "left" }}>
+          Student Dashboard
+        </Typography>
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={logout}
+          sx={{
+            background: "linear-gradient(to right, #FF512F, #DD2476)",
+            minWidth: isMobile ? '120px' : 'auto'
+          }}
+        >
+          Logout
+        </Button>
+      </Box>
+
+      <Paper sx={{
+        p: isMobile ? 3 : 4,
+        borderRadius: 2,
+        textAlign: 'center',
+        backgroundColor: 'white'
+      }}>
+        <Typography variant={isMobile ? "h6" : "h5"} sx={{ mb: 2 }}>
+          Welcome to your dashboard!
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Your exams and results will appear here.
+        </Typography>
+      </Paper>
+>>>>>>> 325d99aa9db450f3ca3f1eeedbaf60b356d95327
     </Box>
   );
 }
