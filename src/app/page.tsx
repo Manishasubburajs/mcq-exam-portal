@@ -42,8 +42,12 @@ export default function Login() {
         return;
       }
 
-      // Save token (localStorage for demo, but better: httpOnly cookie)
-      localStorage.setItem("token", data.token);
+      // ✅ Remember Me implementation
+    if (rememberMe) {
+      localStorage.setItem("token", data.token); // persist
+    } else {
+      sessionStorage.setItem("token", data.token); // session-only
+    }
 
       // Redirect based on role
       if (data.role === "student") {
@@ -271,7 +275,7 @@ export default function Login() {
             <Typography variant="body2" align="center" sx={{ color: "#666" }}>
               Don't have an account?{" "}
               <Link
-                href="/Registration"
+                href="/register"
                 style={{ color: "#2575fc", fontWeight: 600 }}
               >
                 Register here
