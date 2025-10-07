@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -38,8 +38,10 @@ import {
 } from '@mui/icons-material';
 import { useMediaQuery } from '@mui/material';
 
+import dynamic from 'next/dynamic';
 import Sidebar from '../../components/Sidebar';
-import Header from '../../components/Header';
+
+const Header = dynamic(() => import('../../components/Header'), { ssr: false });
 
 interface Exam {
   id: number;
@@ -63,6 +65,10 @@ const ExamManagement: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setSidebarOpen(isDesktop);
+  }, [isDesktop]);
 
   const [exams, setExams] = useState<Exam[]>([
     {
@@ -192,45 +198,23 @@ const ExamManagement: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Sidebar activeItem="Exam Management" isOpen={sidebarOpen} />
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+      <Sidebar isOpen={sidebarOpen} />
+      {sidebarOpen && !isDesktop && (
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '30px',
-            paddingBottom: '15px',
-            borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
           }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ mr: 1 }}>
-              <Menu />
-            </IconButton>
-            <Typography variant="h4" sx={{ color: 'text.primary' }}>
-              Exam Management
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar
-                src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
-                alt="Admin User"
-                sx={{ width: 40, height: 40, border: '2px solid #6a11cb', mr: 1 }}
-              />
-              <Typography variant="body1">Administrator</Typography>
-            </Box>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<Add />}
-              onClick={handleCreateExam}
-            >
-              Create New Exam
-            </Button>
-          </Box>
-        </Box>
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Exam Management" sidebarOpen={sidebarOpen} />
 
         {/* Filters Section */}
         <Paper elevation={1} sx={{ padding: '20px', marginBottom: '25px', borderRadius: '10px' }}>

@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
   List,
@@ -22,12 +22,12 @@ import styles from './Sidebar.module.css';
 import { logout } from '@/utils/auth';
 
 interface Props {
-  activeItem?: string;
   isOpen?: boolean;
 }
 
-const Sidebar: React.FC<Props> = ({ activeItem = 'Dashboard', isOpen = true }) => {
+const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
   const router = useRouter();
+  const pathname = usePathname();
 
   const menuItems = [
     { text: 'Dashboard', icon: <FaTachometerAlt />, route: '/admin-pages' },
@@ -38,6 +38,8 @@ const Sidebar: React.FC<Props> = ({ activeItem = 'Dashboard', isOpen = true }) =
     { text: 'Settings', icon: <Settings />, route: '/admin-pages/Settings' },
     { text: 'Logout', icon: <FaSignOutAlt /> },
   ];
+
+  const activeItem = menuItems.find(item => item.route === pathname)?.text || 'Dashboard';
 
   const handleMenuClick = (item: { text: string; route?: string }) => {
     if (item.text === 'Logout') {
