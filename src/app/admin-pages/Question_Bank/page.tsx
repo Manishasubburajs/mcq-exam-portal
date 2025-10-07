@@ -160,7 +160,7 @@ export default function QuestionBankPage() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
-      <Sidebar activeItem="Question Bank" isOpen={sidebarOpen} />
+      <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{

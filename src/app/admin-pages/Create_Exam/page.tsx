@@ -119,7 +119,7 @@ export default function CreateExam() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
-      <Sidebar activeItem="Create Exam" isOpen={sidebarOpen} />
+      <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{

@@ -293,7 +293,7 @@ const ResultsAnalytics: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Sidebar activeItem="Results Analytics" isOpen={sidebarOpen} />
+      <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{
@@ -419,12 +419,12 @@ const ResultsAnalytics: React.FC = () => {
         </Box>
 
         {/* Charts Section */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 3, marginBottom: '30px' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 3, marginBottom: '30px' }}>
           <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
             <Typography variant="h6" sx={{ marginBottom: '20px', color: 'text.primary' }}>
               Score Distribution
             </Typography>
-            <Box className="chart-container" sx={{ height: '300px' }}>
+            <Box className="chart-container" sx={{ height: '300px', width: '100%' }}>
               <Bar data={scoreDistributionData} options={scoreDistributionOptions} />
             </Box>
           </Paper>
@@ -432,7 +432,7 @@ const ResultsAnalytics: React.FC = () => {
             <Typography variant="h6" sx={{ marginBottom: '20px', color: 'text.primary' }}>
               Subject Performance
             </Typography>
-            <Box className="chart-container" sx={{ height: '300px' }}>
+            <Box className="chart-container" sx={{ height: '300px', width: '100%' }}>
               <Doughnut data={subjectPerformanceData} options={subjectPerformanceOptions} />
             </Box>
           </Paper>

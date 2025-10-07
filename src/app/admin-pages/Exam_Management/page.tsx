@@ -198,7 +198,7 @@ const ExamManagement: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Sidebar activeItem="Exam Management" isOpen={sidebarOpen} />
+      <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{
