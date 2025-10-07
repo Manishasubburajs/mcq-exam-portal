@@ -19,7 +19,10 @@ import {
   IconButton,
 } from '@mui/material';
 import { Edit, Delete, Menu } from '@mui/icons-material';
+import dynamic from 'next/dynamic';
 import Sidebar from '../../components/Sidebar';
+
+const Header = dynamic(() => import('../../components/Header'), { ssr: false });
 
 interface Question {
   id: number;
@@ -32,8 +35,12 @@ interface Question {
 
 export default function CreateExam() {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width:768px)');
+  const isDesktop = useMediaQuery('(min-width:768px)');
+  const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
+
+  useEffect(() => {
+    setSidebarOpen(isDesktop);
+  }, [isDesktop]);
 
   const [examData, setExamData] = useState({
     title: '',
@@ -112,8 +119,8 @@ export default function CreateExam() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
-      <Sidebar activeItem="Create Exam" isOpen={sidebarOpen} />
-      {sidebarOpen && isMobile && (
+      <Sidebar isOpen={sidebarOpen} />
+      {sidebarOpen && !isDesktop && (
         <Box
           sx={{
             position: 'fixed',
@@ -127,36 +134,8 @@ export default function CreateExam() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className="main-content">
-        {/* Header */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '30px',
-            paddingBottom: '15px',
-            borderBottom: '1px solid #e0e0e0',
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {isMobile && (
-              <IconButton onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ mr: 1 }}>
-                <Menu />
-              </IconButton>
-            )}
-            <Typography variant={isMobile ? 'h5' : 'h4'} sx={{ color: '#2c3e50' }}>
-              Create New Exam
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
-              sx={{ width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, marginRight: isMobile ? '5px' : '10px', border: '2px solid #6a11cb' }}
-            />
-            {!isMobile && <Typography>Admin User</Typography>}
-          </Box>
-        </Box>
+      <Box className="main-content" sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Create New Exam" sidebarOpen={sidebarOpen} />
 
         {/* Exam Form */}
         <Paper

@@ -126,7 +126,7 @@ img {
 
 /* Chart containers */
 .chart-container {
-  min-width: 300px;
+  max-width: 100%;
 }
 
 .main-content.sidebar-open {
