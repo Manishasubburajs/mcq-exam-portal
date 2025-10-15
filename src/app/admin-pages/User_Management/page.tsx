@@ -32,6 +32,7 @@ import {
   Download,
   Menu,
   Edit,
+  AdminPanelSettings,
 } from "@mui/icons-material";
 import { useMediaQuery } from "@mui/material";
 import Sidebar from "../../components/Sidebar";
@@ -209,7 +210,7 @@ const UserManagement: React.FC = () => {
       <Box
         sx={{ display: "flex", minHeight: "100vh", backgroundColor: "grey.50" }}
       >
-        <Sidebar activeItem="User Management" isOpen={sidebarOpen} />
+        <Sidebar isOpen={sidebarOpen} />
         <Box
           className={`main-content ${
             sidebarOpen ? "sidebar-open" : "sidebar-closed"
@@ -237,16 +238,9 @@ const UserManagement: React.FC = () => {
               </Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center" }}>
-              <Avatar
-                src="https://ui-avatars.com/api/?name=Admin+User&background=6a11cb&color=fff"
-                alt="Admin User"
-                sx={{
-                  width: 40,
-                  height: 40,
-                  border: "2px solid #6a11cb",
-                  mr: 1,
-                }}
-              />
+              <Avatar sx={{ bgcolor: 'primary.main', color: 'white', width: 40, height: 40, marginRight: '10px' }}>
+                <AdminPanelSettings sx={{ fontSize: 20 }} />
+              </Avatar>
               <Typography variant="body1">Administrator</Typography>
             </Box>
           </Box>
@@ -344,12 +338,8 @@ const UserManagement: React.FC = () => {
               <Button
                 variant="contained"
                 sx={{
-                  background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                  fontWeight: 600,
-                  color: "white",
-                  "&:hover": {
-                    background: "linear-gradient(to right, #5b0eb5, #1e63d6)",
-                  },
+                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                  '&:hover': { opacity: 0.9 }
                 }}
               >
                 Apply Filters
@@ -357,8 +347,11 @@ const UserManagement: React.FC = () => {
 
               <Button
                 variant="contained"
-                color="success"
                 startIcon={<PersonAdd />}
+                sx={{
+                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                  '&:hover': { opacity: 0.9 }
+                }}
                 onClick={handleAddUser}
               >
                 Add New User

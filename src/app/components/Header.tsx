@@ -47,7 +47,15 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0.5 : 2, flexWrap: 'wrap' }}>
-        <Button variant="contained" color="primary" onClick={handleNewExam} size={isMobile ? 'small' : 'medium'}>
+        <Button
+          variant="contained"
+          onClick={handleNewExam}
+          size={isMobile ? 'small' : 'medium'}
+          sx={{
+            background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+            '&:hover': { opacity: 0.9 }
+          }}
+        >
           New Exam
         </Button>
         <Button variant="outlined" color="secondary" size={isMobile ? 'small' : 'medium'}>

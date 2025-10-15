@@ -237,7 +237,15 @@ export default function CreateExam() {
             <Typography variant="h6" sx={{ color: '#2c3e50', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px' }}>
               Exam Questions
             </Typography>
-            <Button variant="outlined" startIcon={<Typography>+</Typography>} onClick={handleAddQuestion}>
+            <Button
+              variant="contained"
+              startIcon={<Typography>+</Typography>}
+              sx={{
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                '&:hover': { opacity: 0.9 }
+              }}
+              onClick={handleAddQuestion}
+            >
               Add Question
             </Button>
           </Box>
@@ -274,7 +282,14 @@ export default function CreateExam() {
             <Button variant="outlined" sx={{ marginRight: '10px' }}>
               Save as Draft
             </Button>
-            <Button variant="contained" onClick={handleSubmit}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                '&:hover': { opacity: 0.9 }
+              }}
+              onClick={handleSubmit}
+            >
               Publish Exam
             </Button>
           </Box>

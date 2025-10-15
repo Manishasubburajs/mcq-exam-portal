@@ -293,7 +293,10 @@ const TeacherGradebookDashboard: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<DownloadIcon />}
-            sx={{ bgcolor: '#4a6fa5', '&:hover': { bgcolor: '#3a5a80' } }}
+            sx={{
+              background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+              '&:hover': { opacity: 0.9 }
+            }}
           >
             Export
           </Button>

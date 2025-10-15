@@ -438,7 +438,10 @@ const BulkImportCSV: React.FC = () => {
               <Button
                 variant="contained"
                 startIcon={<FolderOpenIcon />}
-                sx={{ bgcolor: '#6a89cc', '&:hover': { bgcolor: '#5a79bc' } }}
+                sx={{
+                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                  '&:hover': { opacity: 0.9 }
+                }}
               >
                 Select File
               </Button>
@@ -566,7 +569,10 @@ const BulkImportCSV: React.FC = () => {
                     variant="contained"
                     startIcon={<PublishIcon />}
                     onClick={handleImport}
-                    sx={{ bgcolor: '#6a89cc', '&:hover': { bgcolor: '#5a79bc' } }}
+                    sx={{
+                      background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                      '&:hover': { opacity: 0.9 }
+                    }}
                   >
                     Import Questions
                   </Button>
@@ -648,7 +654,10 @@ const BulkImportCSV: React.FC = () => {
                   variant="contained"
                   startIcon={<DownloadIcon />}
                   onClick={downloadTemplate}
-                  sx={{ bgcolor: '#4caf50', '&:hover': { bgcolor: '#3d8b40' } }}
+                  sx={{
+                    background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                    '&:hover': { opacity: 0.9 }
+                  }}
                 >
                   Download Template
                 </Button>
