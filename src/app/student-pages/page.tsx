@@ -1,6 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
 import type { ReactNode } from "react";
 import { Box, Typography, Card, Button, useTheme, useMediaQuery, Avatar, Chip } from "@mui/material";
 // use CSS grid with Box for consistent layout and spacing
@@ -15,13 +14,8 @@ import EventIcon from "@mui/icons-material/Event";
 import GradeIcon from "@mui/icons-material/Grade";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import FooterSection from "../components/FooterSection";
-=======
-import { logout } from "@/utils/auth";
-import { Box, Typography, Button, Paper, useMediaQuery } from "@mui/material";
->>>>>>> 325d99aa9db450f3ca3f1eeedbaf60b356d95327
 
-const MAIN_BG = "#f8f9fa";
+const MAIN_BG = "#f5f7fa";
 const CARD_BG = "#ffffff";
 const CARD_BORDER = "#e0e0e0";
 const TEXT_SECONDARY = "#64748b";
@@ -63,11 +57,11 @@ interface StatCardProps {
 const StatCard = ({ icon, label, value, color, iconColor }: StatCardProps) => (
   <Card
     sx={{
-      p: 3,
-      borderRadius: 2,
+      p: 2.5,
+      borderRadius: 2.5,
       background: CARD_BG,
       color: TEXT_PRIMARY,
-      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+      boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
       width: '100%',
       display: "flex",
       alignItems: "center",
@@ -80,16 +74,16 @@ const StatCard = ({ icon, label, value, color, iconColor }: StatCardProps) => (
           height: 60,
           bgcolor: color,
           color: iconColor || "#fff",
-          fontSize: "32px",
+          fontSize: "24px",
         }}
       >
         {icon}
       </Avatar>
       <Box>
-        <Typography sx={{ fontSize: 24, fontWeight: 600, lineHeight: 1, mb: 0.3125, color: TEXT_PRIMARY }}>
+        <Typography sx={{ fontSize: 24, fontWeight: 600, lineHeight: 1, mb: 0.625, color: TEXT_PRIMARY }}>
           {value}
         </Typography>
-        <Typography sx={{ color: TEXT_SECONDARY, fontSize: 14 }}>{label}</Typography>
+        <Typography sx={{ color: '#7f8c8d', fontSize: 14 }}>{label}</Typography>
       </Box>
     </Box>
   </Card>
@@ -131,11 +125,11 @@ interface UpcomingExam {
 const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
   <Card
     sx={{
-      border: `1px solid ${CARD_BORDER}`,
-      borderRadius: 2,
+      border: `1px solid #e0e0e0`,
+      borderRadius: 2.5,
       background: CARD_BG,
       color: TEXT_PRIMARY,
-      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+      boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
       width: '100%',
       overflow: "hidden",
       transition: "transform 0.3s, box-shadow 0.3s",
@@ -145,27 +139,27 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
       },
     }}
   >
-    <Box sx={{ p: 3, background: CARD_BG, borderBottom: `1px solid ${CARD_BORDER}` }}>
-      <Typography sx={{ fontSize: 18, fontWeight: 600, mb: 0.3125, color: TEXT_PRIMARY }}>{title}</Typography>
-      <Typography sx={{ color: TEXT_SECONDARY, fontSize: 14 }}>{subject}</Typography>
+    <Box sx={{ p: 1.875, background: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
+      <Typography sx={{ fontSize: 18, fontWeight: 600, mb: 0.625, color: '#2c3e50' }}>{title}</Typography>
+      <Typography sx={{ color: '#7f8c8d', fontSize: 14 }}>{subject}</Typography>
     </Box>
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 1.875 }}>
       <Box sx={{ display: "flex", flexWrap: "wrap", mb: 1.875 }}>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <AccessTimeIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>{meta.duration} min</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <AccessTimeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>{meta.duration} min</Typography>
         </Box>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <HelpOutlineIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>{meta.questions} questions</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <HelpOutlineIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>{meta.questions} questions</Typography>
         </Box>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <EventIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>Due: {meta.due}</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <EventIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>Due: {meta.due}</Typography>
         </Box>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <GradeIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>{meta.points} points</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <GradeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>{meta.points} points</Typography>
         </Box>
       </Box>
       <Box
@@ -174,12 +168,11 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 2,
-          mt: 1,
           flexDirection: { xs: 'column', md: 'row' },
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: { xs: '100%', md: 'auto' } }}>
-          <Chip label="Available" color="success" size="small" />
+          <Chip sx={{ background: '#e6f4ea', color: '#137333', borderRadius: '20px', padding: '5px 10px', fontSize: 12, fontWeight: 600 }} label="Available" size="small" />
           {/* Placeholder for any left-side inline items if needed */}
         </Box>
 
@@ -188,9 +181,20 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
             variant="contained"
             fullWidth
             sx={{
-              ...ACTION_BUTTON_SX,
-              backgroundColor: PRIMARY_PURPLE,
-              '&:hover': { backgroundColor: '#5a3d9a', transform: 'translateY(-2px)' },
+              padding: '8px 15px',
+              height: '40px',
+              lineHeight: '40px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textTransform: 'none',
+              background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+              color: '#fff',
+              borderRadius: 2,
+              fontSize: '14px',
+              fontWeight: 600,
+              boxShadow: 'none',
+              '&:hover': { transform: 'translateY(-2px)' },
             }}
             onClick={onStart}
           >
@@ -203,61 +207,57 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
 );
 
 const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () => void }) => {
-  const scoreColor = exam.scorePercentage >= 90 ? "#22c55e" : exam.scorePercentage >= 70 ? "#f59e0b" : "#ef4444";
+  const scoreColor = exam.scorePercentage >= 90 ? "#28a745" : exam.scorePercentage >= 70 ? "#ffc107" : "#dc3545";
   return (
     <Card
       sx={{
-        // explicit pixel styles to match reference screenshot
-        border: '1px solid #e6e9ee',
-        borderRadius: '8px',
+        border: '1px solid #e0e0e0',
+        borderRadius: 2.5,
         background: '#ffffff',
         color: TEXT_PRIMARY,
-        boxShadow: '0 2px 6px rgba(16,24,40,0.04)',
+        boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
         width: '100%',
         overflow: "hidden",
-        transition: "transform 0.2s, box-shadow 0.2s",
+        transition: "transform 0.3s, box-shadow 0.3s",
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         "&:hover": {
-          transform: "translateY(-3px)",
-          boxShadow: "0 6px 18px rgba(16,24,40,0.06)",
+          transform: "translateY(-5px)",
+          boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
         },
       }}
     >
-      <Box sx={{ p: 16/8, background: '#f6f7f8', borderBottom: '1px solid #eef2f6', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
-        <Typography sx={{ fontSize: 16, fontWeight: 600, mb: 0.25, color: TEXT_PRIMARY }}>{exam.title}</Typography>
-        <Typography sx={{ color: TEXT_SECONDARY, fontSize: 13 }}>{exam.subject}</Typography>
+      <Box sx={{ p: 1, background: '#f6f7f8', borderBottom: '1px solid #eef2f6', borderTopLeftRadius: '10px', borderTopRightRadius: '10px' }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 0.2, color: TEXT_PRIMARY }}>{exam.title}</Typography>
+        <Typography sx={{ color: TEXT_SECONDARY, fontSize: 12 }}>{exam.subject}</Typography>
       </Box>
-      <Box sx={{ p: 2 }}>
-        <Box sx={{ display: "flex", flexWrap: "wrap", mb: 1.25 }}>
-          <Box sx={{ flex: "1 0 50%", mb: 0.9, display: "flex", alignItems: "center", gap: 0.25 }}>
-            <GradeIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-            <Typography variant="body2" sx={{ color: scoreColor, fontWeight: 600, fontSize: 13 }}>{exam.scorePercentage}%</Typography>
-          </Box>
+      <Box sx={{ p: 1.5 }}>
+        <Typography sx={{ fontSize: 18, fontWeight: 600, textAlign: 'center', mb: 1, color: scoreColor }}>{exam.scorePercentage}%</Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", mb: 1 }}>
           <Box sx={{ flex: "1 0 50%", mb: 0.75, display: "flex", alignItems: "center", gap: 0.25 }}>
-            <CalendarTodayIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 13 }}>Completed {exam.completionDate}</Typography>
+            <CalendarTodayIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 12 }}>Completed: {exam.completionDate}</Typography>
           </Box>
-          <Box sx={{ flex: "1 0 50%", mb: 0.75, display: "flex", alignItems: "center", gap: 0.25 }}>
-            <ScheduleIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 13 }}>Time {exam.timeTaken}</Typography>
+          <Box sx={{ flex: "1 0 50%", mb: 0.6, display: "flex", alignItems: "center", gap: 0.25 }}>
+            <ScheduleIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 12 }}>Time: {exam.timeTaken}</Typography>
           </Box>
-          <Box sx={{ flex: "1 0 50%", mb: 0.75, display: "flex", alignItems: "center", gap: 0.25 }}>
-            <GradeIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 13 }}>Score {exam.scoreFraction}</Typography>
+          <Box sx={{ flex: "1 0 50%", mb: 0.6, display: "flex", alignItems: "center", gap: 0.25 }}>
+            <GradeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 12 }}>Score: {exam.scoreFraction}</Typography>
           </Box>
-          <Box sx={{ flex: "1 0 50%", mb: 0.75, display: "flex", alignItems: "center", gap: 0.25 }}>
-            <EmojiEventsIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 13 }}>Rank {exam.rank}</Typography>
+          <Box sx={{ flex: "1 0 50%", mb: 0.6, display: "flex", alignItems: "center", gap: 0.25 }}>
+            <EmojiEventsIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+            <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 12 }}>Rank: {exam.rank}</Typography>
           </Box>
         </Box>
       </Box>
-      <Box sx={{ p: 2, mt: 'auto' }}>
+      <Box sx={{ p: 1.5, mt: 'auto' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
           <Chip
             label="Completed"
-            sx={{ background: '#e8f0ff', color: '#2b6cb0', borderRadius: '16px', padding: '6px 12px', fontSize: 13 }}
+            sx={{ background: '#e8f0ff', color: '#2b6cb0', borderRadius: '16px', padding: '4px 8px', fontSize: 12 }}
             size="small"
           />
 
@@ -266,9 +266,20 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
               variant="contained"
               fullWidth
               sx={{
-                ...ACTION_BUTTON_SX,
-                backgroundColor: SUCCESS_GREEN,
-                '&:hover': { backgroundColor: '#1e8449', transform: 'translateY(-2px)' },
+                padding: '8px 15px',
+                height: '40px',
+                lineHeight: '40px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textTransform: 'none',
+                background: '#28a745',
+                color: '#fff',
+                borderRadius: 2,
+                fontSize: '14px',
+                fontWeight: 600,
+                boxShadow: 'none',
+                '&:hover': { transform: 'translateY(-2px)' },
               }}
               onClick={onView}
             >
@@ -284,11 +295,11 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
 const UpcomingExamCard = ({ exam }: { exam: UpcomingExam }) => (
   <Card
     sx={{
-      border: `1px solid ${CARD_BORDER}`,
-      borderRadius: 2,
+      border: `1px solid #e0e0e0`,
+      borderRadius: 2.5,
       background: CARD_BG,
       color: TEXT_PRIMARY,
-      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+      boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
       width: '100%',
       overflow: "hidden",
       transition: "transform 0.3s, box-shadow 0.3s",
@@ -298,27 +309,27 @@ const UpcomingExamCard = ({ exam }: { exam: UpcomingExam }) => (
       },
     }}
   >
-    <Box sx={{ p: 3, background: CARD_BG, borderBottom: `1px solid ${CARD_BORDER}` }}>
-      <Typography sx={{ fontSize: 18, fontWeight: 600, mb: 0.3125, color: TEXT_PRIMARY }}>{exam.title}</Typography>
-      <Typography sx={{ color: TEXT_SECONDARY, fontSize: 14 }}>{exam.subject}</Typography>
+    <Box sx={{ p: 1.875, background: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
+      <Typography sx={{ fontSize: 18, fontWeight: 600, mb: 0.625, color: '#2c3e50' }}>{exam.title}</Typography>
+      <Typography sx={{ color: '#7f8c8d', fontSize: 14 }}>{exam.subject}</Typography>
     </Box>
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 1.875 }}>
       <Box sx={{ display: "flex", flexWrap: "wrap", mb: 1.875 }}>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <AccessTimeIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>{exam.duration} min</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <AccessTimeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>{exam.duration} min</Typography>
         </Box>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <HelpOutlineIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>{exam.questions} questions</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <HelpOutlineIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>{exam.questions} questions</Typography>
         </Box>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <EventIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>{exam.scheduledDate}</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <EventIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>{exam.scheduledDate}</Typography>
         </Box>
-        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "flex-end", gap: 0.3125 }}>
-          <GradeIcon fontSize="small" sx={{ color: PRIMARY_PURPLE }} />
-          <Typography variant="body2" sx={{ color: TEXT_PRIMARY }}>{exam.points} points</Typography>
+        <Box sx={{ flex: "1 0 50%", mb: 1.25, display: "flex", alignItems: "center", gap: 0.625 }}>
+          <GradeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+          <Typography variant="body2" sx={{ color: TEXT_PRIMARY, fontSize: 14 }}>{exam.points} points</Typography>
         </Box>
       </Box>
       <Box
@@ -327,22 +338,33 @@ const UpcomingExamCard = ({ exam }: { exam: UpcomingExam }) => (
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 2,
-          mt: 1,
           flexDirection: { xs: 'column', sm: 'row' },
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Chip label="Not Available Yet" color="error" size="small" />
+          <Chip sx={{ background: '#fce8e6', color: '#c5221f', borderRadius: '20px', padding: '5px 10px', fontSize: 12, fontWeight: 600 }} label="Not Available Yet" size="small" />
         </Box>
 
         <Box sx={{ width: { xs: '100%', md: ACTION_BUTTON_MD_WIDTH }, display: 'flex' }}>
           <Button
-            variant="contained"
+            variant="outlined"
             fullWidth
+            disabled
             sx={{
-              ...ACTION_BUTTON_SX,
-              backgroundColor: INFO_BLUE,
-              '&:hover': { backgroundColor: '#1565c0', transform: 'translateY(-2px)' },
+              padding: '8px 15px',
+              height: '40px',
+              lineHeight: '40px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textTransform: 'none',
+              background: 'transparent',
+              border: '1px solid #2575fc',
+              color: '#2575fc',
+              borderRadius: 2,
+              fontSize: '14px',
+              fontWeight: 600,
+              boxShadow: 'none',
             }}
           >
             Starts Soon
@@ -365,13 +387,13 @@ const ActionCard = ({ button }: { button: ReactNode }) => (
       overflow: "hidden",
       transition: "transform 0.3s, box-shadow 0.3s",
       "&:hover": {
-        transform: "translateY(-5px)",
-        boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
+        transform: "translateY(-3px)",
+        boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)",
       },
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      p: 3,
+      p: 2,
     }}
   >
     {button}
@@ -383,47 +405,46 @@ const upcomingExams: UpcomingExam[] = [
 ];
 
 export default function StudentDashboard() {
-<<<<<<< HEAD
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 4, color: TEXT_PRIMARY, background: MAIN_BG, minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, color: TEXT_PRIMARY, background: MAIN_BG, minHeight: "100vh", p: 3.75 }}>
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, flexDirection: isMobile ? "column" : "row" }}>
-        <Typography variant="h2" sx={{ fontSize: "32px", color: TEXT_PRIMARY, fontFamily: 'system-ui, sans-serif', fontWeight: 700 }}>Student Dashboard</Typography>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3.75, pb: 1.875, borderBottom: '1px solid #e0e0e0', flexDirection: isMobile ? "column" : "row" }}>
+        <Typography variant="h2" sx={{ fontSize: "24px", color: TEXT_PRIMARY, fontFamily: 'system-ui, sans-serif', fontWeight: 700 }}>Student Dashboard</Typography>
         <Box sx={{ display: "flex", alignItems: "center", mt: isMobile ? 1.875 : 0 }}>
-          <Avatar sx={{ width: 40, height: 40, mr: 1, bgcolor: PRIMARY_PURPLE, color: "white" }}>JD</Avatar>
+          <Avatar sx={{ width: 40, height: 40, mr: 1, bgcolor: '#6a11cb', color: "white", border: '2px solid #6a11cb' }}>JD</Avatar>
           <Typography sx={{ fontFamily: 'system-ui, sans-serif', fontWeight: 500, color: TEXT_PRIMARY }}>John Doe</Typography>
         </Box>
       </Box>
 
       {/* Top Stats */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3.75 }}>
         <Box sx={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))", gap: 2.5 }}>
-          <StatCard icon={<AssignmentIcon />} label="Available Exams" value="3" color={SUCCESS_GREEN} iconColor="#fff" />
-          <StatCard icon={<CheckCircleIcon />} label="Completed Exams" value="5" color={INFO_BLUE} iconColor="#fff" />
-          <StatCard icon={<ScheduleIcon />} label="Pending Results" value="2" color={WARNING_YELLOW} iconColor="#fff" />
-          <StatCard icon={<StarRateIcon />} label="Average Score" value="82%" color={DANGER_RED} iconColor="#fff" />
+          <StatCard icon={<AssignmentIcon />} label="Available Exams" value="3" color={'#e6f4ea'} iconColor={'#137333'} />
+          <StatCard icon={<CheckCircleIcon />} label="Completed Exams" value="5" color={'#e8f0fe'} iconColor={'#1a73e8'} />
+          <StatCard icon={<ScheduleIcon />} label="Pending Results" value="2" color={'#fef7e0'} iconColor={'#e37400'} />
+          <StatCard icon={<StarRateIcon />} label="Average Score" value="82%" color={'#fce8e6'} iconColor={'#c5221f'} />
         </Box>
       </Box>
 
       {/* Available Exams */}
-      <Box sx={{ px: isMobile ? 2 : 6, mb: '40px' }}>
+      <Box sx={{ mb: 3.75 }}>
         <Card
           sx={{
             background: CARD_BG,
-            borderRadius: 2,
-            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-            p: 4,
+            borderRadius: 2.5,
+            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+            p: 3.125,
           }}
         >
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, pb: 2, borderBottom: `2px solid ${CARD_BORDER}`, flexDirection: isMobile ? "column" : "row" }}>
-            <Typography sx={{ fontWeight: 700, color: TEXT_PRIMARY, fontSize: 24 }}>Available Exams</Typography>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5, pb: 1.875, borderBottom: `2px solid #f0f0f0`, flexDirection: isMobile ? "column" : "row" }}>
+            <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Available Exams</Typography>
             <Button
               variant="outlined"
-              sx={{ padding: "10px 20px", color: PRIMARY_PURPLE, borderColor: PRIMARY_PURPLE, fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1.25 : 0 }}
+              sx={{ padding: "10px 20px", color: '#2575fc', borderColor: '#2575fc', fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
               onClick={() => router.push('/student-pages/exam-history')}
             >
               View All
@@ -433,8 +454,8 @@ export default function StudentDashboard() {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-              gap: 3,
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: 2.5,
               alignItems: 'start',
             }}
           >
@@ -467,13 +488,13 @@ export default function StudentDashboard() {
       </Box>
 
       {/* Completed Exams */}
-      <Box sx={{ px: isMobile ? 2 : 6, mb: '40px' }}>
-        <Card sx={{ background: CARD_BG, borderRadius: 2, boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", p: 4 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, pb: 2, borderBottom: `2px solid ${CARD_BORDER}`, flexDirection: isMobile ? "column" : "row" }}>
-            <Typography sx={{ fontWeight: 700, color: TEXT_PRIMARY, fontSize: 24 }}>Completed Exams</Typography>
+      <Box sx={{ mb: 3.75 }}>
+        <Card sx={{ background: CARD_BG, borderRadius: 2.5, boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)", p: 3.125 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5, pb: 1.875, borderBottom: `2px solid #f0f0f0`, flexDirection: isMobile ? "column" : "row" }}>
+            <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Completed Exams</Typography>
             <Button
               variant="outlined"
-              sx={{ padding: "10px 20px", color: PRIMARY_PURPLE, borderColor: PRIMARY_PURPLE, fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1.25 : 0 }}
+              sx={{ padding: "10px 20px", color: '#2575fc', borderColor: '#2575fc', fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
               onClick={() => router.push('/student-pages/exam-history')}
             >
               View All
@@ -483,8 +504,8 @@ export default function StudentDashboard() {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-              gap: 3,
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: 2.5,
               alignItems: 'stretch',
             }}
           >
@@ -502,13 +523,13 @@ export default function StudentDashboard() {
       </Box>
 
       {/* Upcoming Exams */}
-      <Box sx={{ px: isMobile ? 2 : 6, mb: '40px' }}>
-        <Card sx={{ background: CARD_BG, borderRadius: 2, boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", p: 4 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, pb: 2, borderBottom: `2px solid ${CARD_BORDER}`, flexDirection: isMobile ? "column" : "row" }}>
-            <Typography sx={{ fontWeight: 700, color: TEXT_PRIMARY, fontSize: 24 }}>Upcoming Exams</Typography>
+      <Box sx={{ mb: 3.75 }}>
+        <Card sx={{ background: CARD_BG, borderRadius: 2.5, boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)", p: 3.125 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5, pb: 1.875, borderBottom: `2px solid #f0f0f0`, flexDirection: isMobile ? "column" : "row" }}>
+            <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Upcoming Exams</Typography>
             <Button
               variant="outlined"
-              sx={{ padding: "10px 20px", color: PRIMARY_PURPLE, borderColor: PRIMARY_PURPLE, fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1.25 : 0 }}
+              sx={{ padding: "10px 20px", color: '#2575fc', borderColor: '#2575fc', fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
               onClick={() => router.push('/student-pages/progress')}
             >
               View Calendar
@@ -518,8 +539,8 @@ export default function StudentDashboard() {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-              gap: 3,
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: 2.5,
               alignItems: 'start',
             }}
           >
@@ -529,11 +550,11 @@ export default function StudentDashboard() {
             <Box sx={{ gridColumn: isMobile ? 'auto' : 'span 2' }}>
               <Card
                 sx={{
-                  border: `1px solid ${CARD_BORDER}`,
-                  borderRadius: 2,
+                  border: `1px solid #e0e0e0`,
+                  borderRadius: 2.5,
                   background: CARD_BG,
-                  color: EXAM_META_COLOR,
-                  boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                  color: '#7f8c8d',
+                  boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
                   width: '100%',
                   overflow: "hidden",
                   transition: "transform 0.3s, box-shadow 0.3s",
@@ -545,64 +566,20 @@ export default function StudentDashboard() {
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  p: 3,
+                  p: 2,
                 }}
               >
-                <Box sx={{ position: "relative", mb: 2 }}>
-                  <CalendarTodayIcon sx={{ fontSize: 48, color: TEXT_SECONDARY }} />
-                  <Typography sx={{ position: "absolute", top: -5, right: -5, fontSize: 24, color: TEXT_SECONDARY, fontWeight: "bold" }}>+</Typography>
+                <Box sx={{ position: "relative", mb: 1.5 }}>
+                  <CalendarTodayIcon sx={{ fontSize: 36, color: '#7f8c8d' }} />
+                  <Typography sx={{ position: "absolute", top: -4, right: -4, fontSize: 20, color: '#7f8c8d', fontWeight: "bold" }}>+</Typography>
                 </Box>
-                <Typography sx={{ fontSize: 16, fontWeight: 600, color: TEXT_SECONDARY, textAlign: "center" }}>No More Upcoming Exams - Check back later for new exam schedules</Typography>
+                <Typography sx={{ fontSize: 14, fontWeight: 600, color: '#7f8c8d', textAlign: "center", mb: 1 }}>No More Upcoming Exams</Typography>
+                <Typography sx={{ fontSize: 14, color: '#7f8c8d', textAlign: "center" }}>Check back later for new exam schedules</Typography>
               </Card>
             </Box>
           </Box>
         </Card>
       </Box>
-
-      <FooterSection />
-=======
-  const isMobile = useMediaQuery('(max-width:767px)');
-
-  return (
-    <Box sx={{ p: isMobile ? 2 : 4, minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Box sx={{
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        justifyContent: isMobile ? "center" : "space-between",
-        alignItems: isMobile ? "center" : "flex-start",
-        mb: 3,
-        gap: isMobile ? 2 : 0
-      }}>
-        <Typography variant={isMobile ? "h5" : "h4"} sx={{ textAlign: isMobile ? "center" : "left" }}>
-          Student Dashboard
-        </Typography>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={logout}
-          sx={{
-            background: "linear-gradient(to right, #FF512F, #DD2476)",
-            minWidth: isMobile ? '120px' : 'auto'
-          }}
-        >
-          Logout
-        </Button>
-      </Box>
-
-      <Paper sx={{
-        p: isMobile ? 3 : 4,
-        borderRadius: 2,
-        textAlign: 'center',
-        backgroundColor: 'white'
-      }}>
-        <Typography variant={isMobile ? "h6" : "h5"} sx={{ mb: 2 }}>
-          Welcome to your dashboard!
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Your exams and results will appear here.
-        </Typography>
-      </Paper>
->>>>>>> 325d99aa9db450f3ca3f1eeedbaf60b356d95327
     </Box>
   );
 }

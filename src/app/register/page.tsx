@@ -281,7 +281,7 @@ export default function Register() {
             {activeStep === 1 && (
               <Box>
                 <Grid container spacing={2}>
-                  <Grid size={6}>
+                  <Grid xs={6}>
                     <TextField
                       fullWidth
                       label="First Name"
@@ -293,7 +293,7 @@ export default function Register() {
                       helperText={errors.firstName}
                     />
                   </Grid>
-                  <Grid size={6}>
+                  <Grid xs={6}>
                     <TextField
                       fullWidth
                       label="Last Name"

@@ -11,11 +11,10 @@ import {
   Typography,
   IconButton,
   useMediaQuery,
-  Avatar,
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssignmentIcon from "@mui/icons-material/Assignment";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import BarChartIcon from "@mui/icons-material/BarChart";
 import PersonIcon from "@mui/icons-material/Person";
 import HistoryIcon from "@mui/icons-material/History";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -26,14 +25,14 @@ import { usePathname, useRouter } from "next/navigation";
 const navItems = [
   { label: "Dashboard", icon: <DashboardIcon />, path: "/student-pages" },
   { label: "Take Exam", icon: <AssignmentIcon />, path: "/student-pages/take-exam" },
-  { label: "Results", icon: <EmojiEventsIcon />, path: "/student-pages/results" },
-  { label: "Profile", icon: <PersonIcon />, path: "/student-pages/profile" },
   { label: "Exam History", icon: <HistoryIcon />, path: "/student-pages/exam-history" },
+  { label: "Progress", icon: <BarChartIcon />, path: "/student-pages/progress" },
+  { label: "Profile", icon: <PersonIcon />, path: "/student-pages/profile" },
   { label: "Settings", icon: <SettingsIcon />, path: "/student-pages/settings" },
   { label: "Logout", icon: <LogoutIcon />, path: "/logout" },
 ];
 
-const gradientBg = "linear-gradient(180deg, #673ab7 0%, #5e35b1 100%)";
+const gradientBg = "linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)";
 
 export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -43,9 +42,8 @@ export default function Sidebar() {
 
   const drawerContent = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 3, pb: 2 }}>
-        <Avatar sx={{ bgcolor: "#fff", width: 40, height: 40, fontWeight: 900, color: "#673ab7" }}>MCQ</Avatar>
-        <Typography variant="h6" sx={{ fontWeight: 900, color: "#fff", letterSpacing: 1 }}>
+      <Box sx={{ p: 3, pb: 2 }}>
+        <Typography sx={{ fontSize: 24, fontWeight: 700, color: "#fff", letterSpacing: 1, textAlign: "center" }}>
           MCQ <Box component="span" sx={{ color: "#ffb300" }}>Portal</Box>
         </Typography>
       </Box>
@@ -60,7 +58,7 @@ export default function Sidebar() {
                 borderRadius: 2,
                 mx: 2,
                 my: 0.5,
-                background: pathname === item.path || (item.label === "Profile" && pathname?.includes("profile")) ? "rgba(255,255,255,0.12)" : "none",
+                background: pathname === item.path || (item.label === "Profile" && pathname?.includes("profile")) ? "rgba(255,255,255,0.2)" : "none",
                 '&:hover': { background: "rgba(255,255,255,0.08)" },
                 minHeight: 48,
               }}
@@ -91,7 +89,7 @@ export default function Sidebar() {
             anchor="left"
             open={mobileOpen}
             onClose={() => setMobileOpen(false)}
-            PaperProps={{ sx: { width: 260, background: gradientBg, border: "none" } }}
+            PaperProps={{ sx: { width: 250, background: gradientBg, border: "none" } }}
             ModalProps={{ keepMounted: true }}
           >
             {drawerContent}
@@ -100,7 +98,7 @@ export default function Sidebar() {
       ) : (
         <Box
           sx={{
-            width: 260,
+            width: 250,
             height: "100vh",
             position: "fixed",
             top: 0,

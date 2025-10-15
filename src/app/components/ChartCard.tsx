@@ -34,7 +34,7 @@ const ChartCard: React.FC<Props> = ({ title, children, height }) => {
       <Box
         className="chart-container"
         sx={{
-          height,
+          height: height || 200,
           overflow: 'hidden',
           display: 'flex',
           justifyContent: 'center',

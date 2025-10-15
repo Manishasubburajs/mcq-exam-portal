@@ -12,7 +12,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     <StudentDashboardLayout>
       <Box sx={{ display: "flex", minHeight: "100vh" }}>
         <Sidebar />
-        <Box sx={{ flex: 1, ml: { xs: 0, md: 32.5 }, width: "100%", minHeight: "100vh" }}>
+        <Box sx={{ flex: 1, ml: { xs: 0, md: 31.25 }, width: "100%", minHeight: "100vh" }}>
           {children}
         </Box>
       </Box>
