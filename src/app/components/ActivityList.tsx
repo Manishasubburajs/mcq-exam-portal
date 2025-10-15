@@ -48,16 +48,18 @@ const ActivityList: React.FC<Props> = ({ activities }) => {
         <ActivityItem key={index}>
           <Avatar
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
+              width: 48,
+              height: 48,
+              borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginRight: '15px',
-              fontSize: '16px',
+              fontSize: '24px',
               backgroundColor: activity.bgColor,
               color: activity.color,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              border: '2px solid rgba(255,255,255,0.2)',
             }}
           >
             {getIcon(activity.icon)}

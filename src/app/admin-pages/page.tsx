@@ -19,7 +19,7 @@ import { Bar, Line, Doughnut } from 'react-chartjs-2';
 import dynamic from 'next/dynamic';
 import Sidebar from '../components/Sidebar';
 import StatsCard from '../components/StatsCard';
-import ChartCard from '../components/ChartCard';
+import ChartContainer from '../components/ChartContainer';
 import ActivityList from '../components/ActivityList';
 import QuickActionCard from '../components/QuickActionCard';
 
@@ -39,13 +39,14 @@ ChartJS.register(
 
 export default function Home() {
   const router = useRouter();
-  const isDesktop = useMediaQuery('(min-width:768px)');
+  const isDesktop = useMediaQuery('(min-width:1024px)');
   const isMobile = useMediaQuery('(max-width:767px)');
+  const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
   useEffect(() => {
     setSidebarOpen(isDesktop);
-  }, [isDesktop]);
+  }, [isDesktop, isTablet]);
 
   const stats = [
     {
@@ -112,8 +113,16 @@ export default function Home() {
     scales: {
       y: {
         beginAtZero: true,
+        ticks: { font: { size: 9 } }
+      },
+      x: { ticks: { font: { size: 9 } } }
+    },
+    plugins: {
+      legend: {
+        display: false,
       },
     },
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
   };
 
   const subjectPerformanceData = {
@@ -146,8 +155,15 @@ export default function Home() {
     plugins: {
       legend: {
         position: "bottom" as const,
+        labels: {
+          font: {
+            size: 10,
+          },
+          padding: 8,
+        },
       },
     },
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
   };
 
   const performanceTrendData = {
@@ -180,14 +196,33 @@ export default function Home() {
     plugins: {
       legend: {
         position: "bottom" as const,
+        labels: {
+          font: {
+            size: 10,
+          },
+          padding: 8,
+        },
       },
     },
     scales: {
       y: {
         beginAtZero: true,
         max: 100,
+        ticks: {
+          font: {
+            size: 9,
+          },
+        },
+      },
+      x: {
+        ticks: {
+          font: {
+            size: 9,
+          },
+        },
       },
     },
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
   };
 
   const activities = [
@@ -195,36 +230,36 @@ export default function Home() {
       icon: 'Assignment',
       title: 'New exam "Advanced Calculus" created',
       time: '10 minutes ago • By Dr. Smith',
-      color: 'success.main',
-      bgColor: 'success.light',
+      color: 'white',
+      bgColor: 'primary.main',
     },
     {
       icon: 'PersonAdd',
       title: '15 new students registered',
       time: '1 hour ago • System',
-      color: 'success.main',
-      bgColor: 'success.light',
+      color: 'white',
+      bgColor: 'success.main',
     },
     {
       icon: 'Backup',
       title: 'System backup completed successfully',
       time: '3 hours ago • Automated',
-      color: 'primary.main',
-      bgColor: 'primary.light',
+      color: 'white',
+      bgColor: 'info.main',
     },
     {
       icon: 'Publish',
       title: 'Chemistry Midterm results published',
       time: '5 hours ago • By Dr. Johnson',
-      color: 'success.main',
-      bgColor: 'success.light',
+      color: 'white',
+      bgColor: 'secondary.main',
     },
     {
       icon: 'ReportProblem',
       title: '3 exam attempts flagged for review',
       time: 'Yesterday • System',
-      color: 'error.main',
-      bgColor: 'error.light',
+      color: 'white',
+      bgColor: 'warning.main',
     },
   ];
 
@@ -269,7 +304,7 @@ export default function Home() {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
       <Sidebar isOpen={sidebarOpen} />
-      {sidebarOpen && !isDesktop && (
+      {sidebarOpen && (isMobile || isTablet) && (
         <Box
           sx={{
             position: 'fixed',
@@ -294,17 +329,24 @@ export default function Home() {
         </div>
 
         {/* Charts */}
-        <div className="charts-grid">
-          <ChartCard title="Exam Activity Overview" height={isMobile ? 200 : 300}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+            gap: 2,
+            marginBottom: '30px',
+          }}
+        >
+          <ChartContainer title="Exam Activity Overview" minHeight={{ xs: 240, sm: 300, md: 380 }}>
             <Bar data={examActivityData} options={examActivityOptions} />
-          </ChartCard>
-          <ChartCard title="Subject Performance" height={isMobile ? 200 : 300}>
-            <Doughnut data={subjectPerformanceData} options={subjectPerformanceOptions} />
-          </ChartCard>
-          <ChartCard title="Performance Trend" height={isMobile ? 200 : 300}>
-            <Line data={performanceTrendData} options={performanceTrendOptions} />
-          </ChartCard>
-        </div>
+          </ChartContainer>
+          <ChartContainer title="Subject Performance" minHeight={{ xs: 240, sm: 300, md: 380 }}>
+            <Doughnut data={subjectPerformanceData} options={{ ...subjectPerformanceOptions, plugins: { ...subjectPerformanceOptions.plugins, legend: { ...subjectPerformanceOptions.plugins.legend, labels: { font: { size: 12 } } } } }} />
+          </ChartContainer>
+          <ChartContainer title="Performance Trend" minHeight={{ xs: 240, sm: 300, md: 380 }}>
+            <Line data={performanceTrendData} options={{ ...performanceTrendOptions, plugins: { ...performanceTrendOptions.plugins, legend: { ...performanceTrendOptions.plugins.legend, labels: { font: { size: 12 } } } } }} />
+          </ChartContainer>
+        </Box>
 
         {/* Recent Activity */}
         <Paper

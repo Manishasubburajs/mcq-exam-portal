@@ -31,6 +31,7 @@ const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <FaTachometerAlt />, route: '/admin-pages' },
+    { text: 'Create Exam', icon: <FaPlusCircle />, route: '/admin-pages/Create_Exam' },
     { text: 'Exam Management', icon: <Book />, route: '/admin-pages/Exam_Management' },
     { text: 'Results Analytics', icon: <BarChart />, route: '/admin-pages/Results_Analytics' },
     { text: 'User Management', icon: <People />, route: '/admin-pages/User_Management' },

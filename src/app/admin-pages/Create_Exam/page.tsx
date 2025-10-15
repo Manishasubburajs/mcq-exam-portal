@@ -35,12 +35,14 @@ interface Question {
 
 export default function CreateExam() {
   const router = useRouter();
-  const isDesktop = useMediaQuery('(min-width:768px)');
+  const isDesktop = useMediaQuery('(min-width:1024px)');
+  const isMobile = useMediaQuery('(max-width:767px)');
+  const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
   useEffect(() => {
     setSidebarOpen(isDesktop);
-  }, [isDesktop]);
+  }, [isDesktop, isTablet]);
 
   const [examData, setExamData] = useState({
     title: '',
@@ -120,7 +122,7 @@ export default function CreateExam() {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
       <Sidebar isOpen={sidebarOpen} />
-      {sidebarOpen && !isDesktop && (
+      {sidebarOpen && (isMobile || isTablet) && (
         <Box
           sx={{
             position: 'fixed',
@@ -134,7 +136,7 @@ export default function CreateExam() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className="main-content" sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Create New Exam" sidebarOpen={sidebarOpen} />
 
         {/* Exam Form */}

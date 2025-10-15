@@ -50,6 +50,7 @@ a {
 
 .charts-grid {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 24px;
   margin-bottom: 30px;
 }
@@ -63,9 +64,6 @@ a {
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-  .charts-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .actions-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -74,9 +72,6 @@ a {
 @media (min-width: 992px) and (max-width: 1199px) {
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
-  }
-  .charts-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
   .actions-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -92,6 +87,12 @@ a {
   }
   .actions-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .charts-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -126,7 +127,22 @@ img {
 
 /* Chart containers */
 .chart-container {
-  max-width: 100%;
+  width: 100%;
+  min-height: 140px;
+  height: 100%;
+  position: relative;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.chart-container canvas,
+.chart-container svg {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  display: block;
 }
 
 .main-content.sidebar-open {
@@ -176,7 +192,8 @@ img {
   /* Allow charts to be fully responsive */
   .chart-container canvas {
     max-width: 100%;
-    height: auto !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
   }
 
   /* Add scroll indicators */

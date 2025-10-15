@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // ✅ for redirect
 import Link from "next/link";
 import {
@@ -24,8 +24,13 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [activeTab, setActiveTab] = useState<"student" | "admin">("student");
+  const [mounted, setMounted] = useState(false);
   const isMobile = useMediaQuery("(max-width:768px)");
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -74,8 +79,8 @@ export default function Login() {
       <Card
         sx={{
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          width: isMobile ? "100%" : 850,
+          flexDirection: mounted && isMobile ? "column" : "row",
+          width: mounted && isMobile ? "100%" : 850,
           borderRadius: 3,
           overflow: "hidden",
           boxShadow: "0 15px 30px rgba(0,0,0,0.2)",
