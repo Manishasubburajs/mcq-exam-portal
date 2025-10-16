@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -12,153 +12,312 @@ import {
   Select,
   MenuItem,
   Button,
+  Typography,
+  Grid,
+  Divider,
+  Box,
 } from "@mui/material";
+import * as yup from "yup";
 
 interface AddUserModalProps {
   open: boolean;
   onClose: () => void;
   onUserAdded: (user: any) => void;
+  defaultRole: "student" | "teacher" | "admin";
 }
 
-const AddUserModal: React.FC<AddUserModalProps> = ({ open, onClose, onUserAdded }) => {
+const AddUserModal: React.FC<AddUserModalProps> = ({
+  open,
+  onClose,
+  onUserAdded,
+  defaultRole,
+}) => {
+  const [errors, setErrors] = useState<any>({});
+
   const [newUser, setNewUser] = useState({
     username: "",
     first_name: "",
     last_name: "",
     email: "",
-    role: "student",
+    password: "",
+    dob: "",
+    gender: "",
+    role: defaultRole,
     grade: "",
     section: "",
+    department: "",
     status: "active",
   });
 
-  const handleSubmit = async () => {
-    // Simple validation
-    if (!newUser.username || !newUser.first_name || !newUser.email) {
-      alert("Please fill in all required fields (Username, First Name, Email).");
-      return;
+  useEffect(() => {
+    if (open) {
+      setNewUser({
+        username: "",
+        first_name: "",
+        last_name: "",
+        email: "",
+        password: "",
+        dob: "",
+        gender: "",
+        role: defaultRole,
+        grade: "",
+        section: "",
+        department: "",
+        status: "active",
+      });
+      setErrors({});
     }
+  }, [open, defaultRole]);
 
+  // ✅ Validation Schema
+  const studentSchema = yup.object({
+    username: yup.string().required("Username is required"),
+    email: yup.string().email("Invalid email").required("Email is required"),
+    password: yup
+      .string()
+      .min(6, "Password must be at least 6 characters")
+      .required(),
+    first_name: yup.string().required("First Name is required"),
+    last_name: yup.string().required("Last Name is required"),
+    dob: yup.string().required("Date of Birth is required"),
+    gender: yup.string().required("Gender is required"),
+    grade: yup.string().required("Grade is required"),
+    section: yup.string().required("Section is required"),
+  });
+
+  const handleChange = (field: string, value: string) => {
+    setNewUser((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
     try {
+      if (newUser.role === "student") {
+        await studentSchema.validate(newUser, { abortEarly: false });
+      }
+      setErrors({});
+
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newUser),
       });
-      const data = await res.json();
 
+      const data = await res.json();
       if (data.success) {
         onUserAdded(data.user);
         onClose();
-        setNewUser({
-          username: "",
-          first_name: "",
-          last_name: "",
-          email: "",
-          role: "student",
-          grade: "",
-          section: "",
-          status: "active",
-        });
       } else {
         alert("Error: " + data.error);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Something went wrong!");
+    } catch (err: any) {
+      const newErrs: any = {};
+      if (err.inner) {
+        err.inner.forEach((e: any) => {
+          newErrs[e.path] = e.message;
+        });
+      }
+      setErrors(newErrs);
     }
   };
 
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 600 }}>Add New User</DialogTitle>
-      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-        <TextField
-          label="Username"
-          value={newUser.username}
-          onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-          fullWidth
-          required
-        />
-        <TextField
-          label="First Name"
-          value={newUser.first_name}
-          onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
-          fullWidth
-          required
-        />
-        <TextField
-          label="Last Name"
-          value={newUser.last_name}
-          onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
-          fullWidth
-        />
-        <TextField
-          label="Email"
-          type="email"
-          value={newUser.email}
-          onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-          fullWidth
-          required
-        />
+  // 🎓 Student Form (single page with sections)
+  const renderStudentForm = () => (
+    <Box>
+      {/* Account Details */}
+      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
+        Account Details
+      </Typography>
+      <Divider sx={{ mb: 2 }} />
 
-        <FormControl fullWidth>
-          <InputLabel>Role</InputLabel>
-          <Select
-            value={newUser.role}
-            label="Role"
-            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-          >
-            <MenuItem value="student">Student</MenuItem>
-            <MenuItem value="teacher">Teacher</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
-          </Select>
-        </FormControl>
+      <Grid container spacing={2}>
+        <Grid size={6}>
+          <TextField
+            label="Username"
+            fullWidth
+            value={newUser.username}
+            onChange={(e) => handleChange("username", e.target.value)}
+            error={!!errors.username}
+            helperText={errors.username}
+          />
+        </Grid>
+        <Grid size={6}>
+          <TextField
+            label="Email"
+            fullWidth
+            value={newUser.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            error={!!errors.email}
+            helperText={errors.email}
+          />
+        </Grid>
+        <Grid size={6}>
+          <TextField
+            label="Password"
+            type="password"
+            fullWidth
+            value={newUser.password}
+            onChange={(e) => handleChange("password", e.target.value)}
+            error={!!errors.password}
+            helperText={errors.password}
+          />
+        </Grid>
+      </Grid>
 
-        {newUser.role === "student" && (
-          <>
-            <TextField
-              label="Class / Group"
-              value={newUser.grade}
-              onChange={(e) => setNewUser({ ...newUser, grade: e.target.value })}
-              fullWidth
-            />
-            {/* <TextField
-              label="Section"
-              value={newUser.section}
-              onChange={(e) => setNewUser({ ...newUser, section: e.target.value })}
-              fullWidth
-            /> */}
-          </>
-        )}
+      {/* Personal Details */}
+      <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 600 }}>
+        Personal Details
+      </Typography>
+      <Divider sx={{ mb: 2 }} />
 
-        <FormControl fullWidth>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={newUser.status}
-            label="Status"
-            onChange={(e) => setNewUser({ ...newUser, status: e.target.value })}
-          >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-          </Select>
-        </FormControl>
-      </DialogContent>
+      <Grid container spacing={2}>
+        <Grid size={6}>
+          <TextField
+            label="First Name"
+            fullWidth
+            value={newUser.first_name}
+            onChange={(e) => handleChange("first_name", e.target.value)}
+            error={!!errors.first_name}
+            helperText={errors.first_name}
+          />
+        </Grid>
+        <Grid size={6}>
+          <TextField
+            label="Last Name"
+            fullWidth
+            value={newUser.last_name}
+            onChange={(e) => handleChange("last_name", e.target.value)}
+            error={!!errors.last_name}
+            helperText={errors.last_name}
+          />
+        </Grid>
+        <Grid size={6}>
+          <TextField
+            label="Date of Birth"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+            value={newUser.dob}
+            onChange={(e) => handleChange("dob", e.target.value)}
+            error={!!errors.dob}
+            helperText={errors.dob}
+          />
+        </Grid>
+        <Grid size={6}>
+          <FormControl fullWidth>
+            <InputLabel>Gender</InputLabel>
+            <Select
+              value={newUser.gender}
+              label="Gender"
+              onChange={(e) => handleChange("gender", e.target.value)}
+              error={!!errors.gender}
+            >
+              <MenuItem value="">Select</MenuItem>
+              <MenuItem value="male">Male</MenuItem>
+              <MenuItem value="female">Female</MenuItem>
+              <MenuItem value="other">Other</MenuItem>
+            </Select>
+            {errors.gender && (
+              <Typography color="error" variant="caption">
+                {errors.gender}
+              </Typography>
+            )}
+          </FormControl>
+        </Grid>
+      </Grid>
 
-      <DialogActions>
+      {/* Academic Details */}
+      <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 600 }}>
+        Academic Details
+      </Typography>
+      <Divider sx={{ mb: 2 }} />
+
+      <Grid container spacing={2}>
+        <Grid size={6}>
+          <TextField
+            label="Grade"
+            fullWidth
+            value={newUser.grade}
+            onChange={(e) => handleChange("grade", e.target.value)}
+            error={!!errors.grade}
+            helperText={errors.grade}
+          />
+        </Grid>
+        <Grid size={6}>
+          <TextField
+            label="Section"
+            fullWidth
+            value={newUser.section}
+            onChange={(e) => handleChange("section", e.target.value)}
+            error={!!errors.section}
+            helperText={errors.section}
+          />
+        </Grid>
+      </Grid>
+
+      <DialogActions sx={{ mt: 3 }}>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          sx={{
-            background: "linear-gradient(to right, #6a11cb, #2575fc)",
-            color: "white",
-          }}
-        >
-          Save User
+        <Button variant="contained" onClick={handleSubmit}>
+          Save Student
         </Button>
       </DialogActions>
+    </Box>
+  );
+
+  // 👩‍🏫 Simple form for Teacher/Admin
+  const renderOtherForm = () => (
+    <>
+      <TextField
+        label="Username"
+        fullWidth
+        value={newUser.username}
+        onChange={(e) => handleChange("username", e.target.value)}
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        label="First Name"
+        fullWidth
+        value={newUser.first_name}
+        onChange={(e) => handleChange("first_name", e.target.value)}
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        label="Last Name"
+        fullWidth
+        value={newUser.last_name}
+        onChange={(e) => handleChange("last_name", e.target.value)}
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        label="Email"
+        fullWidth
+        value={newUser.email}
+        onChange={(e) => handleChange("email", e.target.value)}
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        label="Department / Group"
+        fullWidth
+        value={newUser.department}
+        onChange={(e) => handleChange("department", e.target.value)}
+        sx={{ mb: 2 }}
+      />
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleSubmit}>
+          Save {newUser.role === "teacher" ? "Teacher" : "Admin"}
+        </Button>
+      </DialogActions>
+    </>
+  );
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ fontWeight: 600 }}>
+        Add New {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}
+      </DialogTitle>
+      <DialogContent sx={{ mt: 1 }}>
+        {newUser.role === "student" ? renderStudentForm() : renderOtherForm()}
+      </DialogContent>
     </Dialog>
   );
 };
