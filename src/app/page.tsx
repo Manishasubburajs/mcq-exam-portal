@@ -12,6 +12,7 @@ import {
   FormControlLabel,
   Typography,
   Divider,
+  useMediaQuery,
 } from "@mui/material";
 
 import GoogleIcon from "@mui/icons-material/Google";
