@@ -24,8 +24,30 @@ const theme = createTheme({
   shadows: [
     "none",
     "0px 2px 8px rgba(40, 40, 40, 0.08)",
-    ...Array(23).fill("0px 2px 8px rgba(40, 40, 40, 0.08)")
-  ],
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)",
+    "0px 2px 8px rgba(40, 40, 40, 0.08)"
+  ] as const,
 });
 
 export default function StudentDashboardLayout({ children }: { children: React.ReactNode }) {

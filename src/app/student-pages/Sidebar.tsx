@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Drawer,
@@ -10,7 +10,6 @@ import {
   ListItemText,
   Typography,
   IconButton,
-  useMediaQuery,
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -24,10 +23,10 @@ import { usePathname, useRouter } from "next/navigation";
 
 const navItems = [
   { label: "Dashboard", icon: <DashboardIcon />, path: "/student-pages" },
-  { label: "Take Exam", icon: <AssignmentIcon />, path: "/student-pages/take-exam" },
-  { label: "Exam History", icon: <HistoryIcon />, path: "/student-pages/exam-history" },
+  { label: "Take Exam", icon: <AssignmentIcon />, path: "/student-pages/exam_taking" },
+  { label: "Exam History", icon: <HistoryIcon />, path: "/student-pages/exam_res_rev" },
   { label: "Progress", icon: <BarChartIcon />, path: "/student-pages/progress" },
-  { label: "Profile", icon: <PersonIcon />, path: "/student-pages/profile" },
+  { label: "My Profile", icon: <PersonIcon />, path: "/student-pages/profile_settings" },
   { label: "Settings", icon: <SettingsIcon />, path: "/student-pages/settings" },
   { label: "Logout", icon: <LogoutIcon />, path: "/logout" },
 ];
@@ -36,9 +35,19 @@ const gradientBg = "linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)";
 
 export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width:900px)");
+  const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width:900px)");
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   const drawerContent = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -51,14 +60,14 @@ export default function Sidebar() {
         {navItems.map((item, idx) => (
           <ListItem key={item.label} disablePadding>
             <ListItemButton
-              selected={pathname === item.path || (item.label === "Profile" && pathname?.includes("profile"))}
+              selected={pathname === item.path || (item.label === "My Profile" && pathname?.includes("profile_settings"))}
               onClick={() => router.push(item.path)}
               sx={{
                 color: "#fff",
                 borderRadius: 2,
                 mx: 2,
                 my: 0.5,
-                background: pathname === item.path || (item.label === "Profile" && pathname?.includes("profile")) ? "rgba(255,255,255,0.2)" : "none",
+                background: pathname === item.path || (item.label === "My Profile" && pathname?.includes("profile_settings")) ? "rgba(255,255,255,0.2)" : "none",
                 '&:hover': { background: "rgba(255,255,255,0.08)" },
                 minHeight: 48,
               }}

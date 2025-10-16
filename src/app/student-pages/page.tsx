@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Box, Typography, Card, Button, useTheme, useMediaQuery, Avatar, Chip } from "@mui/material";
+import { useState, useEffect } from "react";
+import { Box, Typography, Card, Button, useTheme, Avatar, Chip } from "@mui/material";
 // use CSS grid with Box for consistent layout and spacing
 import { useRouter } from "next/navigation";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -407,7 +408,17 @@ const upcomingExams: UpcomingExam[] = [
 export default function StudentDashboard() {
   const router = useRouter();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(theme.breakpoints.down('md'));
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme.breakpoints]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2, color: TEXT_PRIMARY, background: MAIN_BG, minHeight: "100vh", p: 3.75 }}>

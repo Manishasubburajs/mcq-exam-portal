@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Typography, Avatar, Button, IconButton, useMediaQuery } from '@mui/material';
+import { Box, Typography, Avatar, Button, IconButton } from '@mui/material';
 import { AdminPanelSettings, Menu } from '@mui/icons-material';
 
 interface Props {
@@ -11,8 +11,27 @@ interface Props {
 
 const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sidebarOpen = true }) => {
   const router = useRouter();
-  const isMobile = useMediaQuery('(max-width:768px)');
-  const isDesktop = useMediaQuery('(min-width:769px)');
+  const [isMobile, setIsMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const mobileQuery = window.matchMedia('(max-width:768px)');
+    const desktopQuery = window.matchMedia('(min-width:769px)');
+
+    setIsMobile(mobileQuery.matches);
+    setIsDesktop(desktopQuery.matches);
+
+    const handleMobileChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    const handleDesktopChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+
+    mobileQuery.addEventListener('change', handleMobileChange);
+    desktopQuery.addEventListener('change', handleDesktopChange);
+
+    return () => {
+      mobileQuery.removeEventListener('change', handleMobileChange);
+      desktopQuery.removeEventListener('change', handleDesktopChange);
+    };
+  }, []);
 
   const handleNewExam = () => {
     router.push('/admin-pages/Create_Exam');

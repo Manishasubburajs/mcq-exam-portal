@@ -209,7 +209,7 @@ const UserManagement: React.FC = () => {
       <Box
         sx={{ display: "flex", minHeight: "100vh", backgroundColor: "grey.50" }}
       >
-        <Sidebar activeItem="User Management" isOpen={sidebarOpen} />
+        <Sidebar isOpen={sidebarOpen} />
         <Box
           className={`main-content ${
             sidebarOpen ? "sidebar-open" : "sidebar-closed"

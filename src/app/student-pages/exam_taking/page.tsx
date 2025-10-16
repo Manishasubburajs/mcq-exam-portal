@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import ExamContent from '../../exam_taking/ExamContent';
+import ExamContent from './ExamContent';
 
 export default function Page() {
   return <ExamContent />;

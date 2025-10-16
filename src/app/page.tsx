@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // ✅ for redirect
 import Link from "next/link";
 import {
@@ -12,7 +12,6 @@ import {
   FormControlLabel,
   Typography,
   Divider,
-  useMediaQuery,
 } from "@mui/material";
 
 import GoogleIcon from "@mui/icons-material/Google";
@@ -24,8 +23,19 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [activeTab, setActiveTab] = useState<"student" | "admin">("student");
-  const isMobile = useMediaQuery("(max-width:768px)");
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
+
+  // Handle media query client-side only to prevent hydration mismatch
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width:768px)");
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   const handleLogin = async () => {
     try {

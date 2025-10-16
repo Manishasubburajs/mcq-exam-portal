@@ -1,46 +1,38 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Avatar,
   Grid,
   Button,
-  Tabs,
-  Tab,
   TextField,
   Checkbox,
   RadioGroup,
   FormControlLabel,
   Radio,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   IconButton,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Badge,
   Card,
   CardContent,
+  useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
-  Home,
-  MenuBook as BookOpen,
-  TrendingUp as ChartLine,
-  History,
-  Person as User,
-  Settings,
-  Logout,
   Camera,
   Visibility,
   VisibilityOff,
 } from '@mui/icons-material';
 
 const ProfilePage: React.FC = () => {
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -144,38 +136,48 @@ const ProfilePage: React.FC = () => {
     </div>
   );
 
+  const theme = useTheme();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const mediaQuery = window.matchMedia(theme.breakpoints.down('md'));
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme.breakpoints]);
+
+  if (!mounted) {
+    return null; // Prevent hydration mismatch by not rendering until mounted
+  }
+
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f7fa', p: { xs: 1, sm: 2, md: 3 } }}>
         {/* Header */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 3,
-            pb: 1.5,
-            borderBottom: '1px solid #e0e0e0',
-          }}
-        >
-          <Typography variant="h4" sx={{ color: '#2c3e50' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pb: 2, borderBottom: '1px solid #e0e0e0', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 0 } }}>
+          <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '20px', sm: '24px' }, color: '#2c3e50', fontWeight: 600, textAlign: { xs: 'center', sm: 'left' } }}>
             My Profile & Settings
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Avatar
               src="https://ui-avatars.com/api/?name=John+Doe&background=6a11cb&color=fff"
-              sx={{ mr: 1, width: 40, height: 40 }}
+              alt="John Doe"
+              sx={{ width: 40, height: 40, mr: 1, border: '2px solid #6a11cb' }}
             />
-            <Typography>John Doe</Typography>
+            <Typography sx={{ color: '#2c3e50', fontWeight: 500 }}>John Doe</Typography>
           </Box>
         </Box>
 
         {/* Profile Header */}
         <Card sx={{ mb: 3, boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-          <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
-            <Box sx={{ position: 'relative', mr: 3 }}>
+          <CardContent sx={{ display: 'flex', alignItems: 'center', p: { xs: 2, sm: 3 }, flexDirection: { xs: 'column', sm: 'row' }, textAlign: { xs: 'center', sm: 'left' } }}>
+            <Box sx={{ position: 'relative', mr: { xs: 0, sm: 3 }, mb: { xs: 2, sm: 0 } }}>
               <Avatar
                 src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
-                sx={{ width: 120, height: 120, border: '5px solid #6a11cb' }}
+                sx={{ width: { xs: 100, sm: 120 }, height: { xs: 100, sm: 120 }, border: '5px solid #6a11cb' }}
               />
               <IconButton
                 sx={{
@@ -194,16 +196,16 @@ const ProfilePage: React.FC = () => {
               </IconButton>
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h3" sx={{ fontWeight: 700, color: '#2c3e50', mb: 0.5 }}>
+              <Typography variant="h3" sx={{ fontWeight: 700, color: '#2c3e50', mb: 0.5, fontSize: { xs: '1.8rem', sm: '2.125rem' } }}>
                 John Doe
               </Typography>
-              <Typography sx={{ color: '#7f8c8d', mb: 2 }}>
+              <Typography sx={{ color: '#7f8c8d', mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                 Student ID: S12345 • Class: 10th Grade • Section: A
               </Typography>
-              <Grid container spacing={3}>
+              <Grid container spacing={3} justifyContent={{ xs: 'center', sm: 'flex-start' }}>
                 <Grid item>
                   <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                       82%
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
@@ -213,7 +215,7 @@ const ProfilePage: React.FC = () => {
                 </Grid>
                 <Grid item>
                   <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                       15
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
@@ -223,7 +225,7 @@ const ProfilePage: React.FC = () => {
                 </Grid>
                 <Grid item>
                   <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
                       #5
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
@@ -237,18 +239,41 @@ const ProfilePage: React.FC = () => {
         </Card>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 2.5, borderBottom: '2px solid #e0e0e0' }}>
-          <Tab label="Personal Information" />
-          <Tab label="Account Settings" />
-          <Tab label="Privacy & Security" />
-          <Tab label="Notifications" />
-        </Tabs>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'center', sm: 'flex-start' } }}>
+            {[
+              'Personal Information',
+              'Account Settings',
+              'Privacy & Security',
+              'Notifications'
+            ].map((label, index) => (
+              <Button
+                key={index}
+                variant={activeTab === index ? 'contained' : 'text'}
+                onClick={() => setActiveTab(index)}
+                sx={{
+                  bgcolor: activeTab === index ? 'primary.main' : 'transparent',
+                  color: activeTab === index ? 'white' : 'text.primary',
+                  borderRadius: '8px 8px 0 0',
+                  px: { xs: 2, sm: 3 },
+                  py: 1.5,
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  '&:hover': {
+                    bgcolor: activeTab === index ? 'primary.dark' : 'action.hover',
+                  },
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+          </Box>
+        </Box>
 
         {/* Personal Information */}
         <TabPanel value={activeTab} index={0}>
           <Card sx={{ boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                 Personal Information
               </Typography>
               <Box component="form" onSubmit={handlePersonalSubmit}>
@@ -260,6 +285,7 @@ const ProfilePage: React.FC = () => {
                       value={personalInfo.firstName}
                       onChange={handlePersonalInfoChange('firstName')}
                       required
+                      size={isMobile ? 'small' : 'medium'}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -269,6 +295,7 @@ const ProfilePage: React.FC = () => {
                       value={personalInfo.lastName}
                       onChange={handlePersonalInfoChange('lastName')}
                       required
+                      size={isMobile ? 'small' : 'medium'}
                     />
                   </Grid>
                 </Grid>
@@ -280,6 +307,7 @@ const ProfilePage: React.FC = () => {
                   onChange={handlePersonalInfoChange('email')}
                   sx={{ mb: 2 }}
                   required
+                  size={isMobile ? 'small' : 'medium'}
                 />
                 <TextField
                   fullWidth
@@ -287,6 +315,7 @@ const ProfilePage: React.FC = () => {
                   value={personalInfo.phone}
                   onChange={handlePersonalInfoChange('phone')}
                   sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
                 />
                 <Grid container spacing={2} sx={{ mb: 2 }}>
                   <Grid item xs={12} sm={6}>
@@ -298,10 +327,11 @@ const ProfilePage: React.FC = () => {
                       onChange={handlePersonalInfoChange('birthDate')}
                       InputLabelProps={{ shrink: true }}
                       required
+                      size={isMobile ? 'small' : 'medium'}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
+                    <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
                       <InputLabel>Gender</InputLabel>
                       <Select
                         value={personalInfo.gender}
@@ -324,9 +354,10 @@ const ProfilePage: React.FC = () => {
                   onChange={handlePersonalInfoChange('bio')}
                   placeholder="Tell us a bit about yourself..."
                   sx={{ mb: 3 }}
+                  size={isMobile ? 'small' : 'medium'}
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button type="submit" variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)' }}>
+                  <Button type="submit" variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)', fontSize: { xs: '0.875rem', sm: '1rem' }, px: { xs: 2, sm: 3 } }}>
                     Save Changes
                   </Button>
                 </Box>
@@ -338,8 +369,8 @@ const ProfilePage: React.FC = () => {
         {/* Account Settings */}
         <TabPanel value={activeTab} index={1}>
           <Card sx={{ boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                 Account Settings
               </Typography>
               <Box component="form" onSubmit={handleAccountSubmit}>
@@ -351,6 +382,7 @@ const ProfilePage: React.FC = () => {
                   sx={{ mb: 2 }}
                   helperText="This is how you'll appear to others on the platform"
                   required
+                  size={isMobile ? 'small' : 'medium'}
                 />
                 <TextField
                   fullWidth
@@ -359,6 +391,7 @@ const ProfilePage: React.FC = () => {
                   value={accountSettings.currentPassword}
                   onChange={handleAccountSettingsChange('currentPassword')}
                   sx={{ mb: 2 }}
+                  size={isMobile ? 'small' : 'medium'}
                   InputProps={{
                     endAdornment: (
                       <IconButton onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
@@ -374,6 +407,7 @@ const ProfilePage: React.FC = () => {
                   value={accountSettings.newPassword}
                   onChange={handleAccountSettingsChange('newPassword')}
                   sx={{ mb: 1 }}
+                  size={isMobile ? 'small' : 'medium'}
                   InputProps={{
                     endAdornment: (
                       <IconButton onClick={() => setShowNewPassword(!showNewPassword)}>
@@ -382,7 +416,7 @@ const ProfilePage: React.FC = () => {
                     ),
                   }}
                 />
-                <Typography variant="body2" sx={{ color: '#7f8c8d', mb: 2 }}>
+                <Typography variant="body2" sx={{ color: '#7f8c8d', mb: 2, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Password must be at least 8 characters with letters and numbers
                 </Typography>
                 <TextField
@@ -392,6 +426,7 @@ const ProfilePage: React.FC = () => {
                   value={accountSettings.confirmPassword}
                   onChange={handleAccountSettingsChange('confirmPassword')}
                   sx={{ mb: 3 }}
+                  size={isMobile ? 'small' : 'medium'}
                   InputProps={{
                     endAdornment: (
                       <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
@@ -401,7 +436,7 @@ const ProfilePage: React.FC = () => {
                   }}
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button type="submit" variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)' }}>
+                  <Button type="submit" variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)', fontSize: { xs: '0.875rem', sm: '1rem' }, px: { xs: 2, sm: 3 } }}>
                     Update Account
                   </Button>
                 </Box>
@@ -413,11 +448,11 @@ const ProfilePage: React.FC = () => {
         {/* Privacy & Security */}
         <TabPanel value={activeTab} index={2}>
           <Card sx={{ boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                 Privacy & Security
               </Typography>
-              <Typography variant="h6" sx={{ mb: 1, color: '#34495e' }}>
+              <Typography variant="h6" sx={{ mb: 1, color: '#34495e', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 Profile Visibility
               </Typography>
               <RadioGroup
@@ -425,49 +460,49 @@ const ProfilePage: React.FC = () => {
                 onChange={(e) => setPrivacySettings({ ...privacySettings, visibility: e.target.value })}
                 sx={{ mb: 3 }}
               >
-                <FormControlLabel value="public" control={<Radio />} label="Public - Anyone can see my profile" />
-                <FormControlLabel value="classmates" control={<Radio />} label="Classmates Only - Only students in my classes can see my profile" />
-                <FormControlLabel value="private" control={<Radio />} label="Private - Only I can see my profile" />
+                <FormControlLabel value="public" control={<Radio size={isMobile ? 'small' : 'medium'} />} label="Public - Anyone can see my profile" />
+                <FormControlLabel value="classmates" control={<Radio size={isMobile ? 'small' : 'medium'} />} label="Classmates Only - Only students in my classes can see my profile" />
+                <FormControlLabel value="private" control={<Radio size={isMobile ? 'small' : 'medium'} />} label="Private - Only I can see my profile" />
               </RadioGroup>
-              <Typography variant="h6" sx={{ mb: 1, color: '#34495e' }}>
+              <Typography variant="h6" sx={{ mb: 1, color: '#34495e', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 Data Sharing
               </Typography>
               <FormControlLabel
-                control={<Checkbox checked={privacySettings.sharePerformance} onChange={handlePrivacyChange('sharePerformance')} />}
+                control={<Checkbox checked={privacySettings.sharePerformance} onChange={handlePrivacyChange('sharePerformance')} size={isMobile ? 'small' : 'medium'} />}
                 label="Allow my performance data to be used for class statistics (anonymously)"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={privacySettings.shareResearch} onChange={handlePrivacyChange('shareResearch')} />}
+                control={<Checkbox checked={privacySettings.shareResearch} onChange={handlePrivacyChange('shareResearch')} size={isMobile ? 'small' : 'medium'} />}
                 label="Participate in educational research studies (anonymously)"
                 sx={{ mb: 3, display: 'block' }}
               />
-              <Typography variant="h6" sx={{ mb: 1, color: '#34495e' }}>
+              <Typography variant="h6" sx={{ mb: 1, color: '#34495e', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 Security
               </Typography>
               <FormControlLabel
-                control={<Checkbox checked={privacySettings.twoFactor} onChange={handlePrivacyChange('twoFactor')} />}
+                control={<Checkbox checked={privacySettings.twoFactor} onChange={handlePrivacyChange('twoFactor')} size={isMobile ? 'small' : 'medium'} />}
                 label="Enable two-factor authentication for added security"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={privacySettings.loginAlerts} onChange={handlePrivacyChange('loginAlerts')} />}
+                control={<Checkbox checked={privacySettings.loginAlerts} onChange={handlePrivacyChange('loginAlerts')} size={isMobile ? 'small' : 'medium'} />}
                 label="Send email alerts for new logins from unrecognized devices"
                 sx={{ mb: 3, display: 'block' }}
               />
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-                <Button variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)' }}>
+                <Button variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)', fontSize: { xs: '0.875rem', sm: '1rem' }, px: { xs: 2, sm: 3 } }}>
                   Save Privacy Settings
                 </Button>
               </Box>
-              <Box sx={{ border: '2px solid #f8d7da', bgcolor: '#f8d7da', borderRadius: 2, p: 2 }}>
-                <Typography variant="h6" sx={{ color: '#721c24', mb: 1 }}>
+              <Box sx={{ border: '2px solid #f8d7da', bgcolor: '#f8d7da', borderRadius: 2, p: { xs: 1.5, sm: 2 } }}>
+                <Typography variant="h6" sx={{ color: '#721c24', mb: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                   Danger Zone
                 </Typography>
-                <Typography sx={{ color: '#721c24', mb: 2 }}>
+                <Typography sx={{ color: '#721c24', mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                   Deleting your account is permanent and cannot be undone. All your data will be erased.
                 </Typography>
-                <Button variant="contained" color="error" onClick={() => setDeleteModalOpen(true)}>
+                <Button variant="contained" color="error" onClick={() => setDeleteModalOpen(true)} size={isMobile ? 'small' : 'medium'}>
                   Delete My Account
                 </Button>
               </Box>
@@ -478,71 +513,71 @@ const ProfilePage: React.FC = () => {
         {/* Notifications */}
         <TabPanel value={activeTab} index={3}>
           <Card sx={{ boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50' }}>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography variant="h5" sx={{ mb: 2, pb: 1, borderBottom: '2px solid #f0f0f0', color: '#2c3e50', fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                 Notification Preferences
               </Typography>
-              <Typography variant="h6" sx={{ mb: 1, color: '#34495e' }}>
+              <Typography variant="h6" sx={{ mb: 1, color: '#34495e', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 Email Notifications
               </Typography>
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.emailExam} onChange={handleNotificationChange('emailExam')} />}
+                control={<Checkbox checked={notificationSettings.emailExam} onChange={handleNotificationChange('emailExam')} size={isMobile ? 'small' : 'medium'} />}
                 label="New exam announcements"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.emailResults} onChange={handleNotificationChange('emailResults')} />}
+                control={<Checkbox checked={notificationSettings.emailResults} onChange={handleNotificationChange('emailResults')} size={isMobile ? 'small' : 'medium'} />}
                 label="Exam results available"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.emailReminders} onChange={handleNotificationChange('emailReminders')} />}
+                control={<Checkbox checked={notificationSettings.emailReminders} onChange={handleNotificationChange('emailReminders')} size={isMobile ? 'small' : 'medium'} />}
                 label="Exam deadline reminders"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.emailNewsletter} onChange={handleNotificationChange('emailNewsletter')} />}
+                control={<Checkbox checked={notificationSettings.emailNewsletter} onChange={handleNotificationChange('emailNewsletter')} size={isMobile ? 'small' : 'medium'} />}
                 label="Monthly learning tips newsletter"
                 sx={{ mb: 3, display: 'block' }}
               />
-              <Typography variant="h6" sx={{ mb: 1, color: '#34495e' }}>
+              <Typography variant="h6" sx={{ mb: 1, color: '#34495e', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 In-App Notifications
               </Typography>
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.appExam} onChange={handleNotificationChange('appExam')} />}
+                control={<Checkbox checked={notificationSettings.appExam} onChange={handleNotificationChange('appExam')} size={isMobile ? 'small' : 'medium'} />}
                 label="New exam announcements"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.appResults} onChange={handleNotificationChange('appResults')} />}
+                control={<Checkbox checked={notificationSettings.appResults} onChange={handleNotificationChange('appResults')} size={isMobile ? 'small' : 'medium'} />}
                 label="Exam results available"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.appAchievements} onChange={handleNotificationChange('appAchievements')} />}
+                control={<Checkbox checked={notificationSettings.appAchievements} onChange={handleNotificationChange('appAchievements')} size={isMobile ? 'small' : 'medium'} />}
                 label="Achievements and badges"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.appUpdates} onChange={handleNotificationChange('appUpdates')} />}
+                control={<Checkbox checked={notificationSettings.appUpdates} onChange={handleNotificationChange('appUpdates')} size={isMobile ? 'small' : 'medium'} />}
                 label="System updates and maintenance"
                 sx={{ mb: 3, display: 'block' }}
               />
-              <Typography variant="h6" sx={{ mb: 1, color: '#34495e' }}>
+              <Typography variant="h6" sx={{ mb: 1, color: '#34495e', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                 Push Notifications
               </Typography>
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.pushExam} onChange={handleNotificationChange('pushExam')} />}
+                control={<Checkbox checked={notificationSettings.pushExam} onChange={handleNotificationChange('pushExam')} size={isMobile ? 'small' : 'medium'} />}
                 label="Exam reminders (1 hour before)"
                 sx={{ mb: 1, display: 'block' }}
               />
               <FormControlLabel
-                control={<Checkbox checked={notificationSettings.pushResults} onChange={handleNotificationChange('pushResults')} />}
+                control={<Checkbox checked={notificationSettings.pushResults} onChange={handleNotificationChange('pushResults')} size={isMobile ? 'small' : 'medium'} />}
                 label="Immediate results notification"
                 sx={{ mb: 3, display: 'block' }}
               />
               <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)' }}>
+                <Button variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)', fontSize: { xs: '0.875rem', sm: '1rem' }, px: { xs: 2, sm: 3 } }}>
                   Save Notification Settings
                 </Button>
               </Box>
@@ -551,10 +586,10 @@ const ProfilePage: React.FC = () => {
         </TabPanel>
 
       {/* Delete Account Modal */}
-      <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
-        <DialogTitle>Delete Account</DialogTitle>
+      <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ color: '#2c3e50', fontWeight: 600, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>Delete Account</DialogTitle>
         <DialogContent>
-          <Typography sx={{ mb: 2 }}>
+          <Typography sx={{ mb: 2, color: '#7f8c8d', fontSize: { xs: '0.875rem', sm: '1rem' } }}>
             Are you sure you want to delete your account? This action is permanent and cannot be undone. All your data, including exam results and progress, will be permanently erased.
           </Typography>
           <TextField
@@ -563,11 +598,27 @@ const ProfilePage: React.FC = () => {
             value={confirmDeleteText}
             onChange={(e) => setConfirmDeleteText(e.target.value)}
             placeholder="DELETE"
+            variant="outlined"
+            size={isMobile ? 'small' : 'medium'}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteAccount} disabled={confirmDeleteText !== 'DELETE'} color="error">
+        <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 0 } }}>
+          <Button
+            onClick={() => setDeleteModalOpen(false)}
+            variant="outlined"
+            sx={{ mr: { xs: 0, sm: 2 }, width: { xs: '100%', sm: 'auto' } }}
+            size={isMobile ? 'small' : 'medium'}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteAccount}
+            variant="contained"
+            color="error"
+            disabled={confirmDeleteText !== 'DELETE'}
+            size={isMobile ? 'small' : 'medium'}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+          >
             Delete My Account
           </Button>
         </DialogActions>

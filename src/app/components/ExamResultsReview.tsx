@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -17,7 +17,7 @@ import {
   ListItemText,
   Chip,
   useTheme,
-  useMediaQuery,
+  CircularProgress,
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -97,7 +97,17 @@ const questions = [
 export default function ExamResultsReview() {
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(theme.breakpoints.down('md'));
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme.breakpoints]);
 
   const filteredQuestions = questions.filter(q => filter === 'all' || q.status === filter);
 
@@ -112,50 +122,34 @@ export default function ExamResultsReview() {
   const ScoreCircle = ({ score }: { score: number }) => {
     const percentage = score;
     const color = percentage >= 90 ? '#28a745' : percentage >= 70 ? '#ffc107' : '#dc3545';
-    const radius = 75;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDasharray = circumference;
-    const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     return (
-      <Box sx={{ position: 'relative', width: 150, height: 150, mx: 'auto', mb: 2 }}>
-        <svg width="150" height="150">
-          <circle
-            cx="75"
-            cy="75"
-            r={radius}
-            stroke="#e9ecef"
-            strokeWidth="15"
-            fill="none"
-          />
-          <circle
-            cx="75"
-            cy="75"
-            r={radius}
-            stroke={color}
-            strokeWidth="15"
-            fill="none"
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset={strokeDashoffset}
-            transform="rotate(-90 75 75)"
-          />
-        </svg>
+      <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+        <CircularProgress
+          variant="determinate"
+          value={percentage}
+          size={150}
+          thickness={8}
+          sx={{
+            color: color,
+            backgroundColor: 'transparent',
+            borderRadius: '50%',
+            boxShadow: 'inset 0 0 0 8px #e9ecef',
+          }}
+        />
         <Box
           sx={{
+            top: 0,
+            left: 0,
+            bottom: 0,
+            right: 0,
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: 'white',
-            width: 130,
-            height: 130,
-            borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Typography variant="h4" sx={{ fontWeight: 700, color }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: color }}>
             {percentage}%
           </Typography>
         </Box>
@@ -164,48 +158,12 @@ export default function ExamResultsReview() {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa', color: '#333' }}>
-      {/* Sidebar */}
-      <Box
-        sx={{
-          width: 250,
-          background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-          color: 'white',
-          padding: '20px 0',
-          boxShadow: '0 0 15px rgba(0, 0, 0, 0.1)',
-          display: { xs: 'none', md: 'block' },
-        }}
-      >
-        <Box sx={{ textAlign: 'center', padding: '20px 0', marginBottom: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.2)' }}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            MCQ <Box component="span" sx={{ color: '#ffcc00' }}>Portal</Box>
-          </Typography>
-        </Box>
-        <List>
-          {navItems.map((item) => (
-            <ListItem key={item.label} sx={{ padding: 0 }}>
-              <Button
-                sx={{
-                  width: '100%',
-                  color: 'white',
-                  textDecoration: 'none',
-                  padding: '12px 15px',
-                  borderRadius: 0,
-                  justifyContent: 'flex-start',
-                  backgroundColor: item.active ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
-                }}
-              >
-                <Box sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>{item.icon}</Box>
-                <Typography sx={{ fontWeight: 500 }}>{item.label}</Typography>
-              </Button>
-            </ListItem>
-          ))}
-        </List>
-      </Box>
-
-      {/* Main Content */}
-      <Box sx={{ flex: 1, padding: 3 }}>
+    <Box sx={{
+      flex: 1,
+      padding: { xs: 1, sm: 2, md: 3 },
+      maxWidth: '100%',
+      overflowX: 'hidden'
+    }}>
         {/* Header */}
         <Box
           sx={{
@@ -215,18 +173,43 @@ export default function ExamResultsReview() {
             mb: 3,
             paddingBottom: 1.5,
             borderBottom: '1px solid #e0e0e0',
-            flexDirection: { xs: 'column', md: 'row' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
           }}
         >
-          <Typography variant="h4" sx={{ color: '#2c3e50', fontWeight: 600 }}>
+          <Typography
+            sx={{
+              color: '#2c3e50',
+              fontWeight: 600,
+              textAlign: { xs: 'center', sm: 'left' },
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' }
+            }}
+          >
             Exam Results: Mathematics Midterm
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: { xs: 1.5, md: 0 } }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: { xs: 'center', sm: 'flex-start' },
+            mt: { xs: 0, sm: 0 }
+          }}>
             <Avatar
               src="https://ui-avatars.com/api/?name=John+Doe&background=6a11cb&color=fff"
-              sx={{ width: 40, height: 40, mr: 1, border: '2px solid #6a11cb' }}
+              sx={{
+                width: { xs: 35, sm: 40 },
+                height: { xs: 35, sm: 40 },
+                mr: 1,
+                border: '2px solid #6a11cb'
+              }}
             />
-            <Typography>John Doe - Student ID: S12345</Typography>
+            <Typography
+              sx={{
+                textAlign: { xs: 'center', sm: 'left' },
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
+              John Doe - Student ID: S12345
+            </Typography>
           </Box>
         </Box>
 
@@ -236,29 +219,125 @@ export default function ExamResultsReview() {
           <Typography variant="h5" sx={{ mb: 1 }}>Mathematics Midterm Exam</Typography>
           <Typography sx={{ color: '#6c757d', mb: 3 }}>Completed on October 15, 2023 • Time Spent: 28/30 minutes</Typography>
 
-          <Grid container spacing={2} sx={{ maxWidth: 600, mx: 'auto' }}>
+          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{
+            maxWidth: { xs: '100%', sm: 600 },
+            mx: 'auto',
+            justifyContent: 'center'
+          }}>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', padding: 1.5, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>46/50</Typography>
-                <Typography sx={{ color: '#6c757d', fontSize: 14 }}>Questions Correct</Typography>
+              <Box sx={{
+                textAlign: 'center',
+                padding: { xs: 1, sm: 1.5 },
+                backgroundColor: '#f8f9fa',
+                borderRadius: 1,
+                minHeight: { xs: 80, sm: 'auto' },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    mb: 0.5,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                  }}
+                >
+                  46/50
+                </Typography>
+                <Typography sx={{
+                  color: '#6c757d',
+                  fontSize: { xs: 12, sm: 14 },
+                  lineHeight: 1.2
+                }}>
+                  Questions Correct
+                </Typography>
               </Box>
             </Grid>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', padding: 1.5, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>92%</Typography>
-                <Typography sx={{ color: '#6c757d', fontSize: 14 }}>Overall Score</Typography>
+              <Box sx={{
+                textAlign: 'center',
+                padding: { xs: 1, sm: 1.5 },
+                backgroundColor: '#f8f9fa',
+                borderRadius: 1,
+                minHeight: { xs: 80, sm: 'auto' },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    mb: 0.5,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                  }}
+                >
+                  92%
+                </Typography>
+                <Typography sx={{
+                  color: '#6c757d',
+                  fontSize: { xs: 12, sm: 14 },
+                  lineHeight: 1.2
+                }}>
+                  Overall Score
+                </Typography>
               </Box>
             </Grid>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', padding: 1.5, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>5th</Typography>
-                <Typography sx={{ color: '#6c757d', fontSize: 14 }}>Class Rank</Typography>
+              <Box sx={{
+                textAlign: 'center',
+                padding: { xs: 1, sm: 1.5 },
+                backgroundColor: '#f8f9fa',
+                borderRadius: 1,
+                minHeight: { xs: 80, sm: 'auto' },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    mb: 0.5,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                  }}
+                >
+                  5th
+                </Typography>
+                <Typography sx={{
+                  color: '#6c757d',
+                  fontSize: { xs: 12, sm: 14 },
+                  lineHeight: 1.2
+                }}>
+                  Class Rank
+                </Typography>
               </Box>
             </Grid>
             <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', padding: 1.5, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>A</Typography>
-                <Typography sx={{ color: '#6c757d', fontSize: 14 }}>Grade</Typography>
+              <Box sx={{
+                textAlign: 'center',
+                padding: { xs: 1, sm: 1.5 },
+                backgroundColor: '#f8f9fa',
+                borderRadius: 1,
+                minHeight: { xs: 80, sm: 'auto' },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
+              }}>
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    mb: 0.5,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                  }}
+                >
+                  A
+                </Typography>
+                <Typography sx={{
+                  color: '#6c757d',
+                  fontSize: { xs: 12, sm: 14 },
+                  lineHeight: 1.2
+                }}>
+                  Grade
+                </Typography>
               </Box>
             </Grid>
           </Grid>
@@ -302,65 +381,148 @@ export default function ExamResultsReview() {
 
         {/* Questions Review */}
         <Paper sx={{ padding: 3, borderRadius: 2.5, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-            <Typography variant="h5" sx={{ color: '#2c3e50', paddingBottom: 1, borderBottom: '2px solid #f0f0f0' }}>
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 }
+          }}>
+            <Typography
+              sx={{
+                color: '#2c3e50',
+                paddingBottom: 1,
+                borderBottom: '2px solid #f0f0f0',
+                fontSize: { xs: '1.25rem', sm: '1.5rem' }
+              }}
+            >
               Question Review
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, mt: { xs: 1, md: 0 } }}>
-              <ButtonGroup variant="outlined" size="small">
+            <Box sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: { xs: 1, sm: 1 },
+              width: { xs: '100%', sm: 'auto' },
+              alignItems: { xs: 'stretch', sm: 'center' }
+            }}>
+              <ButtonGroup
+                variant="outlined"
+                size="small"
+                sx={{
+                  flex: { xs: 1, sm: 'none' },
+                  minWidth: { xs: '100%', sm: 'auto' }
+                }}
+              >
                 <Button
                   variant={filter === 'all' ? 'contained' : 'outlined'}
                   onClick={() => setFilter('all')}
-                  sx={{ textTransform: 'none' }}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: { xs: 11, sm: 12 },
+                    flex: 1
+                  }}
                 >
-                  All Questions
+                  All
                 </Button>
                 <Button
                   variant={filter === 'correct' ? 'contained' : 'outlined'}
                   onClick={() => setFilter('correct')}
-                  sx={{ textTransform: 'none' }}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: { xs: 11, sm: 12 },
+                    flex: 1
+                  }}
                 >
-                  Correct Answers
+                  Correct
                 </Button>
                 <Button
                   variant={filter === 'incorrect' ? 'contained' : 'outlined'}
                   onClick={() => setFilter('incorrect')}
-                  sx={{ textTransform: 'none' }}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: { xs: 11, sm: 12 },
+                    flex: 1
+                  }}
                 >
-                  Incorrect Answers
+                  Incorrect
                 </Button>
               </ButtonGroup>
-              <Button
-                variant="outlined"
-                startIcon={<PrintIcon />}
-                onClick={handlePrint}
-                sx={{ textTransform: 'none', ml: 1 }}
-              >
-                Print Results
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<DownloadIcon />}
-                onClick={handleExport}
-                sx={{ textTransform: 'none' }}
-              >
-                Export PDF
-              </Button>
+              <Box sx={{
+                display: 'flex',
+                gap: 1,
+                mt: { xs: 0, sm: 0 },
+                justifyContent: { xs: 'center', sm: 'flex-start' }
+              }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<PrintIcon />}
+                  onClick={handlePrint}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: { xs: 11, sm: 12 },
+                    minWidth: { xs: 'auto', sm: 120 }
+                  }}
+                >
+                  <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Print</Box>
+                  <Box sx={{ display: { xs: 'inline', sm: 'none' } }}><PrintIcon /></Box>
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleExport}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: { xs: 11, sm: 12 },
+                    minWidth: { xs: 'auto', sm: 120 }
+                  }}
+                >
+                  <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Export</Box>
+                  <Box sx={{ display: { xs: 'inline', sm: 'none' } }}><DownloadIcon /></Box>
+                </Button>
+              </Box>
             </Box>
           </Box>
 
           {filteredQuestions.map((question) => (
-            <Card key={question.id} sx={{ mb: 2, borderRadius: 1, overflow: 'hidden' }}>
-              <Box sx={{ padding: 1.5, backgroundColor: '#f8f9fa', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>{question.title}</Typography>
+            <Card key={question.id} sx={{
+              mb: 2,
+              borderRadius: 1,
+              overflow: 'hidden',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+            }}>
+              <Box sx={{
+                padding: { xs: 1, sm: 1.5 },
+                backgroundColor: '#f8f9fa',
+                borderBottom: '1px solid #e0e0e0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 1, sm: 0 }
+              }}>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                  }}
+                >
+                  {question.title}
+                </Typography>
                 <Chip
                   label={question.status === 'correct' ? 'Correct' : 'Incorrect'}
                   color={question.status === 'correct' ? 'success' : 'error'}
                   size="small"
                 />
               </Box>
-              <CardContent>
-                <Typography sx={{ mb: 2, lineHeight: 1.5 }}>{question.text}</Typography>
+              <CardContent sx={{ padding: { xs: 1.5, sm: 2 } }}>
+                <Typography sx={{
+                  mb: 2,
+                  lineHeight: 1.5,
+                  fontSize: { xs: '0.9rem', sm: '1rem' }
+                }}>
+                  {question.text}
+                </Typography>
                 <List>
                   {question.options.map((option, index) => (
                     <ListItem
@@ -394,19 +556,49 @@ export default function ExamResultsReview() {
           ))}
 
           {/* Navigation */}
-          <Box sx={{ textAlign: 'center', mt: 3 }}>
-            <Button variant="outlined" startIcon={<ChevronLeftIcon />} sx={{ mr: 1, textTransform: 'none' }}>
+          <Box sx={{
+            textAlign: 'center',
+            mt: 3,
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 1,
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: 'center'
+          }}>
+            <Button
+              variant="outlined"
+              startIcon={<ChevronLeftIcon />}
+              sx={{
+                textTransform: 'none',
+                width: { xs: '100%', sm: 'auto' },
+                mb: { xs: 0.5, sm: 0 }
+              }}
+            >
               Previous
             </Button>
-            <Button variant="contained" sx={{ mr: 1, textTransform: 'none', background: 'linear-gradient(to right, #6a11cb, #2575fc)' }}>
+            <Button
+              variant="contained"
+              sx={{
+                textTransform: 'none',
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                width: { xs: '100%', sm: 'auto' },
+                mb: { xs: 0.5, sm: 0 }
+              }}
+            >
               Back to Dashboard
             </Button>
-            <Button variant="outlined" endIcon={<ChevronRightIcon />} sx={{ textTransform: 'none' }}>
+            <Button
+              variant="outlined"
+              endIcon={<ChevronRightIcon />}
+              sx={{
+                textTransform: 'none',
+                width: { xs: '100%', sm: 'auto' }
+              }}
+            >
               Next
             </Button>
           </Box>
         </Paper>
-      </Box>
     </Box>
   );
 }

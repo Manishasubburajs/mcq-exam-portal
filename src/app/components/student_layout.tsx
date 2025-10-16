@@ -1,13 +1,24 @@
 "use client";
 
-import React from "react";
-import { Box, useMediaQuery } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { Box } from "@mui/material";
 import Sidebar from "../student-pages/Sidebar";
 import StudentDashboardLayout from "../student-pages/StudentDashboardLayout";
 
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
-  const isMobile = useMediaQuery("(max-width:900px)");
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width:900px)");
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
   return (
     <StudentDashboardLayout>
       <Box sx={{ display: "flex", minHeight: "100vh" }}>

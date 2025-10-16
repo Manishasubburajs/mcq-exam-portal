@@ -1,8 +1,19 @@
-import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
+import { useState, useEffect } from "react";
 
 const FooterSection = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(theme.breakpoints.down('md'));
+    setIsMobile(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme.breakpoints]);
 
   return (
     <Box
