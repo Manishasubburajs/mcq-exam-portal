@@ -267,7 +267,14 @@ const ExamManagement: React.FC = () => {
             <Button variant="outlined" onClick={handleResetFilters}>
               Reset Filters
             </Button>
-            <Button variant="contained" onClick={handleApplyFilters}>
+            <Button
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                '&:hover': { opacity: 0.9 }
+              }}
+              onClick={handleApplyFilters}
+            >
               Apply Filters
             </Button>
           </Box>

@@ -146,8 +146,8 @@ export default function QuestionBankPage() {
   };
 
   const handleAddQuestion = () => {
-    // Navigate to create question page
-    router.push('/admin-pages/Create_Exam/Create_Question');
+    // Navigate back to Create Exam page
+    router.push('/admin-pages/Create_Exam');
   };
 
   const handleEditQuestion = (id: number) => {
