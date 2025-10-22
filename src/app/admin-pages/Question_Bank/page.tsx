@@ -3,35 +3,31 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box,
-  Typography,
-  Avatar,
-  Paper,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
-  Pagination,
-} from '@mui/material';
+   Box,
+   Typography,
+   Paper,
+   FormControl,
+   InputLabel,
+   Select,
+   MenuItem,
+   TextField,
+   Button,
+   Table,
+   TableBody,
+   TableCell,
+   TableContainer,
+   TableHead,
+   TableRow,
+   Chip,
+   IconButton,
+   Pagination,
+   useMediaQuery,
+ } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  Menu,
 } from '@mui/icons-material';
-import { useMediaQuery } from '@mui/material';
 import dynamic from 'next/dynamic';
 import Sidebar from '../../components/Sidebar';
 
@@ -245,7 +241,7 @@ export default function QuestionBankPage() {
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-            <Button variant="outlined" onClick={handleResetFilters}>
+            <Button variant="outlined" color="secondary" onClick={handleResetFilters}>
               Reset Filters
             </Button>
             <Button
@@ -334,7 +330,7 @@ export default function QuestionBankPage() {
                     <TableCell>
                       <Chip
                         label={question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
-                        color={getDifficultyColor(question.difficulty) as 'success' | 'warning' | 'error' | 'default'}
+                        color={getDifficultyColor(question.difficulty)}
                         variant="filled"
                       />
                     </TableCell>

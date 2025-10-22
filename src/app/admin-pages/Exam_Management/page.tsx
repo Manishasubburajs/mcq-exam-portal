@@ -1,42 +1,38 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Pagination,
-  Stack,
-  Avatar,
-} from '@mui/material';
+   Box,
+   Paper,
+   Typography,
+   TextField,
+   Select,
+   MenuItem,
+   FormControl,
+   InputLabel,
+   Button,
+   Table,
+   TableBody,
+   TableCell,
+   TableContainer,
+   TableHead,
+   TableRow,
+   Chip,
+   IconButton,
+   Dialog,
+   DialogTitle,
+   DialogContent,
+   DialogActions,
+   Pagination,
+   Stack,
+   useMediaQuery,
+ } from '@mui/material';
 import {
   Edit,
   Visibility,
   Delete,
   BarChart,
-  Add,
   Search,
-  FilterList,
-  Menu,
 } from '@mui/icons-material';
-import { useMediaQuery } from '@mui/material';
 
 import dynamic from 'next/dynamic';
 import Sidebar from '../../components/Sidebar';
@@ -70,7 +66,7 @@ const ExamManagement: React.FC = () => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
 
-  const [exams, setExams] = useState<Exam[]>([
+  const [exams] = useState<Exam[]>([
     {
       id: 1,
       name: 'Mathematics Midterm',
@@ -164,9 +160,6 @@ const ExamManagement: React.FC = () => {
     alert(`Viewing results for: ${exam.name}`);
   };
 
-  const handleCreateExam = () => {
-    alert('Redirecting to create exam page...');
-  };
 
   const handleApplyFilters = () => {
     alert(`Applying filters: Search="${searchTerm}", Subject="${subjectFilter}", Status="${statusFilter}"`);
@@ -228,8 +221,10 @@ const ExamManagement: React.FC = () => {
               placeholder="Search exams by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <Search sx={{ color: 'action.active', mr: 1 }} />,
+              slotProps={{
+                input: {
+                  startAdornment: <Search sx={{ color: 'action.active', mr: 1 }} />,
+                },
               }}
             />
             <FormControl fullWidth>
@@ -264,7 +259,7 @@ const ExamManagement: React.FC = () => {
             </FormControl>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
-            <Button variant="outlined" onClick={handleResetFilters}>
+            <Button variant="outlined" color="secondary" onClick={handleResetFilters}>
               Reset Filters
             </Button>
             <Button
@@ -417,7 +412,9 @@ const ExamManagement: React.FC = () => {
                     label="Time Limit (minutes)"
                     type="number"
                     defaultValue={selectedExam?.duration.replace(' min', '')}
-                    inputProps={{ min: 5 }}
+                    slotProps={{
+                      htmlInput: { min: 5 }
+                    }}
                     required
                   />
                   <TextField
@@ -425,7 +422,9 @@ const ExamManagement: React.FC = () => {
                     label="Total Questions"
                     type="number"
                     defaultValue={selectedExam?.questions}
-                    inputProps={{ min: 1 }}
+                    slotProps={{
+                      htmlInput: { min: 1 }
+                    }}
                     required
                   />
                 </Box>
@@ -434,7 +433,14 @@ const ExamManagement: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditSubmit} variant="contained">
+            <Button
+              onClick={handleEditSubmit}
+              variant="contained"
+              sx={{
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                '&:hover': { opacity: 0.9 }
+              }}
+            >
               Save Changes
             </Button>
           </DialogActions>

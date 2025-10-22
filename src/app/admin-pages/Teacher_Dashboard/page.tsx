@@ -37,8 +37,6 @@ import {
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 
 interface StudentGrade {
@@ -52,11 +50,12 @@ interface StudentGrade {
   overallGrade: string;
 }
 
-const TeacherGradebookDashboard: React.FC = () => {
+const TeacherGradebookDashboard: React.FC = () => { // cSpell:disable
   const [courseFilter, setCourseFilter] = useState('All Courses');
   const [gradeFilter, setGradeFilter] = useState('All Grades');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const studentsPerPage = 10;
 
   const students: StudentGrade[] = [
     {
@@ -130,6 +129,10 @@ const TeacherGradebookDashboard: React.FC = () => {
       return matchesCourse && matchesGrade && matchesSearch;
     });
   }, [courseFilter, gradeFilter, searchQuery]);
+
+  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+  const startIndex = (currentPage - 1) * studentsPerPage;
+  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + studentsPerPage);
 
   const getGradeColor = (grade: string) => {
     if (grade.includes('A')) return '#e8f5e9';
@@ -216,7 +219,7 @@ const TeacherGradebookDashboard: React.FC = () => {
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 3, mb: 3 }}>
         {stats.map((stat, index) => (
           <Card
-            key={index}
+            key={`stat-${stat.title.toLowerCase().replaceAll(' ', '-')}`}
             elevation={1}
             sx={{
               borderRadius: 2,
@@ -280,12 +283,14 @@ const TeacherGradebookDashboard: React.FC = () => {
             placeholder="Search students..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              },
             }}
             sx={{ flexGrow: 1, minWidth: 200 }}
           />
@@ -303,15 +308,15 @@ const TeacherGradebookDashboard: React.FC = () => {
 
           <Button
             variant="outlined"
+            color="secondary"
             startIcon={<RefreshIcon />}
-            sx={{ borderColor: '#e9ecef', color: '#495057', '&:hover': { bgcolor: '#dde1e6' } }}
           >
             Refresh
           </Button>
         </Box>
       </Paper>
 
-      {/* Gradebook Table */}
+      {/* Gradebook Table */}{/* cSpell:disable */}
       <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, mb: 3 }}>
         <Table>
           <TableHead>
@@ -328,7 +333,7 @@ const TeacherGradebookDashboard: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredStudents.map((student) => (
+            {paginatedStudents.map((student) => (
               <TableRow key={student.id} sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
                 <TableCell>{student.id}</TableCell>
                 <TableCell>{student.name}</TableCell>
@@ -365,7 +370,7 @@ const TeacherGradebookDashboard: React.FC = () => {
       {/* Pagination */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
         <Pagination
-          count={4}
+          count={totalPages}
           page={currentPage}
           onChange={(event, page) => setCurrentPage(page)}
           sx={{
@@ -385,7 +390,7 @@ const TeacherGradebookDashboard: React.FC = () => {
       {/* Footer */}
       <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
         <Typography variant="body2">
-          Gradebook Dashboard &copy; 2023 | Last updated: Today at 10:45 AM
+          {/* cSpell:disable */}Gradebook Dashboard &copy; 2023 | Last updated: Today at 10:45 AM
         </Typography>
       </Box>
     </Box>

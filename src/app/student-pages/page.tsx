@@ -208,7 +208,13 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
 );
 
 const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () => void }) => {
-  const scoreColor = exam.scorePercentage >= 90 ? "#28a745" : exam.scorePercentage >= 70 ? "#ffc107" : "#dc3545";
+  const getScoreColor = (score: number): string => {
+    if (score >= 90) return "#28a745";
+    if (score >= 70) return "#ffc107";
+    return "#dc3545";
+  };
+
+  const scoreColor = getScoreColor(exam.scorePercentage);
   return (
     <Card
       sx={{
@@ -349,6 +355,7 @@ const UpcomingExamCard = ({ exam }: { exam: UpcomingExam }) => (
         <Box sx={{ width: { xs: '100%', md: ACTION_BUTTON_MD_WIDTH }, display: 'flex' }}>
           <Button
             variant="outlined"
+            color="secondary"
             fullWidth
             disabled
             sx={{
@@ -411,7 +418,7 @@ export default function StudentDashboard() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(theme.breakpoints.down('md'));
+    const mediaQuery = globalThis.matchMedia(theme.breakpoints.down('md'));
     setIsMobile(mediaQuery.matches);
 
     const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
@@ -455,7 +462,8 @@ export default function StudentDashboard() {
             <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Available Exams</Typography>
             <Button
               variant="outlined"
-              sx={{ padding: "10px 20px", color: '#2575fc', borderColor: '#2575fc', fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
+              color="secondary"
+              sx={{ padding: "10px 20px", fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
               onClick={() => router.push('/student-pages/exam-history')}
             >
               View All
@@ -505,7 +513,8 @@ export default function StudentDashboard() {
             <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Completed Exams</Typography>
             <Button
               variant="outlined"
-              sx={{ padding: "10px 20px", color: '#2575fc', borderColor: '#2575fc', fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
+              color="secondary"
+              sx={{ padding: "10px 20px", fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
               onClick={() => router.push('/student-pages/exam-history')}
             >
               View All
@@ -540,7 +549,8 @@ export default function StudentDashboard() {
             <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Upcoming Exams</Typography>
             <Button
               variant="outlined"
-              sx={{ padding: "10px 20px", color: '#2575fc', borderColor: '#2575fc', fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
+              color="secondary"
+              sx={{ padding: "10px 20px", fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
               onClick={() => router.push('/student-pages/progress')}
             >
               View Calendar

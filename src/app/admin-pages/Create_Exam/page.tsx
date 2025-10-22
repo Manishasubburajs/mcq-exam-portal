@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import {
   Box,
   Typography,
@@ -50,8 +49,7 @@ interface DraftExam {
 }
 
 export default function CreateExam() {
-  const router = useRouter();
-  const isDesktop = useMediaQuery("(min-width:768px)");
+  const isDesktop = useMediaQuery("(min-width:769px)");
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
   useEffect(() => setSidebarOpen(isDesktop), [isDesktop]);
@@ -269,10 +267,84 @@ export default function CreateExam() {
     }
   };
 
+  const getSubjectName = (subjectId: number): string => {
+    switch (subjectId) {
+      case 1: return "Mathematics";
+      case 2: return "Science";
+      case 3: return "English";
+      default: return "Unknown";
+    }
+  };
+
+  const renderDraftExamsSection = () => {
+    if (loadingDrafts) {
+      return (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (draftExams.length === 0) {
+      return <Typography color="text.secondary">No draft exams found.</Typography>;
+    }
+
+    return (
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 2 }}>
+        {draftExams.map((draft) => (
+          <Card key={draft.exam_id} sx={{ p: 2, borderRadius: 2, boxShadow: 2, transition: "transform 0.2s, box-shadow 0.2s", "&:hover": { transform: "translateY(-3px)", boxShadow: 4 } }}>
+            <CardContent>
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "primary.main" }}>{draft.exam_title}</Typography>
+              <Typography sx={{ mt: 1 }}>
+                <strong>Subject:</strong> {getSubjectName(draft.subject_id)}
+              </Typography>
+              <Typography><strong>Questions:</strong> {draft.question_count}</Typography>
+              <Box sx={{ mt: 2, textAlign: "right" }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => handleLoadDraft(draft.exam_id)}
+                  sx={{
+                    background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                    '&:hover': { opacity: 0.9 }
+                  }}
+                >
+                  Load Draft
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+    );
+  };
+
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
       <Sidebar isOpen={sidebarOpen} />
-      <Box className="main-content" sx={{ paddingTop: { xs: "50px", md: "80px" }, width: "100%" }}>
+      {sidebarOpen && !isDesktop && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 999,
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Box
+        className={`main-content ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
+        sx={{
+          paddingTop: { xs: "50px", md: "80px" },
+          width: "100%",
+          marginLeft: sidebarOpen && isDesktop ? "220px" : "0",
+          transition: "margin-left 0.3s ease",
+        }}
+      >
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Create New Exam" sidebarOpen={sidebarOpen} />
 
         {/* Exam Form */}
@@ -289,10 +361,10 @@ export default function CreateExam() {
                 <MenuItem value={3}>English</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Time Limit (minutes)" type="number" value={examData.timeLimit} onChange={(e) => handleInputChange("timeLimit", parseInt(e.target.value))} required />
-            <TextField label="Total Marks" type="number" value={examData.totalMarks} onChange={(e) => handleInputChange("totalMarks", parseInt(e.target.value))} required />
-            <TextField label="Start Date & Time" type="datetime-local" value={examData.startDate} onChange={(e) => handleInputChange("startDate", e.target.value)} InputLabelProps={{ shrink: true }} />
-            <TextField label="End Date & Time" type="datetime-local" value={examData.endDate} onChange={(e) => handleInputChange("endDate", e.target.value)} InputLabelProps={{ shrink: true }} />
+            <TextField label="Time Limit (minutes)" type="number" value={examData.timeLimit} onChange={(e) => handleInputChange("timeLimit", Number.parseInt(e.target.value))} required />
+            <TextField label="Total Marks" type="number" value={examData.totalMarks} onChange={(e) => handleInputChange("totalMarks", Number.parseInt(e.target.value))} required />
+            <TextField label="Start Date & Time" type="datetime-local" value={examData.startDate} onChange={(e) => handleInputChange("startDate", e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <TextField label="End Date & Time" type="datetime-local" value={examData.endDate} onChange={(e) => handleInputChange("endDate", e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             <TextField label="Description" multiline rows={4} value={examData.description} onChange={(e) => handleInputChange("description", e.target.value)} sx={{ gridColumn: "1 / -1" }} />
           </Box>
         </Paper>
@@ -302,10 +374,27 @@ export default function CreateExam() {
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
             <Typography variant="h6">Exam Questions</Typography>
             <Box>
-              <Button variant="outlined" sx={{ mr: 1 }} onClick={() => setOpenModal(true)}>+ Add Question</Button>
-              <Button variant="outlined" sx={{ mr: 1 }} onClick={() => handleSaveExam("draft")}>Save as Draft</Button>
-              <Button variant="contained" sx={{ mr: 1 }} onClick={() => handleSaveExam("published")}>Publish Exam</Button>
-              <Button variant="contained" onClick={handleShowDrafts}>
+              <Button variant="outlined" color="secondary" sx={{ mr: 1 }} onClick={() => setOpenModal(true)}>+ Add Question</Button>
+              <Button variant="outlined" color="secondary" sx={{ mr: 1 }} onClick={() => handleSaveExam("draft")}>Save as Draft</Button>
+              <Button
+                variant="contained"
+                sx={{
+                  mr: 1,
+                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                  '&:hover': { opacity: 0.9 }
+                }}
+                onClick={() => handleSaveExam("published")}
+              >
+                Publish Exam
+              </Button>
+              <Button
+                variant="contained"
+                sx={{
+                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                  '&:hover': { opacity: 0.9 }
+                }}
+                onClick={handleShowDrafts}
+              >
                 {showDrafts ? "Hide Drafts" : "Show Drafts"}
               </Button>
             </Box>
@@ -315,7 +404,7 @@ export default function CreateExam() {
             <Typography color="text.secondary" sx={{ textAlign: "center", py: 3 }}>No questions added yet</Typography>
           ) : (
             questions.map((q, i) => (
-              <Card key={i} sx={{ mb: 2, backgroundColor: "#f9f9f9" }}>
+              <Card key={`question-${q.question_id || i}`} sx={{ mb: 2, backgroundColor: "#f9f9f9" }}>
                 <CardContent>
                   <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
                     <Typography sx={{ fontWeight: "bold" }}>{i + 1}. {q.question_text}</Typography>
@@ -330,15 +419,29 @@ export default function CreateExam() {
                       <IconButton size="small" color="error" onClick={() => handleRemoveQuestion(q.question_id)}><Delete /></IconButton>
                     </Box>
                   </Box>
-                  {["option_a", "option_b", "option_c", "option_d"].map((optKey) => (
-                    <Typography key={optKey} sx={{
-                      color: q.correct_answer === (q as any)[optKey] ? "green" : "#555",
-                      fontWeight: q.correct_answer === (q as any)[optKey] ? "bold" : "normal",
-                      mb: 0.5
-                    }}>
-                      {(optKey === "option_a" && "A.") || (optKey === "option_b" && "B.") || (optKey === "option_c" && "C.") || (optKey === "option_d" && "D.")} {(q as any)[optKey]}
-                    </Typography>
-                  ))}
+                  {["option_a", "option_b", "option_c", "option_d"].map((optKey) => {
+                    const getOptionLabel = (key: string) => {
+                      switch (key) {
+                        case "option_a": return "A.";
+                        case "option_b": return "B.";
+                        case "option_c": return "C.";
+                        case "option_d": return "D.";
+                        default: return "";
+                      }
+                    };
+
+                    const isCorrectAnswer = q.correct_answer === (q as any)[optKey];
+
+                    return (
+                      <Typography key={optKey} sx={{
+                        color: isCorrectAnswer ? "green" : "#555",
+                        fontWeight: isCorrectAnswer ? "bold" : "normal",
+                        mb: 0.5
+                      }}>
+                        {getOptionLabel(optKey)} {(q as any)[optKey]}
+                      </Typography>
+                    );
+                  })}
                 </CardContent>
               </Card>
             ))
@@ -349,30 +452,7 @@ export default function CreateExam() {
         {showDrafts && (
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>Draft Exams</Typography>
-            {loadingDrafts ? (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : draftExams.length === 0 ? (
-              <Typography color="text.secondary">No draft exams found.</Typography>
-            ) : (
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 2 }}>
-                {draftExams.map((draft) => (
-                  <Card key={draft.exam_id} sx={{ p: 2, borderRadius: 2, boxShadow: 2, transition: "transform 0.2s, box-shadow 0.2s", "&:hover": { transform: "translateY(-3px)", boxShadow: 4 } }}>
-                    <CardContent>
-                      <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "primary.main" }}>{draft.exam_title}</Typography>
-                      <Typography sx={{ mt: 1 }}>
-                        <strong>Subject:</strong> {draft.subject_id === 1 ? "Mathematics" : draft.subject_id === 2 ? "Science" : "English"}
-                      </Typography>
-                      <Typography><strong>Questions:</strong> {draft.question_count}</Typography>
-                      <Box sx={{ mt: 2, textAlign: "right" }}>
-                        <Button variant="contained" size="small" onClick={() => handleLoadDraft(draft.exam_id)}>Load Draft</Button>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
-            )}
+            {renderDraftExamsSection()}
           </Box>
         )}
 
@@ -394,7 +474,7 @@ export default function CreateExam() {
                 <MenuItem value="D">{newQuestion.option_d}</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Points" type="number" fullWidth margin="dense" value={newQuestion.points} onChange={(e) => setNewQuestion({ ...newQuestion, points: parseInt(e.target.value) })} />
+            <TextField label="Points" type="number" fullWidth margin="dense" value={newQuestion.points} onChange={(e) => setNewQuestion({ ...newQuestion, points: Number.parseInt(e.target.value) })} />
             <FormControl fullWidth margin="dense">
               <InputLabel>Difficulty</InputLabel>
               <Select value={newQuestion.difficulty} onChange={(e) => setNewQuestion({ ...newQuestion, difficulty: e.target.value })}>
@@ -406,7 +486,16 @@ export default function CreateExam() {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenModal(false)}>Cancel</Button>
-            <Button variant="contained" onClick={handleSaveQuestion}>{editMode ? "Update Question" : "Save Question"}</Button>
+            <Button
+              variant="contained"
+              onClick={handleSaveQuestion}
+              sx={{
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                '&:hover': { opacity: 0.9 }
+              }}
+            >
+              {editMode ? "Update Question" : "Save Question"}
+            </Button>
           </DialogActions>
         </Dialog>
       </Box>

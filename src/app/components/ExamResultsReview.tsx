@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Avatar,
   Paper,
-  Grid,
   LinearProgress,
   Card,
   CardContent,
@@ -16,7 +15,6 @@ import {
   ListItem,
   ListItemText,
   Chip,
-  useTheme,
   CircularProgress,
 } from '@mui/material';
 import {
@@ -33,7 +31,6 @@ import {
   ChevronRight as ChevronRightIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon,
 } from '@mui/icons-material';
 
 const navItems = [
@@ -94,67 +91,60 @@ const questions = [
   },
 ];
 
+const ScoreCircle = ({ score }: { score: number }) => {
+  const percentage = score;
+  const getScoreColor = (score: number): string => {
+    if (score >= 90) return '#28a745';
+    if (score >= 70) return '#ffc107';
+    return '#dc3545';
+  };
+  const color = getScoreColor(percentage);
+
+  return (
+    <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
+      <CircularProgress
+        variant="determinate"
+        value={percentage}
+        size={150}
+        thickness={8}
+        sx={{
+          color: color,
+          backgroundColor: 'transparent',
+          borderRadius: '50%',
+          boxShadow: 'inset 0 0 0 8px #e9ecef',
+        }}
+      />
+      <Box
+        sx={{
+          top: 0,
+          left: 0,
+          bottom: 0,
+          right: 0,
+          position: 'absolute',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Typography variant="h4" sx={{ fontWeight: 700, color: color }}>
+          {percentage}%
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 export default function ExamResultsReview() {
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
-  const theme = useTheme();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(theme.breakpoints.down('md'));
-    setIsMobile(mediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme.breakpoints]);
 
   const filteredQuestions = questions.filter(q => filter === 'all' || q.status === filter);
 
   const handlePrint = () => {
-    window.print();
+    globalThis.window.print();
   };
 
   const handleExport = () => {
     alert('Exporting results as PDF...');
-  };
-
-  const ScoreCircle = ({ score }: { score: number }) => {
-    const percentage = score;
-    const color = percentage >= 90 ? '#28a745' : percentage >= 70 ? '#ffc107' : '#dc3545';
-
-    return (
-      <Box sx={{ position: 'relative', display: 'inline-flex', mb: 2 }}>
-        <CircularProgress
-          variant="determinate"
-          value={percentage}
-          size={150}
-          thickness={8}
-          sx={{
-            color: color,
-            backgroundColor: 'transparent',
-            borderRadius: '50%',
-            boxShadow: 'inset 0 0 0 8px #e9ecef',
-          }}
-        />
-        <Box
-          sx={{
-            top: 0,
-            left: 0,
-            bottom: 0,
-            right: 0,
-            position: 'absolute',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Typography variant="h4" sx={{ fontWeight: 700, color: color }}>
-            {percentage}%
-          </Typography>
-        </Box>
-      </Box>
-    );
   };
 
   return (
@@ -219,128 +209,127 @@ export default function ExamResultsReview() {
           <Typography variant="h5" sx={{ mb: 1 }}>Mathematics Midterm Exam</Typography>
           <Typography sx={{ color: '#6c757d', mb: 3 }}>Completed on October 15, 2023 • Time Spent: 28/30 minutes</Typography>
 
-          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{
+          <Box sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: { xs: 1, sm: 2 },
             maxWidth: { xs: '100%', sm: 600 },
             mx: 'auto',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            '& > *': {
+              flex: { xs: '1 1 45%', sm: '1 1 22%' },
+              minWidth: { xs: '120px', sm: '140px' }
+            }
           }}>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{
-                textAlign: 'center',
-                padding: { xs: 1, sm: 1.5 },
-                backgroundColor: '#f8f9fa',
-                borderRadius: 1,
-                minHeight: { xs: 80, sm: 'auto' },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center'
+            <Box sx={{
+              textAlign: 'center',
+              padding: { xs: 1, sm: 1.5 },
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              minHeight: { xs: 80, sm: 'auto' },
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                }}
+              >
+                46/50
+              </Typography>
+              <Typography sx={{
+                color: '#6c757d',
+                fontSize: { xs: 12, sm: 14 },
+                lineHeight: 1.2
               }}>
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    mb: 0.5,
-                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-                  }}
-                >
-                  46/50
-                </Typography>
-                <Typography sx={{
-                  color: '#6c757d',
-                  fontSize: { xs: 12, sm: 14 },
-                  lineHeight: 1.2
-                }}>
-                  Questions Correct
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{
-                textAlign: 'center',
-                padding: { xs: 1, sm: 1.5 },
-                backgroundColor: '#f8f9fa',
-                borderRadius: 1,
-                minHeight: { xs: 80, sm: 'auto' },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center'
+                Questions Correct
+              </Typography>
+            </Box>
+            <Box sx={{
+              textAlign: 'center',
+              padding: { xs: 1, sm: 1.5 },
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              minHeight: { xs: 80, sm: 'auto' },
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                }}
+              >
+                92%
+              </Typography>
+              <Typography sx={{
+                color: '#6c757d',
+                fontSize: { xs: 12, sm: 14 },
+                lineHeight: 1.2
               }}>
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    mb: 0.5,
-                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-                  }}
-                >
-                  92%
-                </Typography>
-                <Typography sx={{
-                  color: '#6c757d',
-                  fontSize: { xs: 12, sm: 14 },
-                  lineHeight: 1.2
-                }}>
-                  Overall Score
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{
-                textAlign: 'center',
-                padding: { xs: 1, sm: 1.5 },
-                backgroundColor: '#f8f9fa',
-                borderRadius: 1,
-                minHeight: { xs: 80, sm: 'auto' },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center'
+                Overall Score
+              </Typography>
+            </Box>
+            <Box sx={{
+              textAlign: 'center',
+              padding: { xs: 1, sm: 1.5 },
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              minHeight: { xs: 80, sm: 'auto' },
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                }}
+              >
+                5th
+              </Typography>
+              <Typography sx={{
+                color: '#6c757d',
+                fontSize: { xs: 12, sm: 14 },
+                lineHeight: 1.2
               }}>
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    mb: 0.5,
-                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-                  }}
-                >
-                  5th
-                </Typography>
-                <Typography sx={{
-                  color: '#6c757d',
-                  fontSize: { xs: 12, sm: 14 },
-                  lineHeight: 1.2
-                }}>
-                  Class Rank
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{
-                textAlign: 'center',
-                padding: { xs: 1, sm: 1.5 },
-                backgroundColor: '#f8f9fa',
-                borderRadius: 1,
-                minHeight: { xs: 80, sm: 'auto' },
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center'
+                Class Rank
+              </Typography>
+            </Box>
+            <Box sx={{
+              textAlign: 'center',
+              padding: { xs: 1, sm: 1.5 },
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              minHeight: { xs: 80, sm: 'auto' },
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+                }}
+              >
+                A
+              </Typography>
+              <Typography sx={{
+                color: '#6c757d',
+                fontSize: { xs: 12, sm: 14 },
+                lineHeight: 1.2
               }}>
-                <Typography
-                  sx={{
-                    fontWeight: 700,
-                    mb: 0.5,
-                    fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-                  }}
-                >
-                  A
-                </Typography>
-                <Typography sx={{
-                  color: '#6c757d',
-                  fontSize: { xs: 12, sm: 14 },
-                  lineHeight: 1.2
-                }}>
-                  Grade
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
+                Grade
+              </Typography>
+            </Box>
+          </Box>
         </Paper>
 
         {/* Performance Breakdown */}
@@ -348,35 +337,45 @@ export default function ExamResultsReview() {
           <Typography variant="h5" sx={{ mb: 2, color: '#2c3e50', paddingBottom: 1, borderBottom: '2px solid #f0f0f0' }}>
             Performance by Category
           </Typography>
-          <Grid container spacing={2}>
+          <Box sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2,
+            '& > *': {
+              flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 16px)' },
+              minWidth: { xs: '250px', md: '200px' }
+            }
+          }}>
             {categories.map((category) => (
-              <Grid item xs={12} md={4} key={category.name}>
-                <Box sx={{ padding: 1.5, borderRadius: 1, backgroundColor: '#f8f9fa' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography sx={{ fontWeight: 600 }}>{category.name}</Typography>
-                    <Typography sx={{ fontWeight: 700 }}>{category.score}%</Typography>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={category.score}
-                    sx={{
-                      height: 8,
-                      borderRadius: 1,
-                      mb: 1,
-                      backgroundColor: '#e9ecef',
-                      '& .MuiLinearProgress-bar': {
-                        backgroundColor: category.score >= 90 ? '#28a745' : category.score >= 70 ? '#20c997' : '#ffc107',
-                        borderRadius: 1,
-                      },
-                    }}
-                  />
-                  <Typography sx={{ fontSize: 12, color: '#6c757d' }}>
-                    {category.correct}/{category.total} questions correct
-                  </Typography>
+              <Box key={category.name} sx={{ padding: 1.5, borderRadius: 1, backgroundColor: '#f8f9fa' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography sx={{ fontWeight: 600 }}>{category.name}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{category.score}%</Typography>
                 </Box>
-              </Grid>
+                <LinearProgress
+                  variant="determinate"
+                  value={category.score}
+                  sx={{
+                    height: 8,
+                    borderRadius: 1,
+                    mb: 1,
+                    backgroundColor: '#e9ecef',
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor: (() => {
+                        if (category.score >= 90) return '#28a745';
+                        if (category.score >= 70) return '#20c997';
+                        return '#ffc107';
+                      })(),
+                      borderRadius: 1,
+                    },
+                  }}
+                />
+                <Typography sx={{ fontSize: 12, color: '#6c757d' }}>
+                  {category.correct}/{category.total} questions correct
+                </Typography>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         </Paper>
 
         {/* Questions Review */}
@@ -456,6 +455,7 @@ export default function ExamResultsReview() {
               }}>
                 <Button
                   variant="outlined"
+                  color="secondary"
                   startIcon={<PrintIcon />}
                   onClick={handlePrint}
                   sx={{
@@ -469,6 +469,7 @@ export default function ExamResultsReview() {
                 </Button>
                 <Button
                   variant="outlined"
+                  color="secondary"
                   startIcon={<DownloadIcon />}
                   onClick={handleExport}
                   sx={{
@@ -526,19 +527,24 @@ export default function ExamResultsReview() {
                 <List>
                   {question.options.map((option, index) => (
                     <ListItem
-                      key={index}
+                      key={`option-${question.id}-${index}`}
                       sx={{
                         padding: '12px 15px',
                         border: '1px solid #e0e0e0',
                         borderRadius: 1,
                         mb: 1,
-                        backgroundColor: option.correct ? '#d4edda' : option.selected && !option.correct ? '#f8d7da' : option.selected ? '#fff3cd' : 'transparent',
+                        backgroundColor: (() => {
+                          if (option.correct) return '#d4edda';
+                          if (option.selected && !option.correct) return '#f8d7da';
+                          if (option.selected) return '#fff3cd';
+                          return 'transparent';
+                        })(),
                         display: 'flex',
                         alignItems: 'center',
                       }}
                     >
                       <Box sx={{ width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 1.5, fontWeight: 600, flexShrink: 0 }}>
-                        {String.fromCharCode(65 + index)}
+                        {String.fromCodePoint(65 + index)}
                       </Box>
                       <ListItemText primary={option.text} />
                       {option.correct && <CheckCircleIcon sx={{ color: '#28a745', ml: 1 }} />}
@@ -567,6 +573,7 @@ export default function ExamResultsReview() {
           }}>
             <Button
               variant="outlined"
+              color="secondary"
               startIcon={<ChevronLeftIcon />}
               sx={{
                 textTransform: 'none',
@@ -589,6 +596,7 @@ export default function ExamResultsReview() {
             </Button>
             <Button
               variant="outlined"
+              color="secondary"
               endIcon={<ChevronRightIcon />}
               sx={{
                 textTransform: 'none',

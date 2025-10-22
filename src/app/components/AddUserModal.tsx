@@ -2,21 +2,20 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Button,
-  Typography,
-  Grid,
-  Divider,
-  Box,
-} from "@mui/material";
+   Dialog,
+   DialogTitle,
+   DialogContent,
+   DialogActions,
+   TextField,
+   FormControl,
+   InputLabel,
+   Select,
+   MenuItem,
+   Button,
+   Typography,
+   Divider,
+   Box,
+ } from "@mui/material";
 import * as yup from "yup";
 
 interface AddUserModalProps {
@@ -112,9 +111,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     } catch (err: any) {
       const newErrs: any = {};
       if (err.inner) {
-        err.inner.forEach((e: any) => {
+        for (const e of err.inner) {
           newErrs[e.path] = e.message;
-        });
+        }
       }
       setErrors(newErrs);
     }
@@ -129,39 +128,33 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       </Typography>
       <Divider sx={{ mb: 2 }} />
 
-      <Grid container spacing={2}>
-        <Grid size={6}>
-          <TextField
-            label="Username"
-            fullWidth
-            value={newUser.username}
-            onChange={(e) => handleChange("username", e.target.value)}
-            error={!!errors.username}
-            helperText={errors.username}
-          />
-        </Grid>
-        <Grid size={6}>
-          <TextField
-            label="Email"
-            fullWidth
-            value={newUser.email}
-            onChange={(e) => handleChange("email", e.target.value)}
-            error={!!errors.email}
-            helperText={errors.email}
-          />
-        </Grid>
-        <Grid size={6}>
-          <TextField
-            label="Password"
-            type="password"
-            fullWidth
-            value={newUser.password}
-            onChange={(e) => handleChange("password", e.target.value)}
-            error={!!errors.password}
-            helperText={errors.password}
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          label="Username"
+          fullWidth
+          value={newUser.username}
+          onChange={(e) => handleChange("username", e.target.value)}
+          error={!!errors.username}
+          helperText={errors.username}
+        />
+        <TextField
+          label="Email"
+          fullWidth
+          value={newUser.email}
+          onChange={(e) => handleChange("email", e.target.value)}
+          error={!!errors.email}
+          helperText={errors.email}
+        />
+        <TextField
+          label="Password"
+          type="password"
+          fullWidth
+          value={newUser.password}
+          onChange={(e) => handleChange("password", e.target.value)}
+          error={!!errors.password}
+          helperText={errors.password}
+        />
+      </Box>
 
       {/* Personal Details */}
       <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 600 }}>
@@ -169,61 +162,53 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       </Typography>
       <Divider sx={{ mb: 2 }} />
 
-      <Grid container spacing={2}>
-        <Grid size={6}>
-          <TextField
-            label="First Name"
-            fullWidth
-            value={newUser.first_name}
-            onChange={(e) => handleChange("first_name", e.target.value)}
-            error={!!errors.first_name}
-            helperText={errors.first_name}
-          />
-        </Grid>
-        <Grid size={6}>
-          <TextField
-            label="Last Name"
-            fullWidth
-            value={newUser.last_name}
-            onChange={(e) => handleChange("last_name", e.target.value)}
-            error={!!errors.last_name}
-            helperText={errors.last_name}
-          />
-        </Grid>
-        <Grid size={6}>
-          <TextField
-            label="Date of Birth"
-            type="date"
-            InputLabelProps={{ shrink: true }}
-            fullWidth
-            value={newUser.dob}
-            onChange={(e) => handleChange("dob", e.target.value)}
-            error={!!errors.dob}
-            helperText={errors.dob}
-          />
-        </Grid>
-        <Grid size={6}>
-          <FormControl fullWidth>
-            <InputLabel>Gender</InputLabel>
-            <Select
-              value={newUser.gender}
-              label="Gender"
-              onChange={(e) => handleChange("gender", e.target.value)}
-              error={!!errors.gender}
-            >
-              <MenuItem value="">Select</MenuItem>
-              <MenuItem value="male">Male</MenuItem>
-              <MenuItem value="female">Female</MenuItem>
-              <MenuItem value="other">Other</MenuItem>
-            </Select>
-            {errors.gender && (
-              <Typography color="error" variant="caption">
-                {errors.gender}
-              </Typography>
-            )}
-          </FormControl>
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          label="First Name"
+          fullWidth
+          value={newUser.first_name}
+          onChange={(e) => handleChange("first_name", e.target.value)}
+          error={!!errors.first_name}
+          helperText={errors.first_name}
+        />
+        <TextField
+          label="Last Name"
+          fullWidth
+          value={newUser.last_name}
+          onChange={(e) => handleChange("last_name", e.target.value)}
+          error={!!errors.last_name}
+          helperText={errors.last_name}
+        />
+        <TextField
+          label="Date of Birth"
+          type="date"
+          slotProps={{ inputLabel: { shrink: true } }}
+          fullWidth
+          value={newUser.dob}
+          onChange={(e) => handleChange("dob", e.target.value)}
+          error={!!errors.dob}
+          helperText={errors.dob}
+        />
+        <FormControl fullWidth>
+          <InputLabel>Gender</InputLabel>
+          <Select
+            value={newUser.gender}
+            label="Gender"
+            onChange={(e) => handleChange("gender", e.target.value)}
+            error={!!errors.gender}
+          >
+            <MenuItem value="">Select</MenuItem>
+            <MenuItem value="male">Male</MenuItem>
+            <MenuItem value="female">Female</MenuItem>
+            <MenuItem value="other">Other</MenuItem>
+          </Select>
+          {errors.gender && (
+            <Typography color="error" variant="caption">
+              {errors.gender}
+            </Typography>
+          )}
+        </FormControl>
+      </Box>
 
       {/* Academic Details */}
       <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 600 }}>
@@ -231,32 +216,35 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       </Typography>
       <Divider sx={{ mb: 2 }} />
 
-      <Grid container spacing={2}>
-        <Grid size={6}>
-          <TextField
-            label="Grade"
-            fullWidth
-            value={newUser.grade}
-            onChange={(e) => handleChange("grade", e.target.value)}
-            error={!!errors.grade}
-            helperText={errors.grade}
-          />
-        </Grid>
-        <Grid size={6}>
-          <TextField
-            label="Section"
-            fullWidth
-            value={newUser.section}
-            onChange={(e) => handleChange("section", e.target.value)}
-            error={!!errors.section}
-            helperText={errors.section}
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          label="Grade"
+          fullWidth
+          value={newUser.grade}
+          onChange={(e) => handleChange("grade", e.target.value)}
+          error={!!errors.grade}
+          helperText={errors.grade}
+        />
+        <TextField
+          label="Section"
+          fullWidth
+          value={newUser.section}
+          onChange={(e) => handleChange("section", e.target.value)}
+          error={!!errors.section}
+          helperText={errors.section}
+        />
+      </Box>
 
       <DialogActions sx={{ mt: 3 }}>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSubmit}>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          sx={{
+            background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+            '&:hover': { opacity: 0.9 }
+          }}
+        >
           Save Student
         </Button>
       </DialogActions>
@@ -303,7 +291,14 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       />
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSubmit}>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          sx={{
+            background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+            '&:hover': { opacity: 0.9 }
+          }}
+        >
           Save {newUser.role === "teacher" ? "Teacher" : "Admin"}
         </Button>
       </DialogActions>
