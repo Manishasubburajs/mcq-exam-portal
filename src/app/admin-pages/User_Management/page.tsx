@@ -25,9 +25,9 @@ import {
   Select,
   MenuItem,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
-import { Add, Edit, Delete, VpnKey, Download, Menu, PersonAdd } from "@mui/icons-material";
-import { useMediaQuery } from "@mui/material";
+import { Edit, Delete, VpnKey, Download, PersonAdd } from "@mui/icons-material";
 import dynamic from 'next/dynamic';
 import Sidebar from "../../components/Sidebar";
 import AddUserModal from "../../components/AddUserModal";
@@ -100,7 +100,16 @@ const UserManagement: React.FC = () => {
 
   // Filter users by tab + search + filters
   useEffect(() => {
-    const role = tabIndex === 0 ? "student" : tabIndex === 1 ? "teacher" : "admin";
+    const getRoleByTabIndex = (index: number): string => {
+      switch (index) {
+        case 0: return "student";
+        case 1: return "teacher";
+        case 2: return "admin";
+        default: return "student";
+      }
+    };
+
+    const role = getRoleByTabIndex(tabIndex);
     const filtered = users.filter((user) => {
       const fullName = `${user.first_name} ${user.last_name}`;
       const matchesSearch =
@@ -109,10 +118,12 @@ const UserManagement: React.FC = () => {
 
       const matchesStatus = !statusFilter || user.status === statusFilter;
 
-      const userClass =
-        user.grade || user.section
-          ? `${user.grade || ""}${user.section ? ` - ${user.section}` : ""}`
-          : "";
+      const getUserClass = (user: User): string => {
+        if (!user.grade && !user.section) return "";
+        return `${user.grade || ""}${user.section ? ' - ' + user.section : ""}`;
+      };
+
+      const userClass = getUserClass(user);
       const matchesClass = !classFilter || userClass === classFilter;
 
       const matchesTab = user.role === role;
@@ -128,11 +139,16 @@ const UserManagement: React.FC = () => {
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
   // Unique class/group list
+  const getUserClass = (user: User): string => {
+    if (!user.grade && !user.section) return "";
+    return `${user.grade || ""}${user.section ? ' - ' + user.section : ""}`;
+  };
+
   const classGroups = Array.from(
     new Set(
       users
         .filter((u) => u.grade || u.section)
-        .map((u) => `${u.grade || ""}${u.section ? ` - ${u.section}` : ""}`)
+        .map(getUserClass)
     )
   );
 
@@ -247,14 +263,25 @@ const UserManagement: React.FC = () => {
             </FormControl>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
-            <Button variant="outlined" onClick={() => {
-              setSearch("");
-              setStatusFilter("");
-              setClassFilter("");
-            }}>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("");
+                setClassFilter("");
+              }}
+            >
               Reset Filters
             </Button>
-            <Button variant="contained" onClick={() => {}}>
+            <Button
+              variant="contained"
+              onClick={() => {}}
+              sx={{
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                '&:hover': { opacity: 0.9 }
+              }}
+            >
               Apply Filters
             </Button>
             <Button
@@ -306,13 +333,16 @@ const UserManagement: React.FC = () => {
           <Box sx={{ padding: '20px', borderBottom: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6" sx={{ color: 'text.primary' }}>
-                {tabIndex === 0
-                  ? "All Students"
-                  : tabIndex === 1
-                  ? "All Teachers"
-                  : "All Administrators"}
+                {(() => {
+                  switch (tabIndex) {
+                    case 0: return "All Students";
+                    case 1: return "All Teachers";
+                    case 2: return "All Administrators";
+                    default: return "All Users";
+                  }
+                })()}
               </Typography>
-              <Button variant="outlined" startIcon={<Download />}>
+              <Button variant="outlined" color="secondary" startIcon={<Download />}>
                 Export Users
               </Button>
             </Box>
@@ -339,12 +369,12 @@ const UserManagement: React.FC = () => {
                 <TableBody>
                   {paginatedUsers.map((user) => {
                     const fullName = `${user.first_name} ${user.last_name}`;
-                    const classGroup =
-                      user.grade || user.section
-                        ? `${user.grade || ""}${
-                            user.section ? ` - ${user.section}` : ""
-                          }`
-                        : "-";
+                    const getDisplayClass = (user: User): string => {
+                      if (!user.grade && !user.section) return "-";
+                      return `${user.grade || ""}${user.section ? ' - ' + user.section : ""}`;
+                    };
+
+                    const classGroup = getDisplayClass(user);
 
                     return (
                       <TableRow key={user.user_id} hover>
@@ -373,7 +403,7 @@ const UserManagement: React.FC = () => {
                               user.role.charAt(0).toUpperCase() +
                               user.role.slice(1)
                             }
-                            color={getRoleColor(user.role) as any}
+                            color={getRoleColor(user.role)}
                             size="small"
                           />
                         </TableCell>
@@ -386,7 +416,7 @@ const UserManagement: React.FC = () => {
                               user.status.charAt(0).toUpperCase() +
                               user.status.slice(1)
                             }
-                            color={getStatusColor(user.status) as any}
+                            color={getStatusColor(user.status)}
                             size="small"
                           />
                         </TableCell>
@@ -459,7 +489,14 @@ const UserManagement: React.FC = () => {
         open={addUserOpen}
         onClose={() => setAddUserOpen(false)}
         onUserAdded={(newUser) => setUsers((prev) => [...prev, newUser])}
-        defaultRole={tabIndex === 0 ? "student" : tabIndex === 1 ? "teacher" : "admin"}
+        defaultRole={(() => {
+          switch (tabIndex) {
+            case 0: return "student";
+            case 1: return "teacher";
+            case 2: return "admin";
+            default: return "student";
+          }
+        })()}
       />
 
       <EditUserModal

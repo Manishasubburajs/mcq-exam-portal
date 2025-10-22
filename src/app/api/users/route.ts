@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 export async function GET() {
   try {
     const [rows] = await db.query(`
-      SELECT 
+      SELECT
         u.user_id,
         u.username,
         u.first_name,

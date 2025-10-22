@@ -21,7 +21,6 @@ import {
   Chip,
   Divider,
   Stack,
-  Fab,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -138,7 +137,7 @@ const MultipleChoiceQuestionEditor: React.FC = () => {
   };
 
   const addOption = () => {
-    const newId = String.fromCharCode(97 + question.options.length);
+    const newId = String.fromCodePoint(97 + question.options.length);
     setQuestion(prev => ({
       ...prev,
       options: [...prev.options, { id: newId, text: '', isCorrect: false }],
@@ -268,18 +267,20 @@ const MultipleChoiceQuestionEditor: React.FC = () => {
               Question Bank
             </Typography>
             <Stack spacing={1} sx={{ mb: 2 }}>
-              {questionBank.map((item, index) => (
-                <Paper
-                  key={index}
-                  elevation={selectedQuestionBank === index ? 2 : 0}
-                  sx={{
-                    p: 2,
-                    cursor: 'pointer',
-                    border: selectedQuestionBank === index ? '1px solid #6a89cc' : '1px solid #eee',
-                    bgcolor: selectedQuestionBank === index ? '#e3e9ff' : 'white',
-                    '&:hover': { bgcolor: '#f8faff', borderColor: '#6a89cc' },
-                  }}
-                  onClick={() => setSelectedQuestionBank(index)}
+              {questionBank.map((item) => {
+                const itemIndex = questionBank.findIndex(q => q.title === item.title);
+                return (
+                  <Paper
+                    key={`question-bank-${item.title.replaceAll(/\s+/g, '-').toLowerCase()}`}
+                    elevation={selectedQuestionBank === itemIndex ? 2 : 0}
+                    sx={{
+                      p: 2,
+                      cursor: 'pointer',
+                      border: selectedQuestionBank === itemIndex ? '1px solid #6a89cc' : '1px solid #eee',
+                      bgcolor: selectedQuestionBank === itemIndex ? '#e3e9ff' : 'white',
+                      '&:hover': { bgcolor: '#f8faff', borderColor: '#6a89cc' },
+                    }}
+                    onClick={() => setSelectedQuestionBank(itemIndex)}
                 >
                   <Typography variant="subtitle2" fontWeight={600}>
                     {item.title}
@@ -291,7 +292,8 @@ const MultipleChoiceQuestionEditor: React.FC = () => {
                     {item.subject} • {item.points} points • {item.difficulty}
                   </Typography>
                 </Paper>
-              ))}
+                );
+              })}
             </Stack>
             <Button
               variant="contained"
@@ -368,11 +370,11 @@ const MultipleChoiceQuestionEditor: React.FC = () => {
                 <Paper key={option.id} variant="outlined" sx={{ p: 2 }}>
                   <Box display="flex" alignItems="center" gap={2}>
                     <Typography variant="h6" sx={{ color: '#4a69bd', minWidth: 30 }}>
-                      {String.fromCharCode(65 + index)}
+                      {String.fromCodePoint(65 + index)}
                     </Typography>
                     <TextField
                       fullWidth
-                      placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                      placeholder={`Option ${String.fromCodePoint(65 + index)}`}
                       value={option.text}
                       onChange={(e) => handleOptionChange(option.id, e.target.value)}
                     />
@@ -457,8 +459,10 @@ const MultipleChoiceQuestionEditor: React.FC = () => {
                   <TextField
                     type="number"
                     value={question.points}
-                    onChange={(e) => setQuestion(prev => ({ ...prev, points: parseInt(e.target.value) || 1 }))}
-                    inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                    onChange={(e) => setQuestion(prev => ({ ...prev, points: Number.parseInt(e.target.value) || 1 }))}
+                    slotProps={{
+                      htmlInput: { min: 1, style: { textAlign: 'center' } }
+                    }}
                     sx={{ width: 60 }}
                   />
                   <IconButton size="small" onClick={() => handlePointsChange(1)}>
@@ -476,20 +480,27 @@ const MultipleChoiceQuestionEditor: React.FC = () => {
               value={question.tags.join(', ')}
               onChange={(e) => setQuestion(prev => ({
                 ...prev,
-                tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag)
+                tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
               }))}
               sx={{ mb: 3 }}
             />
 
             {/* Action Buttons */}
             <Box display="flex" gap={2} justifyContent="flex-end" sx={{ pt: 2, borderTop: '1px solid #eee' }}>
-              <Button variant="outlined" startIcon={<CancelIcon />}>
+              <Button variant="outlined" color="secondary" startIcon={<CancelIcon />}>
                 Cancel
               </Button>
-              <Button variant="outlined" startIcon={<SaveIcon />}>
+              <Button variant="outlined" color="secondary" startIcon={<SaveIcon />}>
                 Save Draft
               </Button>
-              <Button variant="contained" startIcon={<CheckIcon />} sx={{ bgcolor: '#6a89cc', '&:hover': { bgcolor: '#5a79bc' } }}>
+              <Button
+                variant="contained"
+                startIcon={<CheckIcon />}
+                sx={{
+                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                  '&:hover': { opacity: 0.9 }
+                }}
+              >
                 Save Question
               </Button>
             </Box>
@@ -513,7 +524,7 @@ const MultipleChoiceQuestionEditor: React.FC = () => {
                     key={option.id}
                     value={option.id}
                     control={<Radio />}
-                    label={`${String.fromCharCode(65 + index)}. ${option.text}`}
+                    label={`${String.fromCodePoint(65 + index)}. ${option.text}`}
                   />
                 ))}
               </RadioGroup>

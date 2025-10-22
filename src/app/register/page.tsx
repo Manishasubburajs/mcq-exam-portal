@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Container,
-  Grid,
   Step,
   StepLabel,
   Stepper,
@@ -19,6 +18,7 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import * as yup from "yup";
+import styles from "./page.module.css";
 
 const steps = ["Account", "Personal", "Academic"];
 
@@ -33,7 +33,7 @@ const accountSchema = yup.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .matches(/[a-zA-Z]/, "Password must contain letters")
-    .matches(/[0-9]/, "Password must contain numbers")
+    .matches(/\d/, "Password must contain numbers")
     .required("Password is required"),
   confirmPassword: yup
     .string()
@@ -111,7 +111,7 @@ export default function Register() {
         console.log("Saved user:", data);
 
         // Redirect to login page or student dashboard
-        window.location.href = "/";
+        globalThis.location.href = "/";
       } else {
         const err = await res.json();
         alert("❌ Error: " + err.error);
@@ -136,9 +136,9 @@ export default function Register() {
     } catch (err: any) {
       const newErrors: any = {};
       if (err.inner) {
-        err.inner.forEach((e: any) => {
+        for (const e of err.inner) {
           if (e.path) newErrors[e.path] = e.message;
-        });
+        }
       }
       setErrors(newErrors);
     }
@@ -170,8 +170,7 @@ export default function Register() {
           <Box
             sx={{
               flex: 1,
-              background: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'><rect fill='%236a11cb' width='500' height='500'/><path fill='%232575fc' d='M250,0 L500,250 L250,500 L0,250 Z'/></svg>")`,
-              backgroundSize: "cover",
+              background: styles.bannerGradient,
               color: "white",
               p: 4,
               display: "flex",
@@ -190,43 +189,19 @@ export default function Register() {
               Take exams, track your progress, and improve your knowledge with
               our interactive platform.
             </Typography>
-            <ol
-              style={{
-                marginLeft: "1rem",
-                listStyle: "none", // remove numbers
-                padding: 0,
-              }}
-            >
+            <ol className={styles.featureList}>
               {[
                 "Access to hundreds of practice exams",
                 "Detailed performance analytics",
                 "Progress tracking and certificates",
                 "24/7 availability from any device",
                 "Expert-curated question bank",
-              ].map((item, index) => (
+              ].map((item) => (
                 <li
-                  key={index}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    marginBottom: "0.5rem",
-                  }}
+                  key={item}
+                  className={styles.featureListItem}
                 >
-                  <span
-                    style={{
-                      backgroundColor: "#FFEB3B", // yellow background
-                      color: "green",
-                      fontWeight: "bold",
-                      borderRadius: "50%",
-                      width: "1.2rem",
-                      height: "1.2rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginRight: "0.5rem",
-                      fontSize: "0.8rem",
-                    }}
-                  >
+                  <span className={styles.featureIcon}>
                     ✔
                   </span>
                   {item}
@@ -239,7 +214,7 @@ export default function Register() {
           <Box sx={{ flex: 1, p: 4 }}>
             <Box textAlign="center" mb={3}>
               <Typography variant="h4" color="primary">
-                MCQ <span style={{ color: "#6a11cb" }}>Exam Portal</span>
+                MCQ <span className={styles.portalTitle}>Exam Portal</span>
               </Typography>
               <Typography variant="subtitle1">Student Registration</Typography>
             </Box>
@@ -280,8 +255,13 @@ export default function Register() {
             {/* Step 2: Personal */}
             {activeStep === 1 && (
               <Box>
-                <Grid container spacing={2}>
-                  <Grid xs={6}>
+                <Box sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: 2,
+                  mb: 2
+                }}>
+                  <Box sx={{ flex: 1 }}>
                     <TextField
                       fullWidth
                       label="First Name"
@@ -292,8 +272,8 @@ export default function Register() {
                       error={!!errors.firstName}
                       helperText={errors.firstName}
                     />
-                  </Grid>
-                  <Grid xs={6}>
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
                     <TextField
                       fullWidth
                       label="Last Name"
@@ -302,14 +282,13 @@ export default function Register() {
                       error={!!errors.lastName}
                       helperText={errors.lastName}
                     />
-                  </Grid>
-                </Grid>
+                  </Box>
+                </Box>
                 <TextField
                   fullWidth
                   margin="normal"
                   label="Date of Birth"
                   type="date"
-                  InputLabelProps={{ shrink: true }}
                   value={formData.dob}
                   onChange={(e) => handleChange("dob", e.target.value)}
                   error={!!errors.dob}
@@ -415,10 +394,15 @@ export default function Register() {
                 disabled={activeStep === 0}
                 onClick={handleBack}
                 variant="outlined"
+                color="secondary"
               >
                 Back
               </Button>
-              <Button variant="contained" onClick={handleNext}>
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                className={styles.gradientButton}
+              >
                 {activeStep === steps.length - 1
                   ? "Complete Registration"
                   : "Next"}
@@ -429,7 +413,7 @@ export default function Register() {
             <Box sx={{ textAlign: "center", mt: 3 }}>
               <Typography variant="body2">
                 Already have an account?{" "}
-                <Link href="/" style={{ color: "#2575fc" }}>
+                <Link href="/" className={styles.loginLink}>
                   Log in here
                 </Link>
               </Typography>

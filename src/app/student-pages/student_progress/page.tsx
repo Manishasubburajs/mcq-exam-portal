@@ -3,7 +3,6 @@
 import React from 'react';
 import {
   Box,
-  Grid,
   Paper,
   Card,
   CardContent,
@@ -18,7 +17,6 @@ import {
   Button,
   LinearProgress,
   Stack,
-  useTheme,
 } from '@mui/material';
 import {
   Dashboard,
@@ -28,7 +26,6 @@ import {
   History,
   Settings,
   Logout,
-  Home,
   TrendingUp,
   Schedule,
   EmojiEvents,
@@ -45,7 +42,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2'; // cSpell:ignore chartjs
 
 ChartJS.register(
   CategoryScale,
@@ -58,8 +55,61 @@ ChartJS.register(
   Filler
 );
 
+interface SidebarProps {}
+
+const Sidebar: React.FC<SidebarProps> = () => (
+  <Paper
+    elevation={0}
+    sx={{
+      width: { xs: '100%', md: 280 },
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+      color: 'white',
+      position: { xs: 'static', md: 'fixed' },
+      left: 0,
+      top: 0,
+      zIndex: 1000,
+    }}
+  >
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+        MCQ <Box component="span" sx={{ color: '#ffcc00' }}>Portal</Box>
+      </Typography>
+    </Box>
+
+    <Stack spacing={1} sx={{ px: 2 }}>
+      {[
+        { icon: <Dashboard />, text: 'Dashboard', active: false },
+        { icon: <MenuBook />, text: 'Take Exam', active: false },
+        { icon: <Assessment />, text: 'Results', active: false },
+        { icon: <Person />, text: 'Profile', active: true },
+        { icon: <History />, text: 'Exam History', active: false },
+        { icon: <Settings />, text: 'Settings', active: false },
+        { icon: <Logout />, text: 'Logout', active: false },
+      ].map((item) => (
+        <Button
+          key={item.text}
+          startIcon={item.icon}
+          sx={{
+            justifyContent: 'flex-start',
+            color: 'white',
+            backgroundColor: item.active ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            },
+            py: 1.5,
+            px: 2,
+            borderRadius: 1,
+          }}
+        >
+          {item.text}
+        </Button>
+      ))}
+    </Stack>
+  </Paper>
+);
+
 const StudentProgressPage = () => {
-  const theme = useTheme();
 
   const chartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
@@ -162,57 +212,6 @@ const StudentProgressPage = () => {
     return '#dc3545';
   };
 
-  const Sidebar = () => (
-    <Paper
-      elevation={0}
-      sx={{
-        width: { xs: '100%', md: 280 },
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-        color: 'white',
-        position: { xs: 'static', md: 'fixed' },
-        left: 0,
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-          MCQ <Box component="span" sx={{ color: '#ffcc00' }}>Portal</Box>
-        </Typography>
-      </Box>
-
-      <Stack spacing={1} sx={{ px: 2 }}>
-        {[
-          { icon: <Dashboard />, text: 'Dashboard', active: false },
-          { icon: <MenuBook />, text: 'Take Exam', active: false },
-          { icon: <Assessment />, text: 'Results', active: false },
-          { icon: <Person />, text: 'Profile', active: true },
-          { icon: <History />, text: 'Exam History', active: false },
-          { icon: <Settings />, text: 'Settings', active: false },
-          { icon: <Logout />, text: 'Logout', active: false },
-        ].map((item) => (
-          <Button
-            key={item.text}
-            startIcon={item.icon}
-            sx={{
-              justifyContent: 'flex-start',
-              color: 'white',
-              backgroundColor: item.active ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              },
-              py: 1.5,
-              px: 2,
-              borderRadius: 1,
-            }}
-          >
-            {item.text}
-          </Button>
-        ))}
-      </Stack>
-    </Paper>
-  );
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -270,67 +269,80 @@ const StudentProgressPage = () => {
                 <Typography sx={{ color: '#7f8c8d', mb: 2 }}>
                   Student ID: S12345 • Class: 10th Grade • Section: A
                 </Typography>
-                <Grid container spacing={4}>
+                <Box sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 4,
+                  '& > *': {
+                    flex: { xs: '1 1 45%', sm: '1 1 22%' },
+                    minWidth: { xs: '120px', sm: '140px' }
+                  }
+                }}>
                   {[
                     { value: '82%', label: 'Average Score' },
                     { value: '15', label: 'Exams Taken' },
                     { value: '12', label: 'Certificates' },
                     { value: '#5', label: 'Class Rank' },
                   ].map((stat) => (
-                    <Grid item xs={6} sm={3} key={stat.label}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#6a11cb' }}>
-                          {stat.value}
-                        </Typography>
-                        <Typography sx={{ fontSize: '14px', color: '#7f8c8d' }}>
-                          {stat.label}
-                        </Typography>
-                      </Box>
-                    </Grid>
+                    <Box key={stat.label} sx={{ textAlign: 'center' }}>
+                      <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#6a11cb' }}>
+                        {stat.value}
+                      </Typography>
+                      <Typography sx={{ fontSize: '14px', color: '#7f8c8d' }}>
+                        {stat.label}
+                      </Typography>
+                    </Box>
                   ))}
-                </Grid>
+                </Box>
               </Box>
             </Box>
           </CardContent>
         </Card>
 
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Box sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 3,
+          mb: 4,
+          '& > *': {
+            flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 24px)', md: '1 1 calc(25% - 24px)' },
+            minWidth: { xs: '250px', md: '200px' }
+          }
+        }}>
           {[
             { icon: <Schedule />, value: '3', label: 'Upcoming Exams', color: '#28a745' },
             { icon: <TrendingUp />, value: '+7%', label: 'Progress This Month', color: '#1a73e8' },
             { icon: <School />, value: '24h', label: 'Total Study Time', color: '#e37400' },
             { icon: <EmojiEvents />, value: 'Top 10%', label: 'School Ranking', color: '#dc3545' },
           ].map((stat) => (
-            <Grid item xs={12} sm={6} md={3} key={stat.label}>
-              <Card sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: `${stat.color}20`,
-                        color: stat.color,
-                        width: 60,
-                        height: 60,
-                        mr: 2,
-                      }}
-                    >
-                      {stat.icon}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                        {stat.value}
-                      </Typography>
-                      <Typography sx={{ color: '#7f8c8d', fontSize: '14px' }}>
-                        {stat.label}
-                      </Typography>
-                    </Box>
+            <Card key={stat.label} sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: `${stat.color}20`,
+                      color: stat.color,
+                      width: 60,
+                      height: 60,
+                      mr: 2,
+                    }}
+                  >
+                    {stat.icon}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                      {stat.value}
+                    </Typography>
+                    <Typography sx={{ color: '#7f8c8d', fontSize: '14px' }}>
+                      {stat.label}
+                    </Typography>
                   </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                </Box>
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
+        </Box>
 
         {/* Performance Chart */}
         <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
@@ -350,39 +362,45 @@ const StudentProgressPage = () => {
             <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 3 }}>
               Subject Performance
             </Typography>
-            <Grid container spacing={3}>
+            <Box sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 3,
+              '& > *': {
+                flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 24px)' },
+                minWidth: { xs: '250px', md: '200px' }
+              }
+            }}>
               {[
                 { name: 'Mathematics', score: 88, exams: 7, certificates: 5 },
                 { name: 'Science', score: 79, exams: 5, certificates: 3 },
                 { name: 'History', score: 72, exams: 3, certificates: 2 },
               ].map((subject) => (
-                <Grid item xs={12} md={4} key={subject.name}>
-                  <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography sx={{ fontWeight: 600 }}>{subject.name}</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>{subject.score}%</Typography>
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={subject.score}
-                      sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        mb: 1,
-                        bgcolor: '#e9ecef',
-                        '& .MuiLinearProgress-bar': {
-                          bgcolor: getProgressColor(subject.score),
-                          borderRadius: 4,
-                        },
-                      }}
-                    />
-                    <Typography sx={{ fontSize: '12px', color: '#7f8c8d' }}>
-                      {subject.exams} exams • {subject.certificates} certificates
-                    </Typography>
+                <Box key={subject.name} sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography sx={{ fontWeight: 600 }}>{subject.name}</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{subject.score}%</Typography>
                   </Box>
-                </Grid>
+                  <LinearProgress
+                    variant="determinate"
+                    value={subject.score}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      mb: 1,
+                      bgcolor: '#e9ecef',
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: getProgressColor(subject.score),
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                  <Typography sx={{ fontSize: '12px', color: '#7f8c8d' }}>
+                    {subject.exams} exams • {subject.certificates} certificates
+                  </Typography>
+                </Box>
               ))}
-            </Grid>
+            </Box>
           </CardContent>
         </Card>
 
@@ -393,7 +411,7 @@ const StudentProgressPage = () => {
               <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
                 Recent Exam History
               </Typography>
-              <Button variant="outlined">View Full History</Button>
+              <Button variant="outlined" color="secondary">View Full History</Button>
             </Box>
 
             <TableContainer>
@@ -410,8 +428,8 @@ const StudentProgressPage = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {examHistoryData.map((exam, index) => (
-                    <TableRow key={index} sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
+                  {examHistoryData.map((exam) => (
+                    <TableRow key={`${exam.examName}-${exam.date}`} sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
                       <TableCell>
                         <Typography sx={{ fontWeight: 500 }}>{exam.examName}</Typography>
                         <Typography sx={{ fontSize: '12px', color: '#7f8c8d' }}>
@@ -443,7 +461,7 @@ const StudentProgressPage = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Button variant="outlined" size="small">
+                        <Button variant="outlined" color="secondary" size="small">
                           Review
                         </Button>
                       </TableCell>
