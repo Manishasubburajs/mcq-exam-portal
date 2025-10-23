@@ -1,223 +1,223 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
-   Box,
-   Typography,
-   Paper,
-   FormControl,
-   InputLabel,
-   Select,
-   MenuItem,
-   TextField,
-   Button,
-   Table,
-   TableBody,
-   TableCell,
-   TableContainer,
-   TableHead,
-   TableRow,
-   Chip,
-   IconButton,
-   Pagination,
-   useMediaQuery,
- } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
-} from '@mui/icons-material';
-import dynamic from 'next/dynamic';
-import Sidebar from '../../components/Sidebar';
+  Box,
+  Typography,
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  IconButton,
+  Pagination,
+  useMediaQuery,
+  CircularProgress,
+  Tooltip,
+} from "@mui/material";
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from "@mui/icons-material";
+import dynamic from "next/dynamic";
+import Sidebar from "../../components/Sidebar";
 
-const Header = dynamic(() => import('../../components/Header'), { ssr: false });
-
-interface Question {
-  id: number;
-  question: string;
-  subject: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  created: string;
-  usedIn: string;
-}
-
-const sampleQuestions: Question[] = [
-  {
-    id: 1001,
-    question: "What is the capital of France?",
-    subject: "Geography",
-    difficulty: "easy",
-    created: "2023-10-15",
-    usedIn: "3 exams"
-  },
-  {
-    id: 1002,
-    question: "Solve for x: 2x + 5 = 15",
-    subject: "Mathematics",
-    difficulty: "medium",
-    created: "2023-09-22",
-    usedIn: "5 exams"
-  },
-  {
-    id: 1003,
-    question: "Which of the following is a chemical element?",
-    subject: "Science",
-    difficulty: "easy",
-    created: "2023-11-05",
-    usedIn: "2 exams"
-  },
-  {
-    id: 1004,
-    question: "Who wrote the Declaration of Independence?",
-    subject: "History",
-    difficulty: "medium",
-    created: "2023-08-17",
-    usedIn: "4 exams"
-  },
-  {
-    id: 1005,
-    question: "What is the derivative of x²?",
-    subject: "Mathematics",
-    difficulty: "hard",
-    created: "2023-10-28",
-    usedIn: "1 exam"
-  }
-];
-
-const getDifficultyColor = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy': return 'success';
-    case 'medium': return 'warning';
-    case 'hard': return 'error';
-    default: return 'default';
-  }
-};
-
-const getSubjectColor = (subject: string) => {
-  switch (subject.toLowerCase()) {
-    case 'mathematics': return '#e6f4ea';
-    case 'science': return '#e8f0fe';
-    case 'history': return '#fef7e0';
-    case 'geography': return '#f3e5f5';
-    case 'english': return '#fce4ec';
-    default: return '#f5f5f5';
-  }
-};
-
-const getSubjectTextColor = (subject: string) => {
-  switch (subject.toLowerCase()) {
-    case 'mathematics': return '#137333';
-    case 'science': return '#1a73e8';
-    case 'history': return '#e37400';
-    case 'geography': return '#7b1fa2';
-    case 'english': return '#c2185b';
-    default: return '#333';
-  }
-};
+const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
 export default function QuestionBankPage() {
   const router = useRouter();
-  const isDesktop = useMediaQuery('(min-width:769px)');
+  const isDesktop = useMediaQuery("(min-width:769px)");
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
-  const [subjectFilter, setSubjectFilter] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState('');
-  const [searchFilter, setSearchFilter] = useState('');
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const [subjectFilter, setSubjectFilter] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
 
+  const fetchQuestions = async () => {
+    setLoading(true);
+    try {
+      const query = new URLSearchParams();
+      if (subjectFilter) query.append("subject", subjectFilter);
+      if (difficultyFilter) query.append("difficulty", difficultyFilter);
+      if (searchFilter) query.append("search", searchFilter);
+
+      const res = await fetch(`/api/questions?${query.toString()}`);
+      const data = await res.json();
+      if (data.success) setQuestions(data.data);
+      else setQuestions([]);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchQuestions();
+  }, []);
+
   const handleApplyFilters = () => {
-    // In a real application, this would filter the questions
-    console.log('Applying filters:', { subjectFilter, difficultyFilter, searchFilter });
+    fetchQuestions();
+    setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
-    setSubjectFilter('');
-    setDifficultyFilter('');
-    setSearchFilter('');
+    setSubjectFilter("");
+    setDifficultyFilter("");
+    setSearchFilter("");
+    fetchQuestions();
+    setCurrentPage(1);
   };
 
   const handleAddQuestion = () => {
-    // Navigate back to Create Exam page
-    router.push('/admin-pages/Create_Exam');
+    router.push("/admin-pages/Create_Exam");
   };
 
   const handleEditQuestion = (id: number) => {
-    console.log('Edit question:', id);
+    console.log("Edit question:", id);
   };
 
-  const handleDeleteQuestion = (id: number) => {
-    console.log('Delete question:', id);
+  const handleDeleteQuestion = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+
+    try {
+      const res = await fetch(`/api/questions?question_id=${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) fetchQuestions();
+    } catch (err) {
+      console.error(err);
+    }
   };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case "easy":
+        return "success";
+      case "medium":
+        return "warning";
+      case "hard":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  const getSubjectColor = (subject: string) => {
+    if (!subject) return "#f5f5f5";
+    switch (subject.toLowerCase()) {
+      case "mathematics":
+        return "#e6f4ea";
+      case "science":
+        return "#e8f0fe";
+      case "history":
+        return "#fef7e0";
+      case "geography":
+        return "#f3e5f5";
+      case "english":
+        return "#fce4ec";
+      default:
+        return "#f5f5f5";
+    }
+  };
+
+  const getSubjectTextColor = (subject: string) => {
+    if (!subject) return "#333";
+    switch (subject.toLowerCase()) {
+      case "mathematics":
+        return "#137333";
+      case "science":
+        return "#1a73e8";
+      case "history":
+        return "#e37400";
+      case "geography":
+        return "#7b1fa2";
+      case "english":
+        return "#c2185b";
+      default:
+        return "#333";
+    }
+  };
+
+  const paginatedQuestions = questions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
             zIndex: 999,
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
-        ml: sidebarOpen && isDesktop ? '220px' : 0,
-        transition: 'margin-left 0.3s ease',
-        paddingTop: { xs: '50px', md: '80px' }
-      }}>
+      <Box
+        className={`main-content ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
+        sx={{
+          ml: sidebarOpen && isDesktop ? "220px" : 0,
+          transition: "margin-left 0.3s ease",
+          paddingTop: { xs: "50px", md: "80px" },
+        }}
+      >
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Question Bank" sidebarOpen={sidebarOpen} />
 
         {/* Filters Section */}
         <Paper
           elevation={1}
           sx={{
-            padding: '20px',
-            borderRadius: '10px',
-            marginBottom: '25px',
-            backgroundColor: 'white',
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "25px",
+            backgroundColor: "white",
           }}
         >
-          <Typography variant="h6" sx={{ marginBottom: '15px', color: '#2c3e50' }}>
+          <Typography variant="h6" sx={{ marginBottom: "15px", color: "#2c3e50" }}>
             Filter Questions
           </Typography>
           <Box
             sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '10px',
-              margin: '0 -10px',
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px",
+              margin: "0 -10px",
             }}
           >
-            <Box sx={{ flex: '1', minWidth: '200px', margin: '0 10px 15px' }}>
+            <Box sx={{ flex: "1", minWidth: "200px", margin: "0 10px 15px" }}>
               <FormControl fullWidth>
                 <InputLabel>Subject</InputLabel>
-                <Select
-                  value={subjectFilter}
-                  label="Subject"
-                  onChange={(e) => setSubjectFilter(e.target.value)}
-                >
+                <Select value={subjectFilter} label="Subject" onChange={(e) => setSubjectFilter(e.target.value)}>
                   <MenuItem value="">All Subjects</MenuItem>
-                  <MenuItem value="mathematics">Mathematics</MenuItem>
-                  <MenuItem value="science">Science</MenuItem>
-                  <MenuItem value="history">History</MenuItem>
-                  <MenuItem value="english">English</MenuItem>
-                  <MenuItem value="geography">Geography</MenuItem>
+                  <MenuItem value="Mathematics">Mathematics</MenuItem>
+                  <MenuItem value="Science">Science</MenuItem>
+                  <MenuItem value="History">History</MenuItem>
+                  <MenuItem value="English">English</MenuItem>
+                  <MenuItem value="Geography">Geography</MenuItem>
                 </Select>
               </FormControl>
             </Box>
 
-            <Box sx={{ flex: '1', minWidth: '200px', margin: '0 10px 15px' }}>
+            <Box sx={{ flex: "1", minWidth: "200px", margin: "0 10px 15px" }}>
               <FormControl fullWidth>
                 <InputLabel>Difficulty</InputLabel>
                 <Select
@@ -226,14 +226,14 @@ export default function QuestionBankPage() {
                   onChange={(e) => setDifficultyFilter(e.target.value)}
                 >
                   <MenuItem value="">All Levels</MenuItem>
-                  <MenuItem value="easy">Easy</MenuItem>
-                  <MenuItem value="medium">Medium</MenuItem>
-                  <MenuItem value="hard">Hard</MenuItem>
+                  <MenuItem value="Easy">Easy</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="Hard">Hard</MenuItem>
                 </Select>
               </FormControl>
             </Box>
 
-            <Box sx={{ flex: '1', minWidth: '200px', margin: '0 10px 15px' }}>
+            <Box sx={{ flex: "1", minWidth: "200px", margin: "0 10px 15px" }}>
               <TextField
                 fullWidth
                 label="Search"
@@ -244,15 +244,15 @@ export default function QuestionBankPage() {
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
             <Button variant="outlined" color="secondary" onClick={handleResetFilters}>
               Reset Filters
             </Button>
             <Button
               variant="contained"
               sx={{
-                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                '&:hover': { opacity: 0.9 }
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
               }}
               onClick={handleApplyFilters}
             >
@@ -262,127 +262,98 @@ export default function QuestionBankPage() {
         </Paper>
 
         {/* Questions Table */}
-        <Paper
-          elevation={1}
-          sx={{
-            padding: '25px',
-            borderRadius: '10px',
-            backgroundColor: 'white',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-            }}
-          >
-            <Typography variant="h6" sx={{ color: '#2c3e50' }}>
+        <Paper elevation={1} sx={{ padding: "25px", borderRadius: "10px", backgroundColor: "white" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <Typography variant="h6" sx={{ color: "#2c3e50" }}>
               All Questions
             </Typography>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              sx={{
-                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                '&:hover': { opacity: 0.9 }
-              }}
+              sx={{ background: "linear-gradient(to right, #6a11cb, #2575fc)", "&:hover": { opacity: 0.9 } }}
               onClick={handleAddQuestion}
             >
               Add Question
             </Button>
           </Box>
 
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-                  <TableCell sx={{ fontWeight: '600', color: '#2c3e50' }}>ID</TableCell>
-                  <TableCell sx={{ fontWeight: '600', color: '#2c3e50' }}>Question</TableCell>
-                  <TableCell sx={{ fontWeight: '600', color: '#2c3e50' }}>Subject</TableCell>
-                  <TableCell sx={{ fontWeight: '600', color: '#2c3e50' }}>Difficulty</TableCell>
-                  <TableCell sx={{ fontWeight: '600', color: '#2c3e50' }}>Created</TableCell>
-                  <TableCell sx={{ fontWeight: '600', color: '#2c3e50' }}>Used In</TableCell>
-                  <TableCell sx={{ fontWeight: '600', color: '#2c3e50' }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sampleQuestions.map((question) => (
-                  <TableRow key={question.id} sx={{ '&:hover': { backgroundColor: '#f8f9fa' } }}>
-                    <TableCell>{question.id}</TableCell>
-                    <TableCell
-                      sx={{
-                        maxWidth: '300px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {question.question}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={question.subject}
-                        sx={{
-                          backgroundColor: getSubjectColor(question.subject),
-                          color: getSubjectTextColor(question.subject),
-                          fontWeight: '600',
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1)}
-                        color={getDifficultyColor(question.difficulty)}
-                        variant="filled"
-                      />
-                    </TableCell>
-                    <TableCell>{question.created}</TableCell>
-                    <TableCell>{question.usedIn}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: '10px' }}>
-                        <IconButton
-                          size="small"
-                          sx={{ color: '#2575fc' }}
-                          onClick={() => handleEditQuestion(question.id)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          sx={{ color: '#f44336' }}
-                          onClick={() => handleDeleteQuestion(question.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
+                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>ID</TableCell>
+                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Question</TableCell>
+                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Subject</TableCell>
+                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Difficulty</TableCell>
+                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Used In</TableCell>
+                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {paginatedQuestions.map((question) => (
+                    <TableRow key={question.id} sx={{ "&:hover": { backgroundColor: "#f8f9fa" } }}>
+                      <TableCell>{question.id}</TableCell>
+                      <TableCell>
+                        <Tooltip title={question.question || ""}>
+                          <span>
+                            {question.question
+                              ? question.question.length > 50
+                                ? question.question.slice(0, 50) + "..."
+                                : question.question
+                              : "N/A"}
+                          </span>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={question.subject || "N/A"}
+                          sx={{
+                            backgroundColor: getSubjectColor(question.subject),
+                            color: getSubjectTextColor(question.subject),
+                            fontWeight: "600",
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={question.difficulty || "N/A"}
+                          color={getDifficultyColor(question.difficulty)}
+                          variant="filled"
+                        />
+                      </TableCell>
+                      <TableCell>{question.usedIn}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: "flex", gap: "10px" }}>
+                          <IconButton size="small" sx={{ color: "#2575fc" }} onClick={() => handleEditQuestion(question.id)}>
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton size="small" sx={{ color: "#f44336" }} onClick={() => handleDeleteQuestion(question.id)}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
 
           {/* Pagination */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '25px' }}>
+          <Box sx={{ display: "flex", justifyContent: "center", marginTop: "25px" }}>
             <Pagination
-              count={5}
+              count={Math.ceil(questions.length / itemsPerPage)}
               page={currentPage}
               onChange={(event, page) => setCurrentPage(page)}
               sx={{
-                '& .MuiPaginationItem-root': {
-                  '&:hover': {
-                    backgroundColor: '#f0f5ff',
-                    borderColor: '#2575fc',
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: '#2575fc',
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: '#2575fc',
-                    },
-                  },
+                "& .MuiPaginationItem-root": {
+                  "&:hover": { backgroundColor: "#f0f5ff", borderColor: "#2575fc" },
+                  "&.Mui-selected": { backgroundColor: "#2575fc", color: "white", "&:hover": { backgroundColor: "#2575fc" } },
                 },
               }}
             />

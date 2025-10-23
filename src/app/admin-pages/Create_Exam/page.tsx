@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import { Edit, Delete } from "@mui/icons-material";
 import Sidebar from "../../components/Sidebar";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
@@ -202,7 +203,9 @@ export default function CreateExam() {
 
       if (data.success) {
         alert(
-          `Exam ${status === "draft" ? "saved as draft" : "published"} successfully!`
+          `Exam ${
+            status === "draft" ? "saved as draft" : "published"
+          } successfully!`
         );
 
         setQuestions([]);
@@ -269,10 +272,14 @@ export default function CreateExam() {
 
   const getSubjectName = (subjectId: number): string => {
     switch (subjectId) {
-      case 1: return "Mathematics";
-      case 2: return "Science";
-      case 3: return "English";
-      default: return "Unknown";
+      case 1:
+        return "Mathematics";
+      case 2:
+        return "Science";
+      case 3:
+        return "English";
+      default:
+        return "Unknown";
     }
   };
 
@@ -286,31 +293,121 @@ export default function CreateExam() {
     }
 
     if (draftExams.length === 0) {
-      return <Typography color="text.secondary">No draft exams found.</Typography>;
+      return (
+        <Typography color="text.secondary">No draft exams found.</Typography>
+      );
     }
 
+    const fetchDraftExams = async () => {
+  setLoadingDrafts(true);
+  try {
+    const res = await fetch(`/api/exams`);
+    const data = await res.json();
+    setDraftExams(data || []);
+  } catch (err) {
+    console.error("Error fetching drafts:", err);
+    setDraftExams([]);
+  }
+  setLoadingDrafts(false);
+};
+
+    const handleDeleteDraft = async (examId: number) => {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this draft exam? All its questions will be permanently removed."
+  );
+  if (!confirmDelete) return;
+
+  try {
+    const res = await fetch(`/api/exams/${examId}`, {
+      method: "DELETE",
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("✅ Draft exam deleted successfully!");
+      // 🔄 Refresh your draft exams list after deletion
+      fetchDraftExams();
+    } else {
+      alert("❌ Failed to delete draft: " + (data.message || "Unknown error"));
+    }
+  } catch (error) {
+    console.error("❌ Error deleting draft:", error);
+    alert("Something went wrong while deleting the draft.");
+  }
+};
+
+
     return (
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 2 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: 2,
+        }}
+      >
         {draftExams.map((draft) => (
-          <Card key={draft.exam_id} sx={{ p: 2, borderRadius: 2, boxShadow: 2, transition: "transform 0.2s, box-shadow 0.2s", "&:hover": { transform: "translateY(-3px)", boxShadow: 4 } }}>
+          <Card
+            key={draft.exam_id}
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              boxShadow: 2,
+              transition: "transform 0.2s, box-shadow 0.2s",
+              "&:hover": { transform: "translateY(-3px)", boxShadow: 4 },
+            }}
+          >
             <CardContent>
-              <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "primary.main" }}>{draft.exam_title}</Typography>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: "bold", color: "primary.main" }}
+              >
+                {draft.exam_title}
+              </Typography>
+
               <Typography sx={{ mt: 1 }}>
                 <strong>Subject:</strong> {getSubjectName(draft.subject_id)}
               </Typography>
-              <Typography><strong>Questions:</strong> {draft.question_count}</Typography>
-              <Box sx={{ mt: 2, textAlign: "right" }}>
+
+              <Typography>
+                <strong>Questions:</strong> {draft.question_count}
+              </Typography>
+
+              <Box
+                sx={{
+                  mt: 2,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                {/* 🟣 Load Draft Button */}
                 <Button
                   variant="contained"
                   size="small"
                   onClick={() => handleLoadDraft(draft.exam_id)}
                   sx={{
-                    background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                    '&:hover': { opacity: 0.9 }
+                    background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                    "&:hover": { opacity: 0.9 },
                   }}
                 >
                   Load Draft
                 </Button>
+
+                {/* 🔴 Delete Button */}
+                <IconButton
+                  color="error"
+                  onClick={() => handleDeleteDraft(draft.exam_id)}
+                  sx={{
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 0, 0, 0.1)",
+                      transform: "scale(1.1)",
+                    },
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <DeleteForeverIcon />
+                </IconButton>
               </Box>
             </CardContent>
           </Card>
@@ -320,7 +417,9 @@ export default function CreateExam() {
   };
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}
+    >
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
@@ -337,7 +436,9 @@ export default function CreateExam() {
         />
       )}
       <Box
-        className={`main-content ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
+        className={`main-content ${
+          sidebarOpen ? "sidebar-open" : "sidebar-closed"
+        }`}
         sx={{
           paddingTop: { xs: "50px", md: "80px" },
           width: "100%",
@@ -345,43 +446,130 @@ export default function CreateExam() {
           transition: "margin-left 0.3s ease",
         }}
       >
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Create New Exam" sidebarOpen={sidebarOpen} />
+        <Header
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          title="Create New Exam"
+          sidebarOpen={sidebarOpen}
+        />
 
         {/* Exam Form */}
-        <Paper sx={{ padding: "25px", borderRadius: "10px", marginBottom: "30px" }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Exam Details</Typography>
-          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 2 }}>
-            <TextField label="Exam Title" value={examData.title} onChange={(e) => handleInputChange("title", e.target.value)} required />
+        <Paper
+          sx={{ padding: "25px", borderRadius: "10px", marginBottom: "30px" }}
+        >
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Exam Details
+          </Typography>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 2,
+            }}
+          >
+            <TextField
+              label="Exam Title"
+              value={examData.title}
+              onChange={(e) => handleInputChange("title", e.target.value)}
+              required
+            />
             <FormControl>
               <InputLabel>Subject</InputLabel>
-              <Select value={examData.subject_id} onChange={(e) => handleInputChange("subject_id", Number(e.target.value))} required>
+              <Select
+                value={examData.subject_id}
+                onChange={(e) =>
+                  handleInputChange("subject_id", Number(e.target.value))
+                }
+                required
+              >
                 <MenuItem value={0}>Select Subject</MenuItem>
                 <MenuItem value={1}>Mathematics</MenuItem>
                 <MenuItem value={2}>Science</MenuItem>
                 <MenuItem value={3}>English</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Time Limit (minutes)" type="number" value={examData.timeLimit} onChange={(e) => handleInputChange("timeLimit", Number.parseInt(e.target.value))} required />
-            <TextField label="Total Marks" type="number" value={examData.totalMarks} onChange={(e) => handleInputChange("totalMarks", Number.parseInt(e.target.value))} required />
-            <TextField label="Start Date & Time" type="datetime-local" value={examData.startDate} onChange={(e) => handleInputChange("startDate", e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="End Date & Time" type="datetime-local" value={examData.endDate} onChange={(e) => handleInputChange("endDate", e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField label="Description" multiline rows={4} value={examData.description} onChange={(e) => handleInputChange("description", e.target.value)} sx={{ gridColumn: "1 / -1" }} />
+            <TextField
+              label="Time Limit (minutes)"
+              type="number"
+              value={examData.timeLimit}
+              onChange={(e) =>
+                handleInputChange("timeLimit", Number.parseInt(e.target.value))
+              }
+              required
+            />
+            <TextField
+              label="Total Marks"
+              type="number"
+              value={examData.totalMarks}
+              onChange={(e) =>
+                handleInputChange("totalMarks", Number.parseInt(e.target.value))
+              }
+              required
+            />
+            <TextField
+              label="Start Date & Time"
+              type="datetime-local"
+              value={examData.startDate}
+              onChange={(e) => handleInputChange("startDate", e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              label="End Date & Time"
+              type="datetime-local"
+              value={examData.endDate}
+              onChange={(e) => handleInputChange("endDate", e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              label="Description"
+              multiline
+              rows={4}
+              value={examData.description}
+              onChange={(e) => handleInputChange("description", e.target.value)}
+              sx={{ gridColumn: "1 / -1" }}
+            />
           </Box>
         </Paper>
 
         {/* Questions Section */}
-        <Paper sx={{ padding: "25px", borderRadius: "10px", backgroundColor: "white" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+        <Paper
+          sx={{
+            padding: "25px",
+            borderRadius: "10px",
+            backgroundColor: "white",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
             <Typography variant="h6">Exam Questions</Typography>
             <Box>
-              <Button variant="outlined" color="secondary" sx={{ mr: 1 }} onClick={() => setOpenModal(true)}>+ Add Question</Button>
-              <Button variant="outlined" color="secondary" sx={{ mr: 1 }} onClick={() => handleSaveExam("draft")}>Save as Draft</Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{ mr: 1 }}
+                onClick={() => setOpenModal(true)}
+              >
+                + Add Question
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{ mr: 1 }}
+                onClick={() => handleSaveExam("draft")}
+              >
+                Save as Draft
+              </Button>
               <Button
                 variant="contained"
                 sx={{
                   mr: 1,
-                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                  '&:hover': { opacity: 0.9 }
+                  background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                  "&:hover": { opacity: 0.9 },
                 }}
                 onClick={() => handleSaveExam("published")}
               >
@@ -390,8 +578,8 @@ export default function CreateExam() {
               <Button
                 variant="contained"
                 sx={{
-                  background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                  '&:hover': { opacity: 0.9 }
+                  background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                  "&:hover": { opacity: 0.9 },
                 }}
                 onClick={handleShowDrafts}
               >
@@ -401,47 +589,94 @@ export default function CreateExam() {
           </Box>
 
           {questions.length === 0 ? (
-            <Typography color="text.secondary" sx={{ textAlign: "center", py: 3 }}>No questions added yet</Typography>
+            <Typography
+              color="text.secondary"
+              sx={{ textAlign: "center", py: 3 }}
+            >
+              No questions added yet
+            </Typography>
           ) : (
             questions.map((q, i) => (
-              <Card key={`question-${q.question_id || i}`} sx={{ mb: 2, backgroundColor: "#f9f9f9" }}>
+              <Card
+                key={`question-${q.question_id || i}`}
+                sx={{ mb: 2, backgroundColor: "#f9f9f9" }}
+              >
                 <CardContent>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                    <Typography sx={{ fontWeight: "bold" }}>{i + 1}. {q.question_text}</Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography sx={{ fontWeight: "bold" }}>
+                      {i + 1}. {q.question_text}
+                    </Typography>
                     <Typography>{q.points} points</Typography>
                   </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
                     <Typography variant="body2" sx={{ color: "#7f8c8d" }}>
-                      📊 {q.difficulty} &nbsp;&nbsp; ✅ Correct Answer: {q.correct_answer}
+                      📊 {q.difficulty} &nbsp;&nbsp; ✅ Correct Answer:{" "}
+                      {q.correct_answer}
                     </Typography>
                     <Box>
-                      <IconButton size="small" color="primary" onClick={() => handleEditQuestion(i)}><Edit /></IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleRemoveQuestion(q.question_id)}><Delete /></IconButton>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleEditQuestion(i)}
+                      >
+                        <Edit />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleRemoveQuestion(q.question_id)}
+                      >
+                        <Delete />
+                      </IconButton>
                     </Box>
                   </Box>
-                  {["option_a", "option_b", "option_c", "option_d"].map((optKey) => {
-                    const getOptionLabel = (key: string) => {
-                      switch (key) {
-                        case "option_a": return "A.";
-                        case "option_b": return "B.";
-                        case "option_c": return "C.";
-                        case "option_d": return "D.";
-                        default: return "";
-                      }
-                    };
+                  {["option_a", "option_b", "option_c", "option_d"].map(
+                    (optKey) => {
+                      const getOptionLabel = (key: string) => {
+                        switch (key) {
+                          case "option_a":
+                            return "A.";
+                          case "option_b":
+                            return "B.";
+                          case "option_c":
+                            return "C.";
+                          case "option_d":
+                            return "D.";
+                          default:
+                            return "";
+                        }
+                      };
 
-                    const isCorrectAnswer = q.correct_answer === (q as any)[optKey];
+                      const isCorrectAnswer =
+                        q.correct_answer === (q as any)[optKey];
 
-                    return (
-                      <Typography key={optKey} sx={{
-                        color: isCorrectAnswer ? "green" : "#555",
-                        fontWeight: isCorrectAnswer ? "bold" : "normal",
-                        mb: 0.5
-                      }}>
-                        {getOptionLabel(optKey)} {(q as any)[optKey]}
-                      </Typography>
-                    );
-                  })}
+                      return (
+                        <Typography
+                          key={optKey}
+                          sx={{
+                            color: isCorrectAnswer ? "green" : "#555",
+                            fontWeight: isCorrectAnswer ? "bold" : "normal",
+                            mb: 0.5,
+                          }}
+                        >
+                          {getOptionLabel(optKey)} {(q as any)[optKey]}
+                        </Typography>
+                      );
+                    }
+                  )}
                 </CardContent>
               </Card>
             ))
@@ -451,33 +686,110 @@ export default function CreateExam() {
         {/* Draft Exams Cards */}
         {showDrafts && (
           <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>Draft Exams</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Draft Exams
+            </Typography>
             {renderDraftExamsSection()}
           </Box>
         )}
 
         {/* Add/Edit Question Modal */}
-        <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>{editMode ? "Edit Question" : "Add New Question"}</DialogTitle>
+        <Dialog
+          open={openModal}
+          onClose={() => setOpenModal(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            {editMode ? "Edit Question" : "Add New Question"}
+          </DialogTitle>
           <DialogContent dividers>
-            <TextField label="Question Text" fullWidth margin="dense" value={newQuestion.question_text} onChange={(e) => setNewQuestion({ ...newQuestion, question_text: e.target.value })} />
-            <TextField label="Option A" fullWidth margin="dense" value={newQuestion.option_a} onChange={(e) => setNewQuestion({ ...newQuestion, option_a: e.target.value })} />
-            <TextField label="Option B" fullWidth margin="dense" value={newQuestion.option_b} onChange={(e) => setNewQuestion({ ...newQuestion, option_b: e.target.value })} />
-            <TextField label="Option C" fullWidth margin="dense" value={newQuestion.option_c} onChange={(e) => setNewQuestion({ ...newQuestion, option_c: e.target.value })} />
-            <TextField label="Option D" fullWidth margin="dense" value={newQuestion.option_d} onChange={(e) => setNewQuestion({ ...newQuestion, option_d: e.target.value })} />
+            <TextField
+              label="Question Text"
+              fullWidth
+              margin="dense"
+              value={newQuestion.question_text}
+              onChange={(e) =>
+                setNewQuestion({
+                  ...newQuestion,
+                  question_text: e.target.value,
+                })
+              }
+            />
+            <TextField
+              label="Option A"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_a}
+              onChange={(e) =>
+                setNewQuestion({ ...newQuestion, option_a: e.target.value })
+              }
+            />
+            <TextField
+              label="Option B"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_b}
+              onChange={(e) =>
+                setNewQuestion({ ...newQuestion, option_b: e.target.value })
+              }
+            />
+            <TextField
+              label="Option C"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_c}
+              onChange={(e) =>
+                setNewQuestion({ ...newQuestion, option_c: e.target.value })
+              }
+            />
+            <TextField
+              label="Option D"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_d}
+              onChange={(e) =>
+                setNewQuestion({ ...newQuestion, option_d: e.target.value })
+              }
+            />
             <FormControl fullWidth margin="dense">
               <InputLabel>Correct Answer</InputLabel>
-              <Select value={newQuestion.correct_answer} onChange={(e) => setNewQuestion({ ...newQuestion, correct_answer: e.target.value })}>
+              <Select
+                value={newQuestion.correct_answer}
+                onChange={(e) =>
+                  setNewQuestion({
+                    ...newQuestion,
+                    correct_answer: e.target.value,
+                  })
+                }
+              >
                 <MenuItem value="A">{newQuestion.option_a}</MenuItem>
                 <MenuItem value="B">{newQuestion.option_b}</MenuItem>
                 <MenuItem value="C">{newQuestion.option_c}</MenuItem>
                 <MenuItem value="D">{newQuestion.option_d}</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Points" type="number" fullWidth margin="dense" value={newQuestion.points} onChange={(e) => setNewQuestion({ ...newQuestion, points: Number.parseInt(e.target.value) })} />
+            <TextField
+              label="Points"
+              type="number"
+              fullWidth
+              margin="dense"
+              value={newQuestion.points}
+              onChange={(e) =>
+                setNewQuestion({
+                  ...newQuestion,
+                  points: Number.parseInt(e.target.value),
+                })
+              }
+            />
             <FormControl fullWidth margin="dense">
               <InputLabel>Difficulty</InputLabel>
-              <Select value={newQuestion.difficulty} onChange={(e) => setNewQuestion({ ...newQuestion, difficulty: e.target.value })}>
+              <Select
+                value={newQuestion.difficulty}
+                onChange={(e) =>
+                  setNewQuestion({ ...newQuestion, difficulty: e.target.value })
+                }
+              >
                 <MenuItem value="Easy">Easy</MenuItem>
                 <MenuItem value="Medium">Medium</MenuItem>
                 <MenuItem value="Hard">Hard</MenuItem>
@@ -490,8 +802,8 @@ export default function CreateExam() {
               variant="contained"
               onClick={handleSaveQuestion}
               sx={{
-                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                '&:hover': { opacity: 0.9 }
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
               }}
             >
               {editMode ? "Update Question" : "Save Question"}
