@@ -3,7 +3,6 @@
 import React from 'react';
 import {
   Box,
-  Paper,
   Card,
   CardContent,
   Typography,
@@ -16,16 +15,8 @@ import {
   TableRow,
   Button,
   LinearProgress,
-  Stack,
 } from '@mui/material';
 import {
-  Dashboard,
-  MenuBook,
-  Assessment,
-  Person,
-  History,
-  Settings,
-  Logout,
   TrendingUp,
   Schedule,
   EmojiEvents,
@@ -55,59 +46,6 @@ ChartJS.register(
   Filler
 );
 
-interface SidebarProps {}
-
-const Sidebar: React.FC<SidebarProps> = () => (
-  <Paper
-    elevation={0}
-    sx={{
-      width: { xs: '100%', md: 280 },
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-      color: 'white',
-      position: { xs: 'static', md: 'fixed' },
-      left: 0,
-      top: 0,
-      zIndex: 1000,
-    }}
-  >
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-        MCQ <Box component="span" sx={{ color: '#ffcc00' }}>Portal</Box>
-      </Typography>
-    </Box>
-
-    <Stack spacing={1} sx={{ px: 2 }}>
-      {[
-        { icon: <Dashboard />, text: 'Dashboard', active: false },
-        { icon: <MenuBook />, text: 'Take Exam', active: false },
-        { icon: <Assessment />, text: 'Results', active: false },
-        { icon: <Person />, text: 'Profile', active: true },
-        { icon: <History />, text: 'Exam History', active: false },
-        { icon: <Settings />, text: 'Settings', active: false },
-        { icon: <Logout />, text: 'Logout', active: false },
-      ].map((item) => (
-        <Button
-          key={item.text}
-          startIcon={item.icon}
-          sx={{
-            justifyContent: 'flex-start',
-            color: 'white',
-            backgroundColor: item.active ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            },
-            py: 1.5,
-            px: 2,
-            borderRadius: 1,
-          }}
-        >
-          {item.text}
-        </Button>
-      ))}
-    </Stack>
-  </Paper>
-);
 
 const StudentProgressPage = () => {
 
@@ -214,68 +152,67 @@ const StudentProgressPage = () => {
 
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          ml: { xs: 0, md: '280px' },
-          p: 4,
-          backgroundColor: '#f5f7fa',
-        }}
-      >
-        {/* Header */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 4,
-            pb: 2,
-            borderBottom: '1px solid #e0e0e0',
-          }}
-        >
-          <Typography variant="h4" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-            Student Profile & Progress
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
-              sx={{ width: 40, height: 40, mr: 2, border: '2px solid #6a11cb' }}
-            />
-            <Typography>John Doe</Typography>
-          </Box>
-        </Box>
+    <Box
+      component="main"
+      sx={{
+        p: {
+          xs: '60px 12px 24px',
+          sm: '70px 20px 32px',
+          md: '24px 30px 40px',
+          lg: '32px 40px 48px'
+        },
+        backgroundColor: '#f5f7fa',
+        minHeight: '100vh',
+      }}
+    >
 
         {/* Profile Card */}
-        <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Card sx={{
+          mb: { xs: 2, sm: 3, md: 4 },
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              flexDirection: { xs: 'column', sm: 'row' },
+              textAlign: { xs: 'center', sm: 'left' }
+            }}>
               <Avatar
                 src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
                 sx={{
-                  width: 120,
-                  height: 120,
-                  mr: 4,
+                  width: { xs: 100, sm: 110, md: 120 },
+                  height: { xs: 100, sm: 110, md: 120 },
+                  mr: { xs: 0, sm: 4 },
+                  mb: { xs: 2, sm: 0 },
                   border: '5px solid #6a11cb',
                 }}
               />
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#2c3e50', mb: 1 }}>
+                <Typography variant="h4" sx={{
+                  fontWeight: 700,
+                  color: '#2c3e50',
+                  mb: { xs: 0.75, sm: 1 },
+                  fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' }
+                }}>
                   John Doe
                 </Typography>
-                <Typography sx={{ color: '#7f8c8d', mb: 2 }}>
+                <Typography sx={{
+                  color: '#7f8c8d',
+                  mb: { xs: 1.5, sm: 2 },
+                  fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' }
+                }}>
                   Student ID: S12345 • Class: 10th Grade • Section: A
                 </Typography>
                 <Box sx={{
                   display: 'flex',
                   flexWrap: 'wrap',
-                  gap: 4,
+                  gap: { xs: 2, sm: 3, md: 4 },
+                  justifyContent: { xs: 'center', sm: 'flex-start' },
                   '& > *': {
                     flex: { xs: '1 1 45%', sm: '1 1 22%' },
-                    minWidth: { xs: '120px', sm: '140px' }
+                    minWidth: { xs: '100px', sm: '120px', md: '140px' }
                   }
                 }}>
                   {[
@@ -303,11 +240,11 @@ const StudentProgressPage = () => {
         <Box sx={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 3,
-          mb: 4,
+          gap: { xs: 1.5, sm: 2, md: 3 },
+          mb: { xs: 2, sm: 3, md: 4 },
           '& > *': {
-            flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 24px)', md: '1 1 calc(25% - 24px)' },
-            minWidth: { xs: '250px', md: '200px' }
+            flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 18px)' },
+            minWidth: { xs: '200px', sm: '220px', md: '200px' }
           }
         }}>
           {[
@@ -345,30 +282,48 @@ const StudentProgressPage = () => {
         </Box>
 
         {/* Performance Chart */}
-        <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 3 }}>
+        <Card sx={{
+          mb: { xs: 2, sm: 3, md: 4 },
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Typography variant="h6" sx={{
+              fontWeight: 600,
+              color: '#2c3e50',
+              mb: { xs: 2, sm: 3 },
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}>
               Performance Trend
             </Typography>
-            <Box sx={{ height: 300 }}>
+            <Box sx={{ height: { xs: 250, sm: 280, md: 300 } }}>
               <Line data={chartData} options={chartOptions} />
             </Box>
           </CardContent>
         </Card>
 
         {/* Subject Performance */}
-        <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 3 }}>
+        <Card sx={{
+          mb: { xs: 2, sm: 3, md: 4 },
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Typography variant="h6" sx={{
+              fontWeight: 600,
+              color: '#2c3e50',
+              mb: { xs: 2, sm: 3 },
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}>
               Subject Performance
             </Typography>
             <Box sx={{
               display: 'flex',
               flexWrap: 'wrap',
-              gap: 3,
+              gap: { xs: 2, sm: 2.5, md: 3 },
               '& > *': {
-                flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 24px)' },
-                minWidth: { xs: '250px', md: '200px' }
+                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 10px)', md: '1 1 calc(33.333% - 20px)' },
+                minWidth: { xs: '200px', sm: '250px', md: '200px' }
               }
             }}>
               {[
@@ -405,13 +360,37 @@ const StudentProgressPage = () => {
         </Card>
 
         {/* Exam History */}
-        <Card sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+        <Card sx={{
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: { xs: 2, sm: 3 },
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: { xs: 1, sm: 0 }
+            }}>
+              <Typography variant="h6" sx={{
+                fontWeight: 600,
+                color: '#2c3e50',
+                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
+                textAlign: { xs: 'center', sm: 'left' }
+              }}>
                 Recent Exam History
               </Typography>
-              <Button variant="outlined" color="secondary">View Full History</Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{
+                  fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
+                  padding: { xs: '6px 12px', sm: '8px 16px' }
+                }}
+              >
+                View Full History
+              </Button>
             </Box>
 
             <TableContainer>
@@ -487,7 +466,6 @@ const StudentProgressPage = () => {
             </Box>
           </CardContent>
         </Card>
-      </Box>
     </Box>
   );
 };

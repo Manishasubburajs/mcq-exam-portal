@@ -5,7 +5,6 @@
   background: white;
 }
 
-/* Exam Header */
 .examHeader {
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
   color: white;
@@ -15,8 +14,8 @@
   align-items: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
-  top: 0;
-  z-index: 100;
+  top: 70px;
+  z-index: 90;
 }
 
 .examInfo h1 {
@@ -72,9 +71,9 @@
   border-right: 1px solid #e0e0e0;
   padding: 20px;
   overflow-y: auto;
-  height: calc(100vh - 70px);
+  height: calc(100vh - 140px);
   position: sticky;
-  top: 70px;
+  top: 140px;
 }
 
 .sidebarTitle {
@@ -187,14 +186,15 @@
 /* Main Content - Question Area */
 .questionMain {
   flex: 1;
-  padding: 30px;
+  padding: 30px 30px 20px;
   overflow-y: auto;
-  height: calc(100vh - 70px);
+  height: calc(100vh - 140px);
 }
 
 .questionContainer {
   max-width: 800px;
   margin: 0 auto;
+  margin-top: 10px;
 }
 
 .questionHeader {
@@ -350,6 +350,16 @@
 }
 
 /* Responsive */
+@media (max-width: 1200px) {
+  .questionSidebar {
+    width: 250px;
+  }
+
+  .questionGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 @media (max-width: 992px) {
   .examContent {
     flex-direction: column;
@@ -361,10 +371,24 @@
     position: static;
     border-right: none;
     border-bottom: 1px solid #e0e0e0;
+    max-height: 300px;
+    overflow-y: auto;
   }
 
   .questionMain {
     height: auto;
+    padding: 20px 20px 15px;
+  }
+
+  .questionGrid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+
+  .questionNumber {
+    width: 35px;
+    height: 35px;
+    font-size: 12px;
   }
 }
 
@@ -379,22 +403,183 @@
     margin-bottom: 10px;
   }
 
+  .examInfo h1 {
+    font-size: 20px;
+  }
+
+  .examInfo p {
+    font-size: 13px;
+  }
+
+  .timer {
+    padding: 8px 16px;
+    font-size: 16px;
+  }
+
+  .questionSidebar {
+    max-height: 250px;
+    padding: 15px;
+  }
+
+  .sidebarTitle {
+    font-size: 16px;
+  }
+
+  .questionGrid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .questionNumber {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  .questionMain {
+    padding: 15px 15px 10px;
+  }
+
   .questionHeader {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .questionTitle {
+    font-size: 18px;
   }
 
   .questionActions {
     margin-top: 10px;
   }
 
+  .questionContent {
+    padding: 20px;
+  }
+
+  .questionText {
+    font-size: 16px;
+  }
+
+  .optionItem {
+    padding: 12px;
+  }
+
+  .optionMarker {
+    width: 25px;
+    height: 25px;
+    font-size: 12px;
+  }
+
   .examFooter {
     flex-direction: column;
     gap: 15px;
+    padding: 15px 0;
   }
 
   .navButtons {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .btnLarge {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .progressText {
+    text-align: center;
+    margin: 10px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .examHeader {
+    padding: 10px;
+  }
+
+  .examInfo h1 {
+    font-size: 18px;
+  }
+
+  .examInfo p {
+    font-size: 12px;
+  }
+
+  .timer {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+
+  .questionSidebar {
+    max-height: 200px;
+    padding: 10px;
+  }
+
+  .sidebarTitle {
+    font-size: 14px;
+  }
+
+  .questionGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+
+  .questionNumber {
+    width: 25px;
+    height: 25px;
+    font-size: 10px;
+  }
+
+  .questionMain {
+    padding: 10px 10px 8px;
+  }
+
+  .questionHeader {
+    margin-bottom: 15px;
+  }
+
+  .questionTitle {
+    font-size: 16px;
+  }
+
+  .questionContent {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .questionText {
+    font-size: 15px;
+    margin-bottom: 20px;
+  }
+
+  .optionItem {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .optionMarker {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    margin-right: 10px;
+  }
+
+  .examFooter {
+    margin-top: 20px;
+  }
+
+  .btnLarge {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .statusItem {
+    font-size: 12px;
+  }
+
+  .statusColor {
+    width: 12px;
+    height: 12px;
   }
 }

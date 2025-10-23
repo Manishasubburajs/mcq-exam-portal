@@ -1,6 +1,5 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Box, Paper, Typography, useMediaQuery } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -14,6 +13,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
+// cSpell:ignore chartjs
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 
 import dynamic from 'next/dynamic';
@@ -38,7 +38,6 @@ ChartJS.register(
 );
 
 export default function Home() {
-  const router = useRouter();
   const isDesktop = useMediaQuery('(min-width:1024px)');
   const isMobile = useMediaQuery('(max-width:767px)');
   const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
@@ -318,7 +317,11 @@ export default function Home() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
+        ml: sidebarOpen && !isMobile && !isTablet ? '220px' : 0,
+        transition: 'margin-left 0.3s ease',
+        paddingTop: { xs: '50px', md: '80px' }
+      }}>
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
 
         {/* Stats Cards */}

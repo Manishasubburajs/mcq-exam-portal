@@ -66,15 +66,31 @@
 @media (max-width: 767px) {
   .sidebar {
     position: fixed;
-    width: 180px;
-    left: -180px;
+    width: 280px;
+    left: -280px;
     top: 0;
     z-index: 1000;
     transition: left 0.3s ease;
     height: 100vh;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   }
 
-  .sidebar.open {
+  .sidebar:not(.closed) {
     left: 0;
+  }
+
+  .sidebar.closed {
+    left: -280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 260px;
+    left: -260px;
+  }
+
+  .sidebar.closed {
+    left: -260px;
   }
 }
