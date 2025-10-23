@@ -150,7 +150,12 @@ export default function ExamResultsReview() {
   return (
     <Box sx={{
       flex: 1,
-      padding: { xs: 1, sm: 2, md: 3 },
+      padding: {
+        xs: '60px 8px 16px',
+        sm: '70px 16px 24px',
+        md: '16px 24px 32px',
+        lg: '24px 32px 40px'
+      },
       maxWidth: '100%',
       overflowX: 'hidden'
     }}>
@@ -160,11 +165,11 @@ export default function ExamResultsReview() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 3,
-            paddingBottom: 1.5,
+            mb: { xs: 2, sm: 3 },
+            paddingBottom: { xs: 1, sm: 1.5 },
             borderBottom: '1px solid #e0e0e0',
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 },
+            gap: { xs: 1.5, sm: 2, md: 0 },
           }}
         >
           <Typography
@@ -172,7 +177,8 @@ export default function ExamResultsReview() {
               color: '#2c3e50',
               fontWeight: 600,
               textAlign: { xs: 'center', sm: 'left' },
-              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2.125rem' }
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem', lg: '2.125rem' },
+              lineHeight: 1.2
             }}
           >
             Exam Results: Mathematics Midterm
@@ -186,16 +192,17 @@ export default function ExamResultsReview() {
             <Avatar
               src="https://ui-avatars.com/api/?name=John+Doe&background=6a11cb&color=fff"
               sx={{
-                width: { xs: 35, sm: 40 },
-                height: { xs: 35, sm: 40 },
-                mr: 1,
+                width: { xs: 32, sm: 35, md: 40 },
+                height: { xs: 32, sm: 35, md: 40 },
+                mr: { xs: 0.75, sm: 1 },
                 border: '2px solid #6a11cb'
               }}
             />
             <Typography
               sx={{
                 textAlign: { xs: 'center', sm: 'left' },
-                fontSize: { xs: '0.875rem', sm: '1rem' }
+                fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
+                lineHeight: 1.2
               }}
             >
               John Doe - Student ID: S12345
@@ -204,21 +211,38 @@ export default function ExamResultsReview() {
         </Box>
 
         {/* Results Summary */}
-        <Paper sx={{ padding: 3, mb: 3, borderRadius: 2.5, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)', textAlign: 'center' }}>
+        <Paper sx={{
+          padding: { xs: 2, sm: 2.5, md: 3 },
+          mb: { xs: 2, sm: 3 },
+          borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          textAlign: 'center'
+        }}>
           <ScoreCircle score={92} />
-          <Typography variant="h5" sx={{ mb: 1 }}>Mathematics Midterm Exam</Typography>
-          <Typography sx={{ color: '#6c757d', mb: 3 }}>Completed on October 15, 2023 • Time Spent: 28/30 minutes</Typography>
+          <Typography variant="h5" sx={{
+            mb: { xs: 0.75, sm: 1 },
+            fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+          }}>
+            Mathematics Midterm Exam
+          </Typography>
+          <Typography sx={{
+            color: '#6c757d',
+            mb: { xs: 2, sm: 3 },
+            fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' }
+          }}>
+            Completed on October 15, 2023 • Time Spent: 28/30 minutes
+          </Typography>
 
           <Box sx={{
             display: 'flex',
             flexWrap: 'wrap',
-            gap: { xs: 1, sm: 2 },
+            gap: { xs: 0.75, sm: 1, md: 2 },
             maxWidth: { xs: '100%', sm: 600 },
             mx: 'auto',
             justifyContent: 'center',
             '& > *': {
               flex: { xs: '1 1 45%', sm: '1 1 22%' },
-              minWidth: { xs: '120px', sm: '140px' }
+              minWidth: { xs: '100px', sm: '120px', md: '140px' }
             }
           }}>
             <Box sx={{
@@ -333,17 +357,28 @@ export default function ExamResultsReview() {
         </Paper>
 
         {/* Performance Breakdown */}
-        <Paper sx={{ padding: 3, mb: 3, borderRadius: 2.5, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <Typography variant="h5" sx={{ mb: 2, color: '#2c3e50', paddingBottom: 1, borderBottom: '2px solid #f0f0f0' }}>
+        <Paper sx={{
+          padding: { xs: 2, sm: 2.5, md: 3 },
+          mb: { xs: 2, sm: 3 },
+          borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+        }}>
+          <Typography variant="h5" sx={{
+            mb: { xs: 1.5, sm: 2 },
+            color: '#2c3e50',
+            paddingBottom: { xs: 0.75, sm: 1 },
+            borderBottom: '2px solid #f0f0f0',
+            fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+          }}>
             Performance by Category
           </Typography>
           <Box sx={{
             display: 'flex',
             flexWrap: 'wrap',
-            gap: 2,
+            gap: { xs: 1.5, sm: 2 },
             '& > *': {
-              flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 16px)' },
-              minWidth: { xs: '250px', md: '200px' }
+              flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(33.333% - 16px)' },
+              minWidth: { xs: '200px', sm: '250px', md: '200px' }
             }
           }}>
             {categories.map((category) => (
@@ -379,21 +414,25 @@ export default function ExamResultsReview() {
         </Paper>
 
         {/* Questions Review */}
-        <Paper sx={{ padding: 3, borderRadius: 2.5, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
+        <Paper sx={{
+          padding: { xs: 2, sm: 2.5, md: 3 },
+          borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+        }}>
           <Box sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 2,
+            mb: { xs: 1.5, sm: 2 },
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 }
+            gap: { xs: 1.5, sm: 2, md: 0 }
           }}>
             <Typography
               sx={{
                 color: '#2c3e50',
-                paddingBottom: 1,
+                paddingBottom: { xs: 0.75, sm: 1 },
                 borderBottom: '2px solid #f0f0f0',
-                fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
               }}
             >
               Question Review
@@ -401,7 +440,7 @@ export default function ExamResultsReview() {
             <Box sx={{
               display: 'flex',
               flexDirection: { xs: 'column', sm: 'row' },
-              gap: { xs: 1, sm: 1 },
+              gap: { xs: 0.75, sm: 1 },
               width: { xs: '100%', sm: 'auto' },
               alignItems: { xs: 'stretch', sm: 'center' }
             }}>

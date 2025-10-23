@@ -52,15 +52,15 @@ const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
 
 
   return (
-    <Box className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}>
+    <Box className={`${styles.sidebar} ${isOpen ? '' : styles.closed}`}>
       <Box className={styles.logo}>
         <Typography variant="h4" component="h1" sx={{ fontSize: '24px', fontWeight: 700 }}>
           MCQ <span className={styles.highlight}>Portal</span>
         </Typography>
       </Box>
       <List className={styles.menu}>
-        {menuItems.map((item, index) => (
-          <ListItem key={index} disablePadding className={styles.menuItem}>
+        {menuItems.map((item) => (
+          <ListItem key={item.text} disablePadding className={styles.menuItem}>
             <ListItemButton
               className={`${styles.menuLink} ${item.text === activeItem ? styles.active : ''}`}
               onClick={() => handleMenuClick(item)}

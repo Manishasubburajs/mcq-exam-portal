@@ -171,7 +171,11 @@ export default function QuestionBankPage() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
+        ml: sidebarOpen && isDesktop ? '220px' : 0,
+        transition: 'margin-left 0.3s ease',
+        paddingTop: { xs: '50px', md: '80px' }
+      }}>
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Question Bank" sidebarOpen={sidebarOpen} />
 
         {/* Filters Section */}

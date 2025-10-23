@@ -660,8 +660,7 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f7fa', p: { xs: 1, sm: 2, md: 3 } }}>
-      <ProfileHeader isMobile={isMobile} />
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f7fa', p: { xs: '60px 8px 16px', sm: '70px 16px 24px', md: '16px 24px 32px', lg: '24px 32px 40px' } }}>
       <ProfileStatsCard />
 
         {/* Tabs */}
