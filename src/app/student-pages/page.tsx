@@ -63,9 +63,10 @@ const StatCard = ({ icon, label, value, color, iconColor }: StatCardProps) => (
       background: CARD_BG,
       color: TEXT_PRIMARY,
       boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-      width: '100%',
+      flex: { xs: '1 1 100%', sm: '1 1 50%', md: '1 1 240px' },
       display: "flex",
       alignItems: "center",
+      transition: "all 0.3s ease",
     }}
   >
     <Box sx={{ display: "flex", alignItems: "flex-end", gap: 1.875 }}>
@@ -133,7 +134,7 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
       boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
       width: '100%',
       overflow: "hidden",
-      transition: "transform 0.3s, box-shadow 0.3s",
+      transition: "all 0.3s ease",
       "&:hover": {
         transform: "translateY(-5px)",
         boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
@@ -306,7 +307,7 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
         boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
         width: '100%',
         overflow: "hidden",
-        transition: "transform 0.3s, box-shadow 0.3s",
+        transition: "all 0.3s ease",
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -483,7 +484,7 @@ const UpcomingExamCard = ({ exam }: { exam: UpcomingExam }) => (
       boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
       width: '100%',
       overflow: "hidden",
-      transition: "transform 0.3s, box-shadow 0.3s",
+      transition: "all 0.3s ease",
       "&:hover": {
         transform: "translateY(-5px)",
         boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
@@ -697,12 +698,8 @@ export default function StudentDashboard() {
       {/* Top Stats */}
       <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
         <Box sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "repeat(2, 1fr)",
-            md: "repeat(auto-fit, minmax(240px, 1fr))"
-          },
+          display: "flex",
+          flexWrap: "wrap",
           gap: { xs: 1.5, sm: 2, md: 2.5 }
         }}>
           <StatCard icon={<AssignmentIcon />} label="Available Exams" value="3" color={'#e6f4ea'} iconColor={'#137333'} />
@@ -720,6 +717,7 @@ export default function StudentDashboard() {
             borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
             boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
             p: { xs: 2, sm: 2.5, md: 3.125 },
+            transition: "all 0.3s ease",
           }}
         >
           <Box sx={{
@@ -760,17 +758,13 @@ export default function StudentDashboard() {
 
           <Box
             sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(auto-fill, minmax(280px, 1fr))',
-                md: 'repeat(auto-fill, minmax(300px, 1fr))'
-              },
+              display: 'flex',
+              flexWrap: 'wrap',
               gap: { xs: 1.5, sm: 2, md: 2.5 },
               alignItems: 'start',
             }}
           >
-            <Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 280px', md: '1 1 300px' } }}>
               <ExamCard
                 title="Mathematics Midterm"
                 subject="Mathematics"
@@ -778,7 +772,7 @@ export default function StudentDashboard() {
                 onStart={() => router.push('/student-pages/take-exam')}
               />
             </Box>
-            <Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 280px', md: '1 1 300px' } }}>
               <ExamCard
                 title="Science Quiz"
                 subject="Science"
@@ -786,7 +780,7 @@ export default function StudentDashboard() {
                 onStart={() => router.push('/student-pages/take-exam')}
               />
             </Box>
-            <Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 280px', md: '1 1 300px' } }}>
               <ExamCard
                 title="History Final"
                 subject="History"
@@ -800,7 +794,7 @@ export default function StudentDashboard() {
 
       {/* Completed Exams */}
       <Box sx={{ mb: 3.75 }}>
-        <Card sx={{ background: CARD_BG, borderRadius: 2.5, boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)", p: 3.125 }}>
+        <Card sx={{ background: CARD_BG, borderRadius: 2.5, boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)", p: 3.125, transition: "all 0.3s ease" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5, pb: 1.875, borderBottom: `2px solid #f0f0f0`, flexDirection: isMobile ? "column" : "row" }}>
             <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Completed Exams</Typography>
             <Button
@@ -815,19 +809,19 @@ export default function StudentDashboard() {
 
           <Box
             sx={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              display: 'flex',
+              flexWrap: 'wrap',
               gap: 2.5,
               alignItems: 'stretch',
             }}
           >
-            <Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
               <CompletedExamCard exam={{ title: "Algebra Basics", subject: "Mathematics", scorePercentage: 92, completionDate: "Oct 15, 2023", timeTaken: "28/30 min", scoreFraction: "46/50", rank: "5/120" }} onView={() => router.push('/student-pages/exam-history')} />
             </Box>
-            <Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
               <CompletedExamCard exam={{ title: "Physics Test", subject: "Science", scorePercentage: 78, completionDate: "Oct 10, 2023", timeTaken: "42/45 min", scoreFraction: "39/50", rank: "32/120" }} onView={() => router.push('/student-pages/exam-history')} />
             </Box>
-            <Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
               <CompletedExamCard exam={{ title: "World History", subject: "History", scorePercentage: 65, completionDate: "Oct 5, 2023", timeTaken: "55/60 min", scoreFraction: "65/100", rank: "78/120" }} onView={() => router.push('/student-pages/exam-history')} />
             </Box>
           </Box>
@@ -836,7 +830,7 @@ export default function StudentDashboard() {
 
       {/* Upcoming Exams */}
       <Box sx={{ mb: 3.75 }}>
-        <Card sx={{ background: CARD_BG, borderRadius: 2.5, boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)", p: 3.125 }}>
+        <Card sx={{ background: CARD_BG, borderRadius: 2.5, boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)", p: 3.125, transition: "all 0.3s ease" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5, pb: 1.875, borderBottom: `2px solid #f0f0f0`, flexDirection: isMobile ? "column" : "row" }}>
             <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Upcoming Exams</Typography>
             <Button
@@ -851,16 +845,16 @@ export default function StudentDashboard() {
 
           <Box
             sx={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
+              display: 'flex',
+              flexWrap: 'wrap',
               gap: 2.5,
               alignItems: 'start',
             }}
           >
-            <Box>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
               <UpcomingExamCard exam={upcomingExams[0]} />
             </Box>
-            <Box sx={{ gridColumn: isMobile ? 'auto' : 'span 2' }}>
+            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 600px' } }}>
               <Card
                 sx={{
                   border: `1px solid #e0e0e0`,
@@ -870,7 +864,7 @@ export default function StudentDashboard() {
                   boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
                   width: '100%',
                   overflow: "hidden",
-                  transition: "transform 0.3s, box-shadow 0.3s",
+                  transition: "all 0.3s ease",
                   "&:hover": {
                     transform: "translateY(-5px)",
                     boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",

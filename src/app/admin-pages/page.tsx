@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Box, Paper, Typography, useMediaQuery } from '@mui/material';
 import {
   Chart as ChartJS,
@@ -38,6 +39,7 @@ ChartJS.register(
 );
 
 export default function Home() {
+  const router = useRouter();
   const isDesktop = useMediaQuery('(min-width:1024px)');
   const isMobile = useMediaQuery('(max-width:767px)');
   const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
@@ -296,8 +298,12 @@ export default function Home() {
   ];
 
   const handleActionClick = (title: string) => {
-    alert(`Navigating to: ${title}`);
-    // In a real application, this would redirect to the appropriate page
+    if (title === 'System Settings') {
+      router.push('/admin-pages/Settings');
+    } else {
+      alert(`Navigating to: ${title}`);
+      // In a real application, this would redirect to the appropriate page
+    }
   };
 
   return (

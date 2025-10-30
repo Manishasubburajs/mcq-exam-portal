@@ -156,13 +156,14 @@ const StudentProgressPage = () => {
       component="main"
       sx={{
         p: {
-          xs: '60px 12px 24px',
-          sm: '70px 20px 32px',
-          md: '24px 30px 40px',
-          lg: '32px 40px 48px'
+          xs: 1.5,
+          sm: 2.5,
+          md: 3.75
         },
-        backgroundColor: '#f5f7fa',
+        width: '100%',
         minHeight: '100vh',
+        backgroundColor: '#f5f7fa',
+        transition: 'all 0.3s ease',
       }}
     >
 
@@ -170,7 +171,8 @@ const StudentProgressPage = () => {
         <Card sx={{
           mb: { xs: 2, sm: 3, md: 4 },
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Box sx={{
@@ -244,7 +246,7 @@ const StudentProgressPage = () => {
           mb: { xs: 2, sm: 3, md: 4 },
           '& > *': {
             flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 18px)' },
-            minWidth: { xs: '200px', sm: '220px', md: '200px' }
+            minWidth: { xs: '150px', sm: '180px', md: '150px' }
           }
         }}>
           {[
@@ -253,7 +255,7 @@ const StudentProgressPage = () => {
             { icon: <School />, value: '24h', label: 'Total Study Time', color: '#e37400' },
             { icon: <EmojiEvents />, value: 'Top 10%', label: 'School Ranking', color: '#dc3545' },
           ].map((stat) => (
-            <Card key={stat.label} sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
+            <Card key={stat.label} sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)', transition: "all 0.3s ease" }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Avatar
@@ -285,7 +287,8 @@ const StudentProgressPage = () => {
         <Card sx={{
           mb: { xs: 2, sm: 3, md: 4 },
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Typography variant="h6" sx={{
@@ -306,7 +309,8 @@ const StudentProgressPage = () => {
         <Card sx={{
           mb: { xs: 2, sm: 3, md: 4 },
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Typography variant="h6" sx={{
@@ -323,7 +327,7 @@ const StudentProgressPage = () => {
               gap: { xs: 2, sm: 2.5, md: 3 },
               '& > *': {
                 flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 10px)', md: '1 1 calc(33.333% - 20px)' },
-                minWidth: { xs: '200px', sm: '250px', md: '200px' }
+                minWidth: { xs: '150px', sm: '200px', md: '150px' }
               }
             }}>
               {[
@@ -362,7 +366,8 @@ const StudentProgressPage = () => {
         {/* Exam History */}
         <Card sx={{
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Box sx={{

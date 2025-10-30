@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
+import { useMediaQuery } from '@mui/material';
+import { useSidebar } from '@/app/components/student_layout';
 import styles from './exam_taking.module.css';
 
 interface Question {
@@ -88,6 +89,7 @@ const ExamContent: React.FC = () => {
   const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(new Set());
   const [timeLeft, setTimeLeft] = useState(examData.duration * 60);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showNavigator, setShowNavigator] = useState(true);
 
   // Timer effect
   useEffect(() => {
@@ -103,6 +105,26 @@ const ExamContent: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  // Prevent right-click and leaving the page
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      alert('Right-click is disabled during the exam.');
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   const formatTime = (seconds: number) => {
@@ -122,6 +144,7 @@ const ExamContent: React.FC = () => {
     return examData.questions[questionIndex];
   };
 
+
   const selectOption = (optionId: string) => {
     setUserAnswers(prev => ({
       ...prev,
@@ -140,6 +163,15 @@ const ExamContent: React.FC = () => {
       return newSet;
     });
   };
+
+  const clearAnswer = () => {
+    setUserAnswers(prev => {
+      const newAnswers = { ...prev };
+      delete newAnswers[currentQuestion];
+      return newAnswers;
+    });
+  };
+
 
   const goToQuestion = (questionNum: number) => {
     setCurrentQuestion(questionNum);
@@ -173,10 +205,177 @@ const ExamContent: React.FC = () => {
   const answeredCount = Object.keys(userAnswers).length;
   const currentQ = getCurrentQuestion();
 
+  const { sidebarOpen } = useSidebar();
+  const isDesktop = useMediaQuery('(min-width:1024px)');
+  const leftPosition = isDesktop && sidebarOpen ? '220px' : '0px';
+
+  const renderQuestionSidebar = () => (
+    <div className={`${styles.questionSidebar} ${showNavigator ? '' : styles.compact} ${isDesktop ? styles.questionSidebarDesktop : ''}`}>
+      <div className={styles.sidebarHeader}>
+        <h3 className={styles.sidebarTitle}>Question Navigator</h3>
+        {!isDesktop && (
+          <button
+            className={`${styles.btn} ${styles.btnClose}`}
+            onClick={() => setShowNavigator(false)}
+            aria-label="Close Navigator"
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        )}
+      </div>
+
+      <div className={styles.questionGrid}>
+        {Array.from({ length: 30 }, (_, i) => i + 1).map(num => {
+          const status = getQuestionStatus(num);
+          return (
+            <button
+              key={num}
+              className={`${styles.questionNumber} ${styles[status]}`}
+              onClick={() => goToQuestion(num)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  goToQuestion(num);
+                }
+              }}
+              type="button"
+              aria-label={`Go to question ${num}`}
+            >
+              {num}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className={styles.questionStatus}>
+        <div className={styles.statusItem}>
+          <div className={`${styles.statusColor} ${styles.statusCurrent}`}></div>
+          <span>Current</span>
+        </div>
+        <div className={styles.statusItem}>
+          <div className={`${styles.statusColor} ${styles.statusAnswered}`}></div>
+          <span>Answered</span>
+        </div>
+        <div className={styles.statusItem}>
+          <div className={`${styles.statusColor} ${styles.statusFlagged}`}></div>
+          <span>Flagged</span>
+        </div>
+        <div className={styles.statusItem}>
+          <div className={`${styles.statusColor} ${styles.statusUnanswered}`}></div>
+          <span>Unanswered</span>
+        </div>
+      </div>
+
+      <div className={styles.examNotes}>
+        <p><strong>Instructions:</strong></p>
+        <ul className={styles.instructionsList}>
+          <li>Select one answer per question</li>
+          <li>You can flag questions for review</li>
+          <li>Timer will auto-submit when time expires</li>
+          <li>No going back after submission</li>
+        </ul>
+      </div>
+    </div>
+  );
+
+  const renderQuestionMain = () => (
+    <div className={styles.questionMain}>
+      <div className={styles.questionContainer}>
+        <div className={styles.questionHeader}>
+          <h2 className={styles.questionTitle}>Question {currentQuestion} of {examData.totalQuestions}</h2>
+          <div className={styles.questionActions}>
+            {!isDesktop && (
+              <button
+                className={`${styles.btn} ${styles.btnOutline}`}
+                onClick={() => setShowNavigator(!showNavigator)}
+              >
+                <i className="fas fa-list"></i> {showNavigator ? 'Hide Navigator' : 'Show Navigator'}
+              </button>
+            )}
+            <button
+              className={`${styles.btn} ${styles.btnFlag} ${flaggedQuestions.has(currentQuestion) ? styles.flagged : ''}`}
+              onClick={toggleFlag}
+            >
+              <i className="fas fa-flag"></i> {flaggedQuestions.has(currentQuestion) ? 'Unflag' : 'Flag'}
+            </button>
+            <button
+              className={`${styles.btn} ${styles.btnClear}`}
+              onClick={clearAnswer}
+              disabled={!userAnswers[currentQuestion]}
+            >
+              <i className="fas fa-eraser"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.questionContent}>
+          <div className={styles.questionText}>
+            {currentQ.text}
+          </div>
+
+          <ul className={styles.optionsList} aria-label="Multiple choice options">
+            {currentQ.options.map(option => {
+              const isSelected = userAnswers[currentQuestion] === option.id;
+              return (
+                <li key={option.id}>
+                  <button
+                    className={`${styles.optionItem} ${isSelected ? styles.selected : ''}`}
+                    onClick={() => selectOption(option.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        selectOption(option.id);
+                      }
+                    }}
+                    aria-label={`Select option ${option.id}: ${option.text}`}
+                    type="button"
+                  >
+                    <div className={styles.optionMarker}>{option.id}</div>
+                    <div className={styles.optionText}>{option.text}</div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className={styles.examFooter}>
+          <div className={styles.navButtons}>
+            <button
+              className={`${styles.btn} ${styles.btnOutline} ${styles.btnLarge}`}
+              onClick={goToPrevious}
+              disabled={currentQuestion === 1}
+            >
+              <i className="fas fa-chevron-left"></i> Previous
+            </button>
+            <button
+              className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLarge}`}
+              onClick={goToNext}
+              disabled={currentQuestion === examData.totalQuestions}
+            >
+              Next <i className="fas fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <div className={styles.progressText}>
+            <span>{answeredCount}</span> of {examData.totalQuestions} questions answered
+          </div>
+
+          <button
+            className={`${styles.btn} ${styles.btnDanger} ${styles.btnLarge}`}
+            onClick={() => setShowSubmitModal(true)}
+          >
+            Submit Exam
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className={styles.examContainer}>
+    <div className={`${styles.examContainer} ${leftPosition === '220px' ? styles.containerShifted : styles.containerFull}`}>
       {/* Exam Header */}
-      <div className={styles.examHeader}>
+      <div className={`${styles.examHeader} ${leftPosition === '220px' ? styles.left220 : styles.left0}`}>
         <div className={styles.examInfo}>
           <h1>{examData.title}</h1>
           <p>{examData.duration} minutes • {examData.totalQuestions} questions • 100 points</p>
@@ -188,138 +387,29 @@ const ExamContent: React.FC = () => {
 
       <div className={styles.examContent}>
         {/* Question Navigator Sidebar */}
-        <div className={styles.questionSidebar}>
-          <h3 className={styles.sidebarTitle}>Question Navigator</h3>
-
-          <div className={styles.questionGrid}>
-            {Array.from({ length: examData.totalQuestions }, (_, i) => i + 1).map(num => (
-              <div
-                key={num}
-                className={`${styles.questionNumber} ${styles[getQuestionStatus(num)]}`}
-                onClick={() => goToQuestion(num)}
-              >
-                {num}
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.questionStatus}>
-            <div className={styles.statusItem}>
-              <div className={styles.statusColor + ' ' + styles.statusCurrent}></div>
-              <span>Current</span>
-            </div>
-            <div className={styles.statusItem}>
-              <div className={styles.statusColor + ' ' + styles.statusAnswered}></div>
-              <span>Answered</span>
-            </div>
-            <div className={styles.statusItem}>
-              <div className={styles.statusColor + ' ' + styles.statusFlagged}></div>
-              <span>Flagged</span>
-            </div>
-            <div className={styles.statusItem}>
-              <div className={styles.statusColor + ' ' + styles.statusUnanswered}></div>
-              <span>Unanswered</span>
-            </div>
-          </div>
-
-          <div className={styles.examNotes}>
-            <p><strong>Instructions:</strong></p>
-            <ul>
-              <li>Select one answer per question</li>
-              <li>You can flag questions for review</li>
-              <li>Timer will auto-submit when time expires</li>
-              <li>No going back after submission</li>
-            </ul>
-          </div>
-        </div>
+        {renderQuestionSidebar()}
 
         {/* Main Question Area */}
-        <div className={styles.questionMain}>
-          <div className={styles.questionContainer}>
-            <div className={styles.questionHeader}>
-              <h2 className={styles.questionTitle}>Question {currentQuestion} of {examData.totalQuestions}</h2>
-              <div className={styles.questionActions}>
-                <button
-                  className={`${styles.btn} ${styles.btnFlag} ${flaggedQuestions.has(currentQuestion) ? styles.flagged : ''}`}
-                  onClick={toggleFlag}
-                >
-                  <i className="fas fa-flag"></i> {flaggedQuestions.has(currentQuestion) ? 'Unflag' : 'Flag'}
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.questionContent}>
-              <div className={styles.questionText}>
-                {currentQ.text}
-              </div>
-
-              <ul className={styles.optionsList}>
-                {currentQ.options.map(option => (
-                  <li
-                    key={option.id}
-                    className={`${styles.optionItem} ${userAnswers[currentQuestion] === option.id ? styles.selected : ''}`}
-                    onClick={() => selectOption(option.id)}
-                  >
-                    <div className={styles.optionMarker}>{option.id}</div>
-                    <div className={styles.optionText}>{option.text}</div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className={styles.examFooter}>
-              <div className={styles.navButtons}>
-                <button
-                  className={`${styles.btn} ${styles.btnOutline} ${styles.btnLarge}`}
-                  onClick={goToPrevious}
-                  disabled={currentQuestion === 1}
-                >
-                  <i className="fas fa-chevron-left"></i> Previous
-                </button>
-                <button
-                  className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLarge}`}
-                  onClick={goToNext}
-                  disabled={currentQuestion === examData.totalQuestions}
-                >
-                  Next <i className="fas fa-chevron-right"></i>
-                </button>
-              </div>
-
-              <div className={styles.progressText}>
-                <span>{answeredCount}</span> of {examData.totalQuestions} questions answered
-              </div>
-
-              <button
-                className={`${styles.btn} ${styles.btnDanger} ${styles.btnLarge}`}
-                onClick={() => setShowSubmitModal(true)}
-              >
-                Submit Exam
-              </button>
-            </div>
-          </div>
-        </div>
+        {renderQuestionMain()}
       </div>
 
       {/* Submit Confirmation Modal */}
-      <Dialog
-        open={showSubmitModal}
-        onClose={() => setShowSubmitModal(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Submit Exam?</DialogTitle>
-        <DialogContent>
-          <Typography>
+      <div className={`${styles.modal} ${showSubmitModal ? styles.show : ''}`} id="submitModal">
+        <div className={styles.modalContent}>
+          <h2 className={styles.modalTitle}>Submit Exam?</h2>
+          <p className={styles.modalText} id="modalText">
             You have answered {answeredCount} out of {examData.totalQuestions} questions. Are you sure you want to submit your exam?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowSubmitModal(false)}>Cancel</Button>
-          <Button onClick={handleSubmitExam} variant="contained" color="error">
-            Yes, Submit
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </p>
+          <div className={styles.modalButtons}>
+            <button className={`${styles.btn} ${styles.btnOutline}`} id="cancelSubmit" onClick={() => setShowSubmitModal(false)}>
+              Cancel
+            </button>
+            <button className={`${styles.btn} ${styles.btnDanger}`} id="confirmSubmit" onClick={handleSubmitExam}>
+              Yes, Submit
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

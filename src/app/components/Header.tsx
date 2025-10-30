@@ -15,8 +15,8 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
   const [isDesktop, setIsDesktop] = useState(true);
 
   useEffect(() => {
-    const mobileQuery = window.matchMedia('(max-width:768px)');
-    const desktopQuery = window.matchMedia('(min-width:769px)');
+    const mobileQuery = globalThis.matchMedia('(max-width:768px)');
+    const desktopQuery = globalThis.matchMedia('(min-width:769px)');
 
     setIsMobile(mobileQuery.matches);
     setIsDesktop(desktopQuery.matches);
@@ -47,12 +47,18 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
         borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
         position: 'fixed',
         top: 0,
-        left: isDesktop ? (sidebarOpen ? '220px' : '0px') : '0px', // Desktop adjusts with sidebar, mobile stays at 0px
+        left: (() => {
+          if (isDesktop) {
+            return sidebarOpen ? '220px' : '0px';
+          }
+          return '0px';
+        })(), // Desktop adjusts with sidebar, mobile stays at 0px
         right: 0,
         backgroundColor: (theme) => theme.palette.background.paper,
-        zIndex: isMobile ? 900 : 1000, // Lower z-index on mobile so sidebar appears above header
+        zIndex: isDesktop ? 1000 : 900, // Lower z-index on mobile and tablet so sidebar appears above header
         boxShadow: (theme) => `0 2px 4px ${theme.palette.action.disabled}`,
         transition: 'left 0.3s ease', // Smooth transition when sidebar opens/closes
+        height: isMobile ? '50px' : '80px',
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
