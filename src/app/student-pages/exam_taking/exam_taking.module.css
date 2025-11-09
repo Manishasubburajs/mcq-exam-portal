@@ -74,12 +74,12 @@ body {
 
 .timer.warning {
   background: rgba(255, 193, 7, 0.3);
-  color: #ffc107;
+  color: #000000;
 }
 
 .timer.critical {
   background: rgba(220, 53, 69, 0.3);
-  color: #dc3545;
+  color: #ffffff;
   animation: pulse 1s infinite;
 }
 
@@ -230,7 +230,7 @@ body {
 
 .questionNumber.current:hover {
   border: none;
-  color: white;
+  color: #000000;
   background: #8B5CF6;
 }
 
@@ -243,13 +243,13 @@ body {
 .questionNumber.answered {
   background: #28a745;
   border-color: #28a745;
-  color: white;
+  color: #000000;
 }
 
 .questionNumber.flagged {
   background: #ffc107;
   border-color: #ffc107;
-  color: white;
+  color: #000000;
 }
 
 .questionNumber.unanswered {
@@ -380,7 +380,7 @@ body {
 .btnOutline {
   background: white;
   border: 1px solid #2575fc;
-  color: #2575fc;
+  color: #000000;
 }
 
 .btnOutline:hover {
@@ -399,7 +399,7 @@ body {
 
 .btnFlag {
   background: #ffc107;
-  color: white;
+  color: #000000;
 }
 
 .btnFlag:hover {
@@ -421,7 +421,7 @@ body {
 
 .btnClear:disabled {
   background: #e9ecef;
-  color: #6c757d;
+  color: #000000;
   cursor: not-allowed;
 }
 

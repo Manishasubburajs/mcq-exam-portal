@@ -1,6 +1,6 @@
 /* Register page styles */
 .bannerGradient {
-  background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'><rect fill='%236a11cb' width='500' height='500'/><path fill='%232575fc' d='M250,0 L500,250 L250,500 L0,250 Z'/></svg>");
+  background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'><rect fill='%236a11cb' width='500' height='500'/><path fill='%232575fc' d='M250,0 L500,250 L250,500 L0,250 Z'/></svg>");
   background-size: cover;
 }
 
@@ -17,8 +17,8 @@
 }
 
 .featureIcon {
-  background-color: #FFEB3B;
-  color: green;
+  background-color: #2E7D32;
+  color: white;
   font-weight: bold;
   border-radius: 50%;
   width: 1.2rem;

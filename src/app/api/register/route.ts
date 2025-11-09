@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       grade,
       section,
     } = body;
+    const trimmedEmail = email.trim();
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -35,11 +36,11 @@ export async function POST(req: Request) {
     try {
       await conn.beginTransaction();
 
-      // Insert into users table
+      // Insert into users table (store email in lowercase for consistency)
       const [userResult]: any = await conn.execute(
         `INSERT INTO users (username, email, password_hash, role, first_name, last_name)
          VALUES (?, ?, ?, 'student', ?, ?)`,
-        [username, email, hashedPassword, firstName, lastName]
+        [username, trimmedEmail.toLowerCase(), hashedPassword, firstName, lastName]
       );
 
       const userId = userResult.insertId;
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       await conn.execute(
         `INSERT INTO student_details (user_id, dob, gender, school, grade, section)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [userId, dob, gender, school, grade, section || null]
+        [userId, dob, gender, school, grade, section]
       );
 
       await conn.commit();

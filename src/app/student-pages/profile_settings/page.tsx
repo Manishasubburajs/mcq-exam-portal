@@ -43,93 +43,106 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 );
 
 // Profile Header Component
-const ProfileHeader: React.FC<{ isMobile: boolean }> = ({ isMobile }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pb: 2, borderBottom: '1px solid #e0e0e0', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 0 } }}>
-    <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '20px', sm: '24px' }, color: '#2c3e50', fontWeight: 600, textAlign: { xs: 'center', sm: 'left' } }}>
-      My Profile & Settings
-    </Typography>
-    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-      <Avatar
-        src="https://ui-avatars.com/api/?name=John+Doe&background=6a11cb&color=fff"
-        alt="John Doe"
-        sx={{ width: 40, height: 40, mr: 1, border: '2px solid #6a11cb' }}
-      />
-      <Typography sx={{ color: '#2c3e50', fontWeight: 500 }}>John Doe</Typography>
+const ProfileHeader: React.FC<{ isMobile: boolean; userData: any; loading: boolean }> = ({ isMobile, userData, loading }) => {
+  const displayName = userData ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || 'User' : 'Loading...';
+  const avatarUrl = userData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6a11cb&color=fff` : '';
+
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, pb: 2, borderBottom: '1px solid #e0e0e0', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 0 } }}>
+      <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '20px', sm: '24px' }, color: '#2c3e50', fontWeight: 600, textAlign: { xs: 'center', sm: 'left' } }}>
+        My Profile & Settings
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Avatar
+          src={avatarUrl}
+          alt={displayName}
+          sx={{ width: 40, height: 40, mr: 1, border: '2px solid #6a11cb' }}
+        />
+        <Typography sx={{ color: '#2c3e50', fontWeight: 500 }}>{loading ? 'Loading...' : displayName}</Typography>
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
 
 // Profile Stats Card Component
-const ProfileStatsCard: React.FC = () => (
-  <Card sx={{ mb: 3, boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-    <CardContent sx={{ display: 'flex', alignItems: 'center', p: { xs: 2, sm: 3 }, flexDirection: { xs: 'column', sm: 'row' }, textAlign: { xs: 'center', sm: 'left' } }}>
-      <Box sx={{ position: 'relative', mr: { xs: 0, sm: 3 }, mb: { xs: 2, sm: 0 } }}>
-        <Avatar
-          src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
-          sx={{ width: { xs: 100, sm: 120 }, height: { xs: 100, sm: 120 }, border: '5px solid #6a11cb' }}
-        />
-        <IconButton
-          sx={{
-            position: 'absolute',
-            bottom: 5,
-            right: 5,
-            bgcolor: '#2575fc',
-            color: 'white',
-            width: 30,
-            height: 30,
-            '&:hover': { bgcolor: '#1a5fc8' },
-          }}
-          onClick={() => alert('Avatar edit functionality would open a file picker in a real application')}
-        >
-          <Camera sx={{ fontSize: 16 }} />
-        </IconButton>
-      </Box>
-      <Box sx={{ flex: 1 }}>
-        <Typography variant="h3" sx={{ fontWeight: 700, color: '#2c3e50', mb: 0.5, fontSize: { xs: '1.8rem', sm: '2.125rem' } }}>
-          John Doe
-        </Typography>
-        <Typography sx={{ color: '#7f8c8d', mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-          Student ID: S12345 • Class: 10th Grade • Section: A
-        </Typography>
-        <Box sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 3,
-          justifyContent: { xs: 'center', sm: 'flex-start' },
-          '& > *': {
-            flex: { xs: '1 1 120px', sm: '1 1 150px' },
-            minWidth: { xs: '100px', sm: '120px' }
-          }
-        }}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-              82%
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
-              Average Score
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-              15
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
-              Exams Taken
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-              #5
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
-              Class Rank
-            </Typography>
+const ProfileStatsCard = ({ userData, loading }: { userData: any; loading: boolean }) => {
+  const displayName = userData ? ((userData.first_name || '') + ' ' + (userData.last_name || '')).trim() || userData.username || 'User' : 'Loading...';
+  const avatarUrl = userData ? `https://ui-avatars.com/api/?name=${displayName}&background=6a11cb&color=fff&size=120` : '';
+  const studentId = userData ? `S${userData.user_id || '00000'}` : 'Loading...';
+  const grade = userData?.grade ? `${userData.grade}th Grade` : 'Grade not set';
+  const section = userData?.section || 'Section not set';
+
+  return (
+    <Card sx={{ mb: 3, boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+      <CardContent sx={{ display: 'flex', alignItems: 'center', p: { xs: 2, sm: 3 }, flexDirection: { xs: 'column', sm: 'row' }, textAlign: { xs: 'center', sm: 'left' } }}>
+        <Box sx={{ position: 'relative', mr: { xs: 0, sm: 3 }, mb: { xs: 2, sm: 0 } }}>
+          <Avatar
+            src={avatarUrl}
+            sx={{ width: { xs: 100, sm: 120 }, height: { xs: 100, sm: 120 }, border: '5px solid #6a11cb' }}
+          />
+          <IconButton
+            sx={{
+              position: 'absolute',
+              bottom: 5,
+              right: 5,
+              bgcolor: '#2575fc',
+              color: 'white',
+              width: 30,
+              height: 30,
+              '&:hover': { bgcolor: '#1a5fc8' },
+            }}
+            onClick={() => alert('Avatar edit functionality would open a file picker in a real application')}
+          >
+            <Camera sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h3" sx={{ fontWeight: 700, color: '#2c3e50', mb: 0.5, fontSize: { xs: '1.8rem', sm: '2.125rem' } }}>
+            {loading ? 'Loading...' : displayName}
+          </Typography>
+          <Typography sx={{ color: '#7f8c8d', mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+            {loading ? 'Loading student details...' : 'Student ID: ' + studentId + ' • Class: ' + grade + ' • Section: ' + section}
+          </Typography>
+          <Box sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 3,
+            justifyContent: { xs: 'center', sm: 'flex-start' },
+            '& > *': {
+              flex: { xs: '1 1 120px', sm: '1 1 150px' },
+              minWidth: { xs: '100px', sm: '120px' }
+            }
+          }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+                82%
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
+                Average Score
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+                15
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
+                Exams Taken
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#6a11cb', fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+                #5
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#7f8c8d' }}>
+                Class Rank
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </Box>
-    </CardContent>
-  </Card>
-);
+      </CardContent>
+    </Card>
+  );
+};
 
 // Personal Information Tab Component
 const PersonalInformationTab: React.FC<{
@@ -193,6 +206,7 @@ const PersonalInformationTab: React.FC<{
             onChange={handlePersonalInfoChange('phone')}
             sx={{ mb: 2 }}
             size={isMobile ? 'small' : 'medium'}
+            
           />
           <Box sx={{
             display: 'flex',
@@ -209,6 +223,7 @@ const PersonalInformationTab: React.FC<{
                 onChange={handlePersonalInfoChange('birthDate')}
                 required
                 size={isMobile ? 'small' : 'medium'}
+                
               />
             </Box>
             <Box sx={{ flex: 1 }}>
@@ -217,6 +232,7 @@ const PersonalInformationTab: React.FC<{
                 <Select
                   value={personalInfo.gender}
                   onChange={(e) => handlePersonalInfoChange('gender')({ target: { value: e.target.value } } as any)}
+                  
                 >
                   <MenuItem value="male">Male</MenuItem>
                   <MenuItem value="female">Female</MenuItem>
@@ -228,6 +244,42 @@ const PersonalInformationTab: React.FC<{
           </Box>
           <TextField
             fullWidth
+            label="School / Institution"
+            value={personalInfo.school}
+            onChange={handlePersonalInfoChange('school')}
+            sx={{ mb: 2 }}
+            size={isMobile ? 'small' : 'medium'}
+          />
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            mb: 2
+          }}>
+            <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+              <InputLabel>Grade</InputLabel>
+              <Select
+                value={personalInfo.grade}
+                onChange={(e) => handlePersonalInfoChange('grade')({ target: { value: e.target.value } } as any)}
+              >
+                <MenuItem value="9">9th Grade</MenuItem>
+                <MenuItem value="10">10th Grade</MenuItem>
+                <MenuItem value="11">11th Grade</MenuItem>
+                <MenuItem value="12">12th Grade</MenuItem>
+                <MenuItem value="college">College</MenuItem>
+                <MenuItem value="other">Other</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="Section (Optional)"
+              value={personalInfo.section}
+              onChange={handlePersonalInfoChange('section')}
+              size={isMobile ? 'small' : 'medium'}
+            />
+          </Box>
+          <TextField
+            fullWidth
             label="Bio (Optional)"
             multiline
             rows={3}
@@ -236,9 +288,10 @@ const PersonalInformationTab: React.FC<{
             placeholder="Tell us a bit about yourself..."
             sx={{ mb: 3 }}
             size={isMobile ? 'small' : 'medium'}
+
           />
           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button type="submit" variant="contained" sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)', fontSize: { xs: '0.875rem', sm: '1rem' }, px: { xs: 2, sm: 3 } }}>
+            <Button type="submit" variant="contained"  sx={{ bgcolor: 'linear-gradient(to right, #6a11cb, #2575fc)', fontSize: { xs: '0.875rem', sm: '1rem' }, px: { xs: 2, sm: 3 } }}>
               Save Changes
             </Button>
           </Box>
@@ -565,8 +618,10 @@ const DeleteAccountModal: React.FC<{
   </Dialog>
 );
 
-const ProfilePage: React.FC = () => {
+const ProfilePage = () => {
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -576,17 +631,20 @@ const ProfilePage: React.FC = () => {
 
   // Form states
   const [personalInfo, setPersonalInfo] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@school.edu',
-    phone: '+1 (555) 123-4567',
-    birthDate: '2006-05-15',
-    gender: 'male',
-    bio: "I'm a 10th grade student passionate about mathematics and science. I enjoy solving complex problems and participating in science fairs.",
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    gender: '',
+    bio: '',
+    school: '',
+    grade: '',
+    section: '',
   });
 
   const [accountSettings, setAccountSettings] = useState({
-    username: 'student2023', // Sample username for demo purposes
+    username: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -613,6 +671,56 @@ const ProfilePage: React.FC = () => {
     pushResults: false,
   });
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+          console.error('No authentication token found');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setUserData(data.user);
+        setPersonalInfo({
+          firstName: data.user.first_name || '',
+          lastName: data.user.last_name || '',
+          email: data.user.email || '',
+          phone: data.user.phone || '',
+          birthDate: data.user.dob ? new Date(data.user.dob).toISOString().split('T')[0] : '',
+          gender: data.user.gender || '',
+          bio: data.user.bio || '',
+          school: data.user.school || '',
+          grade: data.user.grade || '',
+          section: data.user.section || '',
+        });
+        setAccountSettings({ ...accountSettings, username: data.user.username || '' });
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const handlePersonalInfoChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setPersonalInfo({ ...personalInfo, [field]: event.target.value });
@@ -631,7 +739,6 @@ const ProfilePage: React.FC = () => {
     setNotificationSettings({ ...notificationSettings, [field]: event.target.checked });
   };
 
-
   const handleDeleteAccount = () => {
     if (confirmDeleteText === 'DELETE') {
       alert('Account deletion requested. A confirmation email has been sent to your email address.');
@@ -640,12 +747,10 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-
   const theme = useTheme();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const mediaQuery = globalThis.matchMedia(theme.breakpoints.down('md'));
     setIsMobile(mediaQuery.matches);
 
@@ -661,7 +766,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f7fa', p: { xs: '60px 8px 16px', sm: '70px 16px 24px', md: '16px 24px 32px', lg: '24px 32px 40px' } }}>
-      <ProfileStatsCard />
+      <ProfileStatsCard userData={userData} loading={loading} />
 
         {/* Tabs */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>

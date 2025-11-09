@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -48,6 +48,8 @@ ChartJS.register(
 
 
 const StudentProgressPage = () => {
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const chartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
@@ -150,6 +152,45 @@ const StudentProgressPage = () => {
     return '#dc3545';
   };
 
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+          console.error('No authentication token found');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setUserData(data.user);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const displayName = userData ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || 'User' : 'Loading...';
+  const avatarUrl = userData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6a11cb&color=fff` : '';
+  const studentId = userData ? `S${userData.user_id || '00000'}` : 'Loading...';
+  const grade = userData?.grade ? `${userData.grade}th Grade` : 'Grade not set';
+  const section = userData?.section || 'Section not set';
 
   return (
     <Box
@@ -182,7 +223,7 @@ const StudentProgressPage = () => {
               textAlign: { xs: 'center', sm: 'left' }
             }}>
               <Avatar
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
+                src={avatarUrl}
                 sx={{
                   width: { xs: 100, sm: 110, md: 120 },
                   height: { xs: 100, sm: 110, md: 120 },
@@ -198,14 +239,14 @@ const StudentProgressPage = () => {
                   mb: { xs: 0.75, sm: 1 },
                   fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' }
                 }}>
-                  John Doe
+                  {loading ? 'Loading...' : displayName}
                 </Typography>
                 <Typography sx={{
                   color: '#7f8c8d',
                   mb: { xs: 1.5, sm: 2 },
                   fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' }
                 }}>
-                  Student ID: S12345 • Class: 10th Grade • Section: A
+                  {loading ? 'Loading student details...' : `Student ID: ${studentId} • Class: ${grade} • Section: ${section}`}
                 </Typography>
                 <Box sx={{
                   display: 'flex',

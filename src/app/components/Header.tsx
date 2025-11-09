@@ -13,6 +13,7 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [username, setUsername] = useState<string>("Administrator");
 
   useEffect(() => {
     const mobileQuery = globalThis.matchMedia('(max-width:768px)');
@@ -26,6 +27,9 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
 
     mobileQuery.addEventListener('change', handleMobileChange);
     desktopQuery.addEventListener('change', handleDesktopChange);
+
+    // Always show "Administrator" for admin pages
+    setUsername("Administrator");
 
     return () => {
       mobileQuery.removeEventListener('change', handleMobileChange);
@@ -90,7 +94,7 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
           <Avatar sx={{ bgcolor: 'primary.main', color: 'white', width: isMobile ? 20 : 40, height: isMobile ? 20 : 40, marginRight: isMobile ? '2px' : '10px' }}>
             <AdminPanelSettings sx={{ fontSize: isMobile ? 12 : 20 }} />
           </Avatar>
-          {!isMobile && <Typography variant="body1">Administrator</Typography>}
+          {!isMobile && <Typography variant="body1">{username}</Typography>}
         </Box>
       </Box>
     </Box>
