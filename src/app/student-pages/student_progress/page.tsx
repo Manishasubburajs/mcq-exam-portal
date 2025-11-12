@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -48,6 +48,8 @@ ChartJS.register(
 
 
 const StudentProgressPage = () => {
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const chartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
@@ -150,19 +152,59 @@ const StudentProgressPage = () => {
     return '#dc3545';
   };
 
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+          console.error('No authentication token found');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setUserData(data.user);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const displayName = userData ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || 'User' : 'Loading...';
+  const avatarUrl = userData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6a11cb&color=fff` : '';
+  const studentId = userData ? `S${userData.user_id || '00000'}` : 'Loading...';
+  const grade = userData?.grade ? `${userData.grade}th Grade` : 'Grade not set';
+  const section = userData?.section || 'Section not set';
 
   return (
     <Box
       component="main"
       sx={{
         p: {
-          xs: '60px 12px 24px',
-          sm: '70px 20px 32px',
-          md: '24px 30px 40px',
-          lg: '32px 40px 48px'
+          xs: 1.5,
+          sm: 2.5,
+          md: 3.75
         },
-        backgroundColor: '#f5f7fa',
+        width: '100%',
         minHeight: '100vh',
+        backgroundColor: '#f5f7fa',
+        transition: 'all 0.3s ease',
       }}
     >
 
@@ -170,7 +212,8 @@ const StudentProgressPage = () => {
         <Card sx={{
           mb: { xs: 2, sm: 3, md: 4 },
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Box sx={{
@@ -180,7 +223,7 @@ const StudentProgressPage = () => {
               textAlign: { xs: 'center', sm: 'left' }
             }}>
               <Avatar
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
+                src={avatarUrl}
                 sx={{
                   width: { xs: 100, sm: 110, md: 120 },
                   height: { xs: 100, sm: 110, md: 120 },
@@ -196,14 +239,14 @@ const StudentProgressPage = () => {
                   mb: { xs: 0.75, sm: 1 },
                   fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' }
                 }}>
-                  John Doe
+                  {loading ? 'Loading...' : displayName}
                 </Typography>
                 <Typography sx={{
                   color: '#7f8c8d',
                   mb: { xs: 1.5, sm: 2 },
                   fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' }
                 }}>
-                  Student ID: S12345 • Class: 10th Grade • Section: A
+                  {loading ? 'Loading student details...' : `Student ID: ${studentId} • Class: ${grade} • Section: ${section}`}
                 </Typography>
                 <Box sx={{
                   display: 'flex',
@@ -244,7 +287,7 @@ const StudentProgressPage = () => {
           mb: { xs: 2, sm: 3, md: 4 },
           '& > *': {
             flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 18px)' },
-            minWidth: { xs: '200px', sm: '220px', md: '200px' }
+            minWidth: { xs: '150px', sm: '180px', md: '150px' }
           }
         }}>
           {[
@@ -253,7 +296,7 @@ const StudentProgressPage = () => {
             { icon: <School />, value: '24h', label: 'Total Study Time', color: '#e37400' },
             { icon: <EmojiEvents />, value: 'Top 10%', label: 'School Ranking', color: '#dc3545' },
           ].map((stat) => (
-            <Card key={stat.label} sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
+            <Card key={stat.label} sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)', transition: "all 0.3s ease" }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Avatar
@@ -285,7 +328,8 @@ const StudentProgressPage = () => {
         <Card sx={{
           mb: { xs: 2, sm: 3, md: 4 },
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Typography variant="h6" sx={{
@@ -306,7 +350,8 @@ const StudentProgressPage = () => {
         <Card sx={{
           mb: { xs: 2, sm: 3, md: 4 },
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Typography variant="h6" sx={{
@@ -323,7 +368,7 @@ const StudentProgressPage = () => {
               gap: { xs: 2, sm: 2.5, md: 3 },
               '& > *': {
                 flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 10px)', md: '1 1 calc(33.333% - 20px)' },
-                minWidth: { xs: '200px', sm: '250px', md: '200px' }
+                minWidth: { xs: '150px', sm: '200px', md: '150px' }
               }
             }}>
               {[
@@ -362,7 +407,8 @@ const StudentProgressPage = () => {
         {/* Exam History */}
         <Card sx={{
           borderRadius: { xs: 1.5, sm: 2 },
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
         }}>
           <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
             <Box sx={{

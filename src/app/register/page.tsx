@@ -163,14 +163,17 @@ export default function Register() {
             borderRadius: 3,
             overflow: "hidden",
             display: "flex",
-            minHeight: 600,
+            flexDirection: { xs: 'column', md: 'row' },
+            minHeight: { xs: 'auto', md: 600 },
           }}
         >
           {/* Left Banner with Gradient */}
           <Box
+            className={styles.bannerGradient}
             sx={{
-              flex: 1,
-              background: styles.bannerGradient,
+              flex: 'none',
+              width: { xs: '100%', md: '50%' },
+              height: { xs: 500, md: 600 },
               color: "white",
               p: 4,
               display: "flex",
@@ -211,7 +214,7 @@ export default function Register() {
           </Box>
 
           {/* Form Side */}
-          <Box sx={{ flex: 1, p: 4 }}>
+          <Box sx={{ flex: 1, p: 4, width: { xs: '100%', md: '50%' } }}>
             <Box textAlign="center" mb={3}>
               <Typography variant="h4" color="primary">
                 MCQ <span className={styles.portalTitle}>Exam Portal</span>
@@ -293,6 +296,11 @@ export default function Register() {
                   onChange={(e) => handleChange("dob", e.target.value)}
                   error={!!errors.dob}
                   helperText={errors.dob}
+                  slotProps={{
+                    inputLabel: {
+                      shrink: true,
+                    },
+                  }}
                 />
                 <Select
                   fullWidth
