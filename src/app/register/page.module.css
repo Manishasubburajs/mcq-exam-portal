@@ -17,8 +17,8 @@
 }
 
 .featureIcon {
-  background-color: #2E7D32;
-  color: white;
+  background-color: hsl(57, 98%, 77%);
+  color: #2db806;
   font-weight: bold;
   border-radius: 50%;
   width: 1.2rem;
