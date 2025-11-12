@@ -299,44 +299,45 @@ export default function CreateExam() {
     }
 
     const fetchDraftExams = async () => {
-  setLoadingDrafts(true);
-  try {
-    const res = await fetch(`/api/exams`);
-    const data = await res.json();
-    setDraftExams(data || []);
-  } catch (err) {
-    console.error("Error fetching drafts:", err);
-    setDraftExams([]);
-  }
-  setLoadingDrafts(false);
-};
+      setLoadingDrafts(true);
+      try {
+        const res = await fetch(`/api/exams`);
+        const data = await res.json();
+        setDraftExams(data || []);
+      } catch (err) {
+        console.error("Error fetching drafts:", err);
+        setDraftExams([]);
+      }
+      setLoadingDrafts(false);
+    };
 
     const handleDeleteDraft = async (examId: number) => {
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this draft exam? All its questions will be permanently removed."
-  );
-  if (!confirmDelete) return;
+      const confirmDelete = window.confirm(
+        "Are you sure you want to delete this draft exam? All its questions will be permanently removed."
+      );
+      if (!confirmDelete) return;
 
-  try {
-    const res = await fetch(`/api/exams/${examId}`, {
-      method: "DELETE",
-    });
+      try {
+        const res = await fetch(`/api/exams/${examId}`, {
+          method: "DELETE",
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    if (data.success) {
-      alert("✅ Draft exam deleted successfully!");
-      // 🔄 Refresh your draft exams list after deletion
-      fetchDraftExams();
-    } else {
-      alert("❌ Failed to delete draft: " + (data.message || "Unknown error"));
-    }
-  } catch (error) {
-    console.error("❌ Error deleting draft:", error);
-    alert("Something went wrong while deleting the draft.");
-  }
-};
-
+        if (data.success) {
+          alert("✅ Draft exam deleted successfully!");
+          // 🔄 Refresh your draft exams list after deletion
+          fetchDraftExams();
+        } else {
+          alert(
+            "❌ Failed to delete draft: " + (data.message || "Unknown error")
+          );
+        }
+      } catch (error) {
+        console.error("❌ Error deleting draft:", error);
+        alert("Something went wrong while deleting the draft.");
+      }
+    };
 
     return (
       <Box

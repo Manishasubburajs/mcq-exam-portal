@@ -24,8 +24,17 @@ import {
   useMediaQuery,
   CircularProgress,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from "@mui/icons-material";
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Visibility as VisibilityIcon,
+} from "@mui/icons-material";
 import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
 
@@ -37,30 +46,53 @@ export default function QuestionBankPage() {
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
   const [questions, setQuestions] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [subjectFilter, setSubjectFilter] = useState("");
-  const [difficultyFilter, setDifficultyFilter] = useState("");
-  const [searchFilter, setSearchFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+
+  const [openModal, setOpenModal] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const [newQuestion, setNewQuestion] = useState({
+    question_id: 0,
+    question_text: "",
+    option_a: "",
+    option_b: "",
+    option_c: "",
+    option_d: "",
+    correct_answer: "",
+    points: 1,
+    subject_id: 0,
+    difficulty: "Medium",
+  });
 
   useEffect(() => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
 
+  const fetchSubjects = async () => {
+    try {
+      const res = await fetch("/api/subjects");
+      const data = await res.json();
+      if (Array.isArray(data)) setSubjects(data);
+      else if (Array.isArray(data.data)) setSubjects(data.data);
+      else setSubjects([]);
+    } catch (err) {
+      console.error("Error fetching subjects:", err);
+      setSubjects([]);
+    }
+  };
+
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const query = new URLSearchParams();
-      if (subjectFilter) query.append("subject", subjectFilter);
-      if (difficultyFilter) query.append("difficulty", difficultyFilter);
-      if (searchFilter) query.append("search", searchFilter);
-
-      const res = await fetch(`/api/questions?${query.toString()}`);
+      const res = await fetch("/api/questions");
       const data = await res.json();
-      if (data.success) setQuestions(data.data);
-      else setQuestions([]);
+      setQuestions(data);
     } catch (err) {
       console.error(err);
     }
@@ -68,41 +100,19 @@ export default function QuestionBankPage() {
   };
 
   useEffect(() => {
+    fetchSubjects();
     fetchQuestions();
   }, []);
 
-  const handleApplyFilters = () => {
-    fetchQuestions();
-    setCurrentPage(1);
+  const subjectColors: { [key: string]: { bg: string; text: string } } = {
+    Math: { bg: "#e0f7fa", text: "#006064" },
+    Physics: { bg: "#fce4ec", text: "#880e4f" },
+    Chemistry: { bg: "#fff3e0", text: "#e65100" },
+    Biology: { bg: "#e8f5e9", text: "#1b5e20" },
   };
 
-  const handleResetFilters = () => {
-    setSubjectFilter("");
-    setDifficultyFilter("");
-    setSearchFilter("");
-    fetchQuestions();
-    setCurrentPage(1);
-  };
-
-  const handleAddQuestion = () => {
-    router.push("/admin-pages/Create_Exam");
-  };
-
-  const handleEditQuestion = (id: number) => {
-    console.log("Edit question:", id);
-  };
-
-  const handleDeleteQuestion = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this question?")) return;
-
-    try {
-      const res = await fetch(`/api/questions?question_id=${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (data.success) fetchQuestions();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const getSubjectColor = (subject: string) => subjectColors[subject]?.bg || "#f5f7fa";
+  const getSubjectTextColor = (subject: string) => subjectColors[subject]?.text || "#2c3e50";
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty?.toLowerCase()) {
@@ -117,43 +127,101 @@ export default function QuestionBankPage() {
     }
   };
 
-  const getSubjectColor = (subject: string) => {
-    if (!subject) return "#f5f5f5";
-    switch (subject.toLowerCase()) {
-      case "mathematics":
-        return "#e6f4ea";
-      case "science":
-        return "#e8f0fe";
-      case "history":
-        return "#fef7e0";
-      case "geography":
-        return "#f3e5f5";
-      case "english":
-        return "#fce4ec";
-      default:
-        return "#f5f5f5";
+  const handleAddQuestion = () => {
+    setNewQuestion({
+      question_id: 0,
+      question_text: "",
+      option_a: "",
+      option_b: "",
+      option_c: "",
+      option_d: "",
+      correct_answer: "",
+      points: 1,
+      subject_id: 0,
+      difficulty: "Medium",
+    });
+    setIsEditMode(false);
+    setOpenModal(true);
+  };
+
+  const handleEditQuestion = (q: any) => {
+    setNewQuestion({
+      question_id: q.question_id,
+      question_text: q.question_text,
+      option_a: q.option_a,
+      option_b: q.option_b,
+      option_c: q.option_c,
+      option_d: q.option_d,
+      correct_answer: q.correct_answer,
+      points: q.points,
+      subject_id: q.subject_id,
+      difficulty: q.difficulty,
+    });
+    setIsEditMode(true);
+    setOpenModal(true);
+  };
+
+  const handleSaveQuestion = async () => {
+    if (
+      !newQuestion.question_text ||
+      !newQuestion.option_a ||
+      !newQuestion.option_b ||
+      !newQuestion.option_c ||
+      !newQuestion.option_d ||
+      !newQuestion.correct_answer ||
+      newQuestion.subject_id === 0
+    ) {
+      alert("Please fill all required fields!");
+      return;
+    }
+
+    const method = isEditMode ? "PUT" : "POST";
+
+    try {
+      const res = await fetch("/api/questions", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newQuestion),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`✅ Question ${isEditMode ? "updated" : "added"} successfully!`);
+        setOpenModal(false);
+        fetchQuestions();
+      } else {
+        alert(`❌ ${data.error || "Failed to save question"}`);
+      }
+    } catch (err) {
+      console.error("Error saving question:", err);
+      alert("Something went wrong. Try again.");
     }
   };
 
-  const getSubjectTextColor = (subject: string) => {
-    if (!subject) return "#333";
-    switch (subject.toLowerCase()) {
-      case "mathematics":
-        return "#137333";
-      case "science":
-        return "#1a73e8";
-      case "history":
-        return "#e37400";
-      case "geography":
-        return "#7b1fa2";
-      case "english":
-        return "#c2185b";
-      default:
-        return "#333";
+  const handleDeleteQuestion = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+    try {
+      const res = await fetch("/api/questions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (res.ok) fetchQuestions();
+      else alert(data.error || "Failed to delete question");
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const paginatedQuestions = questions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const handleViewQuestion = (question: any) => {
+    setSelectedQuestion(question);
+    setViewModalOpen(true);
+  };
+
+  const paginatedQuestions = questions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
@@ -180,97 +248,22 @@ export default function QuestionBankPage() {
           paddingTop: { xs: "50px", md: "80px" },
         }}
       >
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Question Bank" sidebarOpen={sidebarOpen} />
+        <Header
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          title="Question Bank"
+          sidebarOpen={sidebarOpen}
+        />
 
-        {/* Filters Section */}
-        <Paper
-          elevation={1}
-          sx={{
-            padding: "20px",
-            borderRadius: "10px",
-            marginBottom: "25px",
-            backgroundColor: "white",
-          }}
-        >
-          <Typography variant="h6" sx={{ marginBottom: "15px", color: "#2c3e50" }}>
-            Filter Questions
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "10px",
-              margin: "0 -10px",
-            }}
-          >
-            <Box sx={{ flex: "1", minWidth: "200px", margin: "0 10px 15px" }}>
-              <FormControl fullWidth>
-                <InputLabel>Subject</InputLabel>
-                <Select value={subjectFilter} label="Subject" onChange={(e) => setSubjectFilter(e.target.value)}>
-                  <MenuItem value="">All Subjects</MenuItem>
-                  <MenuItem value="Mathematics">Mathematics</MenuItem>
-                  <MenuItem value="Science">Science</MenuItem>
-                  <MenuItem value="History">History</MenuItem>
-                  <MenuItem value="English">English</MenuItem>
-                  <MenuItem value="Geography">Geography</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box sx={{ flex: "1", minWidth: "200px", margin: "0 10px 15px" }}>
-              <FormControl fullWidth>
-                <InputLabel>Difficulty</InputLabel>
-                <Select
-                  value={difficultyFilter}
-                  label="Difficulty"
-                  onChange={(e) => setDifficultyFilter(e.target.value)}
-                >
-                  <MenuItem value="">All Levels</MenuItem>
-                  <MenuItem value="Easy">Easy</MenuItem>
-                  <MenuItem value="Medium">Medium</MenuItem>
-                  <MenuItem value="Hard">Hard</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box sx={{ flex: "1", minWidth: "200px", margin: "0 10px 15px" }}>
-              <TextField
-                fullWidth
-                label="Search"
-                placeholder="Search questions..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-              />
-            </Box>
-          </Box>
-
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-            <Button variant="outlined" color="secondary" onClick={handleResetFilters}>
-              Reset Filters
-            </Button>
+        <Paper elevation={1} sx={{ p: 3, borderRadius: "10px", backgroundColor: "white" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+            <Typography variant="h6">All Questions</Typography>
             <Button
               variant="contained"
+              startIcon={<AddIcon />}
               sx={{
                 background: "linear-gradient(to right, #6a11cb, #2575fc)",
                 "&:hover": { opacity: 0.9 },
               }}
-              onClick={handleApplyFilters}
-            >
-              Apply Filters
-            </Button>
-          </Box>
-        </Paper>
-
-        {/* Questions Table */}
-        <Paper elevation={1} sx={{ padding: "25px", borderRadius: "10px", backgroundColor: "white" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-            <Typography variant="h6" sx={{ color: "#2c3e50" }}>
-              All Questions
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              sx={{ background: "linear-gradient(to right, #6a11cb, #2575fc)", "&:hover": { opacity: 0.9 } }}
               onClick={handleAddQuestion}
             >
               Add Question
@@ -286,56 +279,45 @@ export default function QuestionBankPage() {
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
-                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>ID</TableCell>
-                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Question</TableCell>
-                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Subject</TableCell>
-                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Difficulty</TableCell>
-                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Used In</TableCell>
-                    <TableCell sx={{ fontWeight: "600", color: "#2c3e50" }}>Actions</TableCell>
+                    <TableCell>ID</TableCell>
+                    <TableCell>Question</TableCell>
+                    <TableCell>Subject</TableCell>
+                    <TableCell>Difficulty</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {paginatedQuestions.map((question) => (
-                    <TableRow key={question.id} sx={{ "&:hover": { backgroundColor: "#f8f9fa" } }}>
-                      <TableCell>{question.id}</TableCell>
+                  {paginatedQuestions.map((q) => (
+                    <TableRow key={q.question_id}>
+                      <TableCell>{q.question_id}</TableCell>
                       <TableCell>
-                        <Tooltip title={question.question || ""}>
-                          <span>
-                            {question.question
-                              ? question.question.length > 50
-                                ? question.question.slice(0, 50) + "..."
-                                : question.question
-                              : "N/A"}
-                          </span>
+                        <Tooltip title={q.question_text}>
+                          <span>{q.question_text?.slice(0, 50)}...</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell>
                         <Chip
-                          label={question.subject || "N/A"}
+                          label={q.subject_name || "N/A"}
                           sx={{
-                            backgroundColor: getSubjectColor(question.subject),
-                            color: getSubjectTextColor(question.subject),
+                            backgroundColor: getSubjectColor(q.subject_name),
+                            color: getSubjectTextColor(q.subject_name),
                             fontWeight: "600",
                           }}
                         />
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={question.difficulty || "N/A"}
-                          color={getDifficultyColor(question.difficulty)}
-                          variant="filled"
-                        />
+                        <Chip label={q.difficulty} color={getDifficultyColor(q.difficulty)} />
                       </TableCell>
-                      <TableCell>{question.usedIn}</TableCell>
                       <TableCell>
-                        <Box sx={{ display: "flex", gap: "10px" }}>
-                          <IconButton size="small" sx={{ color: "#2575fc" }} onClick={() => handleEditQuestion(question.id)}>
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton size="small" sx={{ color: "#f44336" }} onClick={() => handleDeleteQuestion(question.id)}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
+                        <IconButton sx={{ color: "#1976d2" }} onClick={() => handleViewQuestion(q)}>
+                          <VisibilityIcon />
+                        </IconButton>
+                        <IconButton sx={{ color: "#2575fc" }} onClick={() => handleEditQuestion(q)}>
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton sx={{ color: "#f44336" }} onClick={() => handleDeleteQuestion(q.question_id)}>
+                          <DeleteIcon />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -344,21 +326,136 @@ export default function QuestionBankPage() {
             </TableContainer>
           )}
 
-          {/* Pagination */}
-          <Box sx={{ display: "flex", justifyContent: "center", marginTop: "25px" }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
             <Pagination
               count={Math.ceil(questions.length / itemsPerPage)}
               page={currentPage}
-              onChange={(event, page) => setCurrentPage(page)}
-              sx={{
-                "& .MuiPaginationItem-root": {
-                  "&:hover": { backgroundColor: "#f0f5ff", borderColor: "#2575fc" },
-                  "&.Mui-selected": { backgroundColor: "#2575fc", color: "white", "&:hover": { backgroundColor: "#2575fc" } },
-                },
-              }}
+              onChange={(e, page) => setCurrentPage(page)}
             />
           </Box>
         </Paper>
+
+        {/* Add/Edit Modal */}
+        <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>{isEditMode ? "Edit Question" : "Add New Question"}</DialogTitle>
+          <DialogContent dividers>
+            <FormControl fullWidth margin="dense">
+              <InputLabel>Subject</InputLabel>
+              <Select
+                value={newQuestion.subject_id}
+                onChange={(e) =>
+                  setNewQuestion({ ...newQuestion, subject_id: Number(e.target.value) })
+                }
+              >
+                <MenuItem value={0}>Select Subject</MenuItem>
+                {subjects.map((sub) => (
+                  <MenuItem key={sub.subject_id} value={sub.subject_id}>
+                    {sub.subject_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Question Text"
+              fullWidth
+              margin="dense"
+              value={newQuestion.question_text}
+              onChange={(e) => setNewQuestion({ ...newQuestion, question_text: e.target.value })}
+            />
+            <TextField
+              label="Option A"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_a}
+              onChange={(e) => setNewQuestion({ ...newQuestion, option_a: e.target.value })}
+            />
+            <TextField
+              label="Option B"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_b}
+              onChange={(e) => setNewQuestion({ ...newQuestion, option_b: e.target.value })}
+            />
+            <TextField
+              label="Option C"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_c}
+              onChange={(e) => setNewQuestion({ ...newQuestion, option_c: e.target.value })}
+            />
+            <TextField
+              label="Option D"
+              fullWidth
+              margin="dense"
+              value={newQuestion.option_d}
+              onChange={(e) => setNewQuestion({ ...newQuestion, option_d: e.target.value })}
+            />
+
+            <FormControl fullWidth margin="dense">
+              <InputLabel>Correct Answer</InputLabel>
+              <Select
+                value={newQuestion.correct_answer}
+                onChange={(e) => setNewQuestion({ ...newQuestion, correct_answer: e.target.value })}
+              >
+                <MenuItem value={newQuestion.option_a}>A: {newQuestion.option_a}</MenuItem>
+                <MenuItem value={newQuestion.option_b}>B: {newQuestion.option_b}</MenuItem>
+                <MenuItem value={newQuestion.option_c}>C: {newQuestion.option_c}</MenuItem>
+                <MenuItem value={newQuestion.option_d}>D: {newQuestion.option_d}</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Points"
+              type="number"
+              fullWidth
+              margin="dense"
+              value={newQuestion.points}
+              onChange={(e) => setNewQuestion({ ...newQuestion, points: Number(e.target.value) })}
+            />
+
+            <FormControl fullWidth margin="dense">
+              <InputLabel>Difficulty</InputLabel>
+              <Select
+                value={newQuestion.difficulty}
+                onChange={(e) => setNewQuestion({ ...newQuestion, difficulty: e.target.value })}
+              >
+                <MenuItem value="Easy">Easy</MenuItem>
+                <MenuItem value="Medium">Medium</MenuItem>
+                <MenuItem value="Hard">Hard</MenuItem>
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenModal(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleSaveQuestion}>
+              {isEditMode ? "Update" : "Save"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* View Modal */}
+        <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>View Question</DialogTitle>
+          <DialogContent dividers>
+            {selectedQuestion && (
+              <Box>
+                <Typography sx={{ mb: 1 }}><b>Question:</b> {selectedQuestion.question_text}</Typography>
+                <Typography>A: {selectedQuestion.option_a}</Typography>
+                <Typography>B: {selectedQuestion.option_b}</Typography>
+                <Typography>C: {selectedQuestion.option_c}</Typography>
+                <Typography>D: {selectedQuestion.option_d}</Typography>
+                <Typography sx={{ mt: 2 }}><b>Correct Answer:</b> {selectedQuestion.correct_answer}</Typography>
+                <Typography><b>Points:</b> {selectedQuestion.points}</Typography>
+                <Typography><b>Difficulty:</b> {selectedQuestion.difficulty}</Typography>
+                <Typography><b>Subject:</b> {selectedQuestion.subject_name}</Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setViewModalOpen(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Box>
   );
