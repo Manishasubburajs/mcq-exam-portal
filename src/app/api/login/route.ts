@@ -16,14 +16,15 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { email, password } = body;
+    const trimmedEmail = email.trim();
 
     const conn = await pool.getConnection();
 
     try {
-      // Check if user exists
+      // Check if user exists (case-insensitive)
       const [rows]: any = await conn.execute(
-        "SELECT * FROM users WHERE email = ?",
-        [email]
+        "SELECT * FROM users WHERE LOWER(email) = LOWER(?)",
+        [trimmedEmail]
       );
 
       conn.release();
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
       // Log user credentials (safe, no password)
       console.log("User login:", {
         userId: user.user_id,
-        email: user.email,
+        email: trimmedEmail,
         role: user.role,
       });
 
@@ -54,11 +55,15 @@ export async function POST(req: Request) {
         { expiresIn: "1h" } // token valid for 1 hour from now
       );
 
+      // Extract username from email (part before @)
+      const username = trimmedEmail.split('@')[0];
+
       // Return success response
       return NextResponse.json({
         message: "Login successful",
         role: user.role,
         token,
+        username,
       });
     } catch (err) {
       conn.release();

@@ -14,6 +14,7 @@ const StudentHeader: React.FC<Props> = ({ onMenuClick, title, sidebarOpen = true
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [username, setUsername] = useState<string>("Student");
 
   useEffect(() => {
     const mobileQuery = globalThis.matchMedia('(max-width:767px)');
@@ -27,6 +28,12 @@ const StudentHeader: React.FC<Props> = ({ onMenuClick, title, sidebarOpen = true
 
     mobileQuery.addEventListener('change', handleMobileChange);
     desktopQuery.addEventListener('change', handleDesktopChange);
+
+    // Get username from localStorage or sessionStorage
+    const storedUsername = localStorage.getItem("username") || sessionStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
 
     return () => {
       mobileQuery.removeEventListener('change', handleMobileChange);
@@ -114,7 +121,7 @@ const StudentHeader: React.FC<Props> = ({ onMenuClick, title, sidebarOpen = true
           <Avatar sx={{ bgcolor: 'primary.main', color: 'white', width: avatarSize, height: avatarSize, marginRight }}>
             <Person sx={{ fontSize: personFontSize }} />
           </Avatar>
-          {!isMobile && <Typography variant="body1">Student</Typography>}
+          {!isMobile && <Typography variant="body1">{username}</Typography>}
         </Box>
       </Box>
     </Box>

@@ -50,15 +50,23 @@ export default function Login() {
       // ✅ Remember Me implementation
     if (rememberMe) {
       localStorage.setItem("token", data.token); // persist
+      localStorage.setItem("username", data.username); // persist username
     } else {
       sessionStorage.setItem("token", data.token); // session-only
+      sessionStorage.setItem("username", data.username); // session-only username
     }
 
       // Redirect based on role
-      if (data.role === "student") {
+      if (activeTab === "admin") {
+        if (data.role === "admin") {
+          router.push("/admin-pages");
+        } else {
+          alert("Access denied. You do not have admin privileges.");
+          return;
+        }
+      } else {
+        // Student login - allow any role to access student pages for now
         router.push("/student-pages");
-      } else if (data.role === "admin") {
-        router.push("/admin-pages");
       }
     } catch (err) {
       console.error("Login Error:", err);
@@ -103,11 +111,11 @@ export default function Login() {
           <Typography variant="h4" gutterBottom>
             MCQ Exam Portal
           </Typography>
-          <Typography paragraph>
+          <Typography sx={{ mb: 2 }}>
             Welcome to the student assessment system designed for educational
             institutions.
           </Typography>
-          <Typography paragraph>
+          <Typography sx={{ mb: 2 }}>
             Take exams, review your results, and track your progress all in one
             place.
           </Typography>
@@ -252,7 +260,7 @@ export default function Login() {
               <Button
                 sx={{ minWidth: 0, width: 50, height: 50, borderRadius: "50%" }}
                 onClick={() =>
-                  (window.location.href = "https://accounts.google.com")
+                  (globalThis.location.href = "https://accounts.google.com")
                 }
               >
                 <GoogleIcon sx={{ color: "#DB4437" }} />
@@ -261,7 +269,7 @@ export default function Login() {
               <Button
                 sx={{ minWidth: 0, width: 50, height: 50, borderRadius: "50%" }}
                 onClick={() =>
-                  (window.location.href = "https://www.facebook.com/")
+                  (globalThis.location.href = "https://www.facebook.com/")
                 }
               >
                 <FacebookIcon sx={{ color: "#1877F2" }} />
@@ -270,7 +278,7 @@ export default function Login() {
               <Button
                 sx={{ minWidth: 0, width: 50, height: 50, borderRadius: "50%" }}
                 onClick={() =>
-                  (window.location.href = "https://twitter.com/")
+                  (globalThis.location.href = "https://twitter.com/")
                 }
               >
                 <TwitterIcon sx={{ color: "#1DA1F2" }} />
