@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db"; // MySQL connection
+import { prisma } from "@/lib/db";
 
 // ========================
 // ✅ CREATE EXAM (POST)
@@ -21,12 +21,14 @@ export async function POST(request: Request) {
     } = data;
 
     // 🧩 0️⃣ Check duplicate exam title within same subject
-    const [existing] = await db.query(
-      `SELECT exam_id FROM exams WHERE subject_id = ? AND exam_title = ?`,
-      [subject_id, exam_title]
-    );
+    const existing = await prisma.exams.findFirst({
+      where: {
+        subject_id: subject_id,
+        exam_title: exam_title,
+      },
+    });
 
-    if ((existing as any).length > 0) {
+    if (existing) {
       return NextResponse.json(
         {
           success: false,
@@ -36,62 +38,58 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🧩 1️⃣ Insert exam record
-    const [examResult] = await db.query(
-      `INSERT INTO exams 
-        (exam_title, description, subject_id, time_limit_minutes, total_marks, scheduled_start, scheduled_end, created_by, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        exam_title,
-        description,
-        subject_id,
-        time_limit_minutes,
-        total_marks,
-        scheduled_start,
-        scheduled_end,
-        created_by,
-        status,
-      ]
-    );
-
-    const exam_id = (examResult as any).insertId;
-
-    // 🧩 2️⃣ Insert related questions
-    if (questions && questions.length > 0) {
-      const questionValues = questions.map((q: any) => {
-        // Ensure correct_answer is one of A/B/C/D
-        const validAnswers = ["A", "B", "C", "D"];
-        if (!validAnswers.includes(q.correct_answer)) {
-          throw new Error(
-            `Invalid correct answer: ${q.correct_answer}. Must be A/B/C/D.`
-          );
-        }
-
-        return [
-          exam_id,
-          q.question_text,
-          q.option_a,
-          q.option_b,
-          q.option_c,
-          q.option_d,
-          q.correct_answer, // store letter only
-          q.points || 1,
-          q.difficulty || "Medium",
+    // 🧩 1️⃣ Insert exam record and questions in a transaction
+    const result = await prisma.$transaction(async (tx:any) => {
+      const exam = await tx.exams.create({
+        data: {
+          exam_title,
+          description,
           subject_id,
+          time_limit_minutes,
+          total_marks,
+          scheduled_start: new Date(scheduled_start),
+          scheduled_end: new Date(scheduled_end),
           created_by,
-          status === "draft" ? 1 : 0,
-        ];
+          status: status as any,
+        },
       });
 
-      await db.query(
-        `INSERT INTO questions
-          (exam_id, question_text, option_a, option_b, option_c, option_d, correct_answer, points, difficulty, subject_id, created_by, is_draft)
-         VALUES ?`,
-        [questionValues]
-      );
-    }
+      // 🧩 2️⃣ Insert related questions
+      if (questions && questions.length > 0) {
+        const questionData = questions.map((q: any) => {
+          // Ensure correct_answer is one of A/B/C/D
+          const validAnswers = ["A", "B", "C", "D"];
+          if (!validAnswers.includes(q.correct_answer)) {
+            throw new Error(
+              `Invalid correct answer: ${q.correct_answer}. Must be A/B/C/D.`
+            );
+          }
 
-    return NextResponse.json({ success: true, exam_id });
+          return {
+            exam_id: exam.exam_id,
+            question_text: q.question_text,
+            option_a: q.option_a,
+            option_b: q.option_b,
+            option_c: q.option_c,
+            option_d: q.option_d,
+            correct_answer: q.correct_answer,
+            points: q.points || 1,
+            difficulty: (q.difficulty || "Medium") as any,
+            subject_id: subject_id,
+            created_by: created_by,
+            is_draft: status === "draft",
+          };
+        });
+
+        await tx.questions.createMany({
+          data: questionData,
+        });
+      }
+
+      return exam;
+    });
+
+    return NextResponse.json({ success: true, exam_id: result.exam_id });
   } catch (err) {
     console.error("❌ Error saving exam:", err);
     return NextResponse.json({
@@ -106,15 +104,33 @@ export async function POST(request: Request) {
 // ========================
 export async function GET() {
   try {
-    const [drafts]: any = await db.query(
-      `SELECT e.exam_id, e.exam_title, e.subject_id,
-              (SELECT COUNT(*) FROM questions q WHERE q.exam_id = e.exam_id) AS question_count
-       FROM exams e
-       WHERE e.status='draft'
-       ORDER BY e.created_at DESC`
-    );
+    const drafts = await prisma.exams.findMany({
+      where: {
+        status: "draft",
+      },
+      select: {
+        exam_id: true,
+        exam_title: true,
+        subject_id: true,
+        _count: {
+          select: {
+            questions: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    });
 
-    return NextResponse.json(drafts);
+    const formattedDrafts = drafts.map((draft:any) => ({
+      exam_id: draft.exam_id,
+      exam_title: draft.exam_title,
+      subject_id: draft.subject_id,
+      question_count: draft._count.questions,
+    }));
+
+    return NextResponse.json(formattedDrafts);
   } catch (err) {
     console.error("❌ Error fetching drafts:", err);
     return NextResponse.json({

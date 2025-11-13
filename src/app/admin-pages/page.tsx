@@ -46,8 +46,17 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
   useEffect(() => {
+    // Check if user is logged in and is admin
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const role = localStorage.getItem("role") || sessionStorage.getItem("role");
+
+    if (!token || role !== "admin") {
+      router.push("/");
+      return;
+    }
+
     setSidebarOpen(isDesktop);
-  }, [isDesktop, isTablet]);
+  }, [isDesktop, isTablet, router]);
 
   const stats = [
     {

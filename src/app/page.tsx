@@ -48,25 +48,23 @@ export default function Login() {
       }
 
       // ✅ Remember Me implementation
-    if (rememberMe) {
-      localStorage.setItem("token", data.token); // persist
-      localStorage.setItem("username", data.username); // persist username
-    } else {
-      sessionStorage.setItem("token", data.token); // session-only
-      sessionStorage.setItem("username", data.username); // session-only username
-    }
+      if (rememberMe) {
+        localStorage.setItem("token", data.token); // persist
+        localStorage.setItem("username", data.username); // persist username
+        localStorage.setItem("role", data.role); // persist role
+      } else {
+        sessionStorage.setItem("token", data.token); // session-only
+        sessionStorage.setItem("username", data.username); // session-only username
+        sessionStorage.setItem("role", data.role); // session-only role
+      }
 
       // Redirect based on role
-      if (activeTab === "admin") {
-        if (data.role === "admin") {
-          router.push("/admin-pages");
-        } else {
-          alert("Access denied. You do not have admin privileges.");
-          return;
-        }
-      } else {
-        // Student login - allow any role to access student pages for now
+      if (data.role === "admin") {
+        router.push("/admin-pages");
+      } else if (data.role === "student") {
         router.push("/student-pages");
+      } else {
+        alert("Invalid user role. Please contact support.");
       }
     } catch (err) {
       console.error("Login Error:", err);

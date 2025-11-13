@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 // ============================
 // GET CURRENT USER
@@ -22,49 +22,37 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Decoded userId:', decoded.userId);
-    console.log('Query parameters:', [decoded.userId]);
 
-    const conn = await db.getConnection();
+    // Fetch user with student details
+    const user = await prisma.users.findUnique({
+      where: { user_id: decoded.userId },
+      include: {
+        student_details: true,
+      },
+    });
 
-    try {
-      // First check if user exists
-      const [userCheck] = await conn.query('SELECT user_id FROM users WHERE user_id = ?', [decoded.userId]);
-      console.log('User check result:', userCheck);
-
-      if ((userCheck as any[]).length === 0) {
-        console.log('User not found in users table');
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-      }
-
-      const [rows] = await conn.query(`
-      SELECT
-        u.user_id,
-        u.username,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.role,
-        s.grade,
-        s.section,
-        s.dob,
-        s.gender,
-        s.school
-      FROM users u
-      LEFT JOIN student_details s ON u.user_id = s.user_id
-      WHERE u.user_id = ?
-    `, [decoded.userId]);
-
-    console.log('Query result:', rows);
-    console.log('Rows length:', (rows as any[]).length);
-
-    if ((rows as any[]).length === 0) {
+    if (!user) {
+      console.log('User not found');
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user: (rows as any[])[0] });
-    } finally {
-      conn.release();
-    }
+    const formattedUser = {
+      user_id: user.user_id,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      role: user.role,
+      grade: user.student_details?.[0]?.grade,
+      section: user.student_details?.[0]?.section,
+      dob: user.student_details?.[0]?.dob,
+      gender: user.student_details?.[0]?.gender,
+      school: user.student_details?.[0]?.school,
+    };
+
+    console.log('Query result:', formattedUser);
+
+    return NextResponse.json({ user: formattedUser });
   } catch (error) {
     console.error("DB Connection Error:", (error as Error).message);
     console.error("Full error:", error);
@@ -102,57 +90,54 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { first_name, last_name, email, school, grade, section, dob, gender } = body;
 
-    const conn = await db.getConnection();
+    // Update user and student details
+    const updateData: any = {
+      first_name,
+      last_name,
+      email,
+      student_details: {
+        upsert: {
+          create: {
+            dob,
+            gender,
+            school,
+            grade,
+            section,
+          },
+          update: {
+            dob,
+            gender,
+            school,
+            grade,
+            section,
+          },
+        },
+      },
+    };
 
-    try {
-      // Update current user data
-      await conn.query(
-        `UPDATE users
-          SET first_name = ?, last_name = ?, email = ?
-          WHERE user_id = ?`,
-        [first_name, last_name, email, user_id]
-      );
+    const updatedUser = await prisma.users.update({
+      where: { user_id: user_id },
+      data: updateData,
+      include: {
+        student_details: true,
+      },
+    });
 
-      // Update or insert student details
-      const [existingStudent] = await conn.query('SELECT user_id FROM student_details WHERE user_id = ?', [user_id]);
-      if ((existingStudent as any[]).length > 0) {
-        await conn.query(
-          'UPDATE student_details SET dob = ?, gender = ?, school = ?, grade = ?, section = ? WHERE user_id = ?',
-          [dob, gender, school, grade, section, user_id]
-        );
-      } else {
-        await conn.query(
-          'INSERT INTO student_details (user_id, dob, gender, school, grade, section) VALUES (?, ?, ?, ?, ?, ?)',
-          [user_id, dob, gender, school, grade, section]
-        );
-      }
+    const formattedUser = {
+      user_id: updatedUser.user_id,
+      username: updatedUser.username,
+      first_name: updatedUser.first_name,
+      last_name: updatedUser.last_name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      grade: updatedUser.student_details?.[0]?.grade,
+      section: updatedUser.student_details?.[0]?.section,
+      dob: updatedUser.student_details?.[0]?.dob,
+      gender: updatedUser.student_details?.[0]?.gender,
+      school: updatedUser.student_details?.[0]?.school,
+    };
 
-      // Fetch updated user
-      const [updatedRows] = await conn.query(
-        `
-        SELECT
-          u.user_id,
-          u.username,
-          u.first_name,
-          u.last_name,
-          u.email,
-          u.role,
-          s.grade,
-          s.section,
-          s.dob,
-          s.gender,
-          s.school
-        FROM users u
-        LEFT JOIN student_details s ON u.user_id = s.user_id
-        WHERE u.user_id = ?
-      `,
-        [user_id]
-      );
-
-      return NextResponse.json({ success: true, user: (updatedRows as any)[0] });
-    } finally {
-      conn.release();
-    }
+    return NextResponse.json({ success: true, user: formattedUser });
   } catch (error) {
     console.error("Error updating user:", (error as Error).message);
     return NextResponse.json(

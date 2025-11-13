@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 // ============================
 // GET ALL USERS OR CURRENT USER
@@ -19,54 +19,52 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Invalid token" }, { status: 401 });
       }
 
-      const [rows] = await db.query(`
-        SELECT
-          u.user_id,
-          u.username,
-          u.first_name,
-          u.last_name,
-          u.email,
-          u.role,
-          u.status,
-          u.phone,
-          u.birth_date,
-          u.gender,
-          u.bio,
-          s.grade,
-          s.section
-        FROM users u
-        LEFT JOIN student_details s ON u.user_id = s.user_id
-        WHERE u.user_id = ?
-      `, [decoded.userId]);
+      const user = await prisma.users.findUnique({
+        where: { user_id: decoded.userId },
+        include: {
+          student_details: true,
+        },
+      });
 
-      if ((rows as any[]).length === 0) {
+      if (!user) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
-      return NextResponse.json({ user: (rows as any[])[0] });
+      const formattedUser = {
+        user_id: user.user_id,
+        username: user.username,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        grade: user.student_details?.[0]?.grade,
+        section: user.student_details?.[0]?.section,
+      };
+
+      return NextResponse.json({ user: formattedUser });
     } else {
       // Return all users (admin functionality)
-      const [rows] = await db.query(`
-        SELECT
-          u.user_id,
-          u.username,
-          u.first_name,
-          u.last_name,
-          u.email,
-          u.role,
-          u.status,
-          u.phone,
-          u.birth_date,
-          u.gender,
-          u.bio,
-          s.grade,
-          s.section
-        FROM users u
-        LEFT JOIN student_details s ON u.user_id = s.user_id
-      `);
+      const users = await prisma.users.findMany({
+        include: {
+          student_details: true,
+        },
+      });
 
-      console.log("User Details:", rows);
-      return NextResponse.json({ success: true, data: rows });
+      const formattedUsers = users.map((user: any) => ({
+        user_id: user.user_id,
+        username: user.username,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        grade: user.student_details?.[0]?.grade,
+        section: user.student_details?.[0]?.section,
+      }));
+
+      console.log("User Details:", formattedUsers);
+      return NextResponse.json({ success: true, data: formattedUsers });
     }
   } catch (error) {
     console.error("DB Connection Error:", (error as Error).message);
@@ -85,13 +83,12 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json();
     const { user_id } = body;
 
-    // Delete from student_details first
-    await db.query("DELETE FROM student_details WHERE user_id = ?", [user_id]);
+    // Delete user (Prisma will handle cascading deletes)
+    const deletedUser = await prisma.users.delete({
+      where: { user_id: user_id },
+    });
 
-    // Delete from users
-    const [result] = await db.query("DELETE FROM users WHERE user_id = ?", [user_id]);
-
-    if ((result as any).affectedRows > 0) {
+    if (deletedUser) {
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
@@ -120,47 +117,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert into users table (added username field)
-    const [userResult] = await db.query(
-      "INSERT INTO users (username, first_name, last_name, email, role, status) VALUES (?, ?, ?, ?, ?, ?)",
-      [username, first_name, last_name, email, role, status]
-    );
+    // Create user with student details if applicable
+    const userData: any = {
+      username,
+      first_name,
+      last_name,
+      email,
+      role: role as any,
+      status: status as any,
+    };
 
-    const userId = (userResult as any).insertId;
-
-    // If student, insert into student_details
     if (role === "student" && (grade || section)) {
-      await db.query(
-        "INSERT INTO student_details (user_id, grade, section) VALUES (?, ?, ?)",
-        [userId, grade || null, section || null]
-      );
+      userData.student_details = {
+        create: {
+          grade: grade || null,
+          section: section || null,
+          dob: null,
+          gender: "male",
+          school: "",
+        },
+      };
     }
 
-    // Fetch newly created user
-    const [newUserRows] = await db.query(
-      `
-      SELECT
-        u.user_id,
-        u.username,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.role,
-        u.status,
-        u.phone,
-        u.birth_date,
-        u.gender,
-        u.bio,
-        s.grade,
-        s.section
-      FROM users u
-      LEFT JOIN student_details s ON u.user_id = s.user_id
-      WHERE u.user_id = ?
-    `,
-      [userId]
-    );
+    const newUser = await prisma.users.create({
+      data: userData,
+      include: {
+        student_details: true,
+      },
+    });
 
-    return NextResponse.json({ success: true, user: (newUserRows as any)[0] });
+    const formattedUser = {
+      user_id: newUser.user_id,
+      username: newUser.username,
+      first_name: newUser.first_name,
+      last_name: newUser.last_name,
+      email: newUser.email,
+      role: newUser.role,
+      status: newUser.status,
+      grade: newUser.student_details?.[0]?.grade,
+      section: newUser.student_details?.[0]?.section,
+    };
+
+    return NextResponse.json({ success: true, user: formattedUser });
   } catch (error) {
     console.error("Error adding user:", (error as Error).message);
     return NextResponse.json(
@@ -195,12 +193,14 @@ export async function PUT(request: NextRequest) {
       const { first_name, last_name, email, phone, birth_date, gender, bio } = body;
 
       // Update current user data
-      await db.query(
-        `UPDATE users
-          SET first_name = ?, last_name = ?, email = ?, phone = ?, birth_date = ?, gender = ?, bio = ?
-          WHERE user_id = ?`,
-        [first_name, last_name, email, phone, birth_date, gender, bio, user_id]
-      );
+      await prisma.users.update({
+        where: { user_id: user_id },
+        data: {
+          first_name,
+          last_name,
+          email,
+        },
+      });
     } else {
       // Admin update (existing logic)
       const body = await request.json();
@@ -216,62 +216,63 @@ export async function PUT(request: NextRequest) {
       user_id = adminUserId;
 
       // 1️⃣ Update users table
-      await db.query(
-        `UPDATE users
-          SET username = ?, first_name = ?, last_name = ?, email = ?, role = ?, status = ?, phone = ?, birth_date = ?, gender = ?, bio = ?
-          WHERE user_id = ?`,
-        [username, first_name, last_name, email, role, status, phone, birth_date, gender, bio, user_id]
-      );
+      const updateData: any = {
+        username,
+        first_name,
+        last_name,
+        email,
+        role: role as any,
+        status: status as any,
+      };
 
       // 2️⃣ Handle student details
       if (role === "student") {
-        const [existing] = await db.query(
-          "SELECT * FROM student_details WHERE user_id = ?",
-          [user_id]
-        );
-
-        if ((existing as any[]).length > 0) {
-          await db.query(
-            "UPDATE student_details SET grade = ?, section = ? WHERE user_id = ?",
-            [grade || null, section || null, user_id]
-          );
-        } else {
-          await db.query(
-            "INSERT INTO student_details (user_id, grade, section) VALUES (?, ?, ?)",
-            [user_id, grade || null, section || null]
-          );
-        }
+        updateData.student_details = {
+          upsert: {
+            create: {
+              grade: grade || null,
+              section: section || null,
+            },
+            update: {
+              grade: grade || null,
+              section: section || null,
+            },
+          },
+        };
       } else {
-        // If not a student, remove any old student_details record
-        await db.query("DELETE FROM student_details WHERE user_id = ?", [user_id]);
+        // If not a student, disconnect student_details
+        updateData.student_details = {
+          delete: true,
+        };
       }
+
+      await prisma.users.update({
+        where: { user_id: user_id },
+        data: updateData,
+      });
     }
 
     // 3️⃣ Fetch updated user
-    const [updatedRows] = await db.query(
-      `
-      SELECT
-        u.user_id,
-        u.username,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.role,
-        u.status,
-        u.phone,
-        u.birth_date,
-        u.gender,
-        u.bio,
-        s.grade,
-        s.section
-      FROM users u
-      LEFT JOIN student_details s ON u.user_id = s.user_id
-      WHERE u.user_id = ?
-    `,
-      [user_id]
-    );
+    const updatedUser = await prisma.users.findUnique({
+      where: { user_id: user_id },
+      include: {
+        student_details: true,
+      },
+    });
 
-    return NextResponse.json({ success: true, user: (updatedRows as any)[0] });
+    const formattedUser = {
+      user_id: updatedUser?.user_id,
+      username: updatedUser?.username,
+      first_name: updatedUser?.first_name,
+      last_name: updatedUser?.last_name,
+      email: updatedUser?.email,
+      role: updatedUser?.role,
+      status: updatedUser?.status,
+      grade: updatedUser?.student_details?.[0]?.grade,
+      section: updatedUser?.student_details?.[0]?.section,
+    };
+
+    return NextResponse.json({ success: true, user: formattedUser });
   } catch (error) {
     console.error("Error updating user:", (error as Error).message);
     return NextResponse.json(

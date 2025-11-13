@@ -1,13 +1,19 @@
 // 📁 src/app/api/subjects/route.ts
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 export async function GET() {
   try {
-    const [rows] = await db.query(
-      "SELECT subject_id, subject_name FROM subjects ORDER BY subject_name ASC"
-    );
-    return NextResponse.json({ success: true, data: rows });
+    const subjects = await prisma.subjects.findMany({
+      select: {
+        subject_id: true,
+        subject_name: true,
+      },
+      orderBy: {
+        subject_name: "asc",
+      },
+    });
+    return NextResponse.json({ success: true, data: subjects });
   } catch (err) {
     console.error("Error fetching subjects:", err);
     return NextResponse.json(

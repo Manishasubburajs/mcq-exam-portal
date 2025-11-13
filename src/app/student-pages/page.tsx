@@ -675,6 +675,15 @@ export default function StudentDashboard() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Check if user is logged in and is student
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const role = localStorage.getItem("role") || sessionStorage.getItem("role");
+
+    if (!token || role !== "student") {
+      router.push("/");
+      return;
+    }
+
     const mediaQuery = globalThis.matchMedia(theme.breakpoints.down('md'));
     setIsMobile(mediaQuery.matches);
 
@@ -682,7 +691,7 @@ export default function StudentDashboard() {
     mediaQuery.addEventListener('change', handleChange);
 
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme.breakpoints]);
+  }, [theme.breakpoints, router]);
 
   return (
     <Box sx={{
