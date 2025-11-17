@@ -48,14 +48,17 @@ export default function Login() {
       }
 
       // ✅ Remember Me implementation
+      const sessionStartTime = Date.now().toString();
       if (rememberMe) {
         localStorage.setItem("token", data.token); // persist
         localStorage.setItem("username", data.username); // persist username
         localStorage.setItem("role", data.role); // persist role
+        localStorage.setItem("sessionStartTime", sessionStartTime); // persist session start time
       } else {
         sessionStorage.setItem("token", data.token); // session-only
         sessionStorage.setItem("username", data.username); // session-only username
         sessionStorage.setItem("role", data.role); // session-only role
+        sessionStorage.setItem("sessionStartTime", sessionStartTime); // session-only session start time
       }
 
       // Redirect based on role
