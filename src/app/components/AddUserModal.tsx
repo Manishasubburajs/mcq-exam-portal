@@ -44,29 +44,31 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     role: defaultRole,
     grade: "",
     section: "",
+    school: "",
     department: "",
     status: "active",
   });
 
   useEffect(() => {
-    if (open) {
-      setNewUser({
-        username: "",
-        first_name: "",
-        last_name: "",
-        email: "",
-        password: "",
-        dob: "",
-        gender: "",
-        role: defaultRole,
-        grade: "",
-        section: "",
-        department: "",
-        status: "active",
-      });
-      setErrors({});
-    }
-  }, [open, defaultRole]);
+   if (open) {
+     setNewUser({
+       username: "",
+       first_name: "",
+       last_name: "",
+       email: "",
+       password: "",
+       dob: "",
+       gender: "",
+       role: defaultRole,
+       grade: "",
+       section: "",
+       school: "",
+       department: "",
+       status: "active",
+     });
+     setErrors({});
+   }
+ }, [open, defaultRole]);
 
   // ✅ Validation Schema
   const studentSchema = yup.object({
@@ -82,6 +84,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     gender: yup.string().required("Gender is required"),
     grade: yup.string().required("Grade is required"),
     section: yup.string().required("Section is required"),
+    school: yup.string().required("School is required"),
   });
 
   const handleChange = (field: string, value: string) => {
@@ -232,6 +235,14 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
           onChange={(e) => handleChange("section", e.target.value)}
           error={!!errors.section}
           helperText={errors.section}
+        />
+        <TextField
+          label="School"
+          fullWidth
+          value={newUser.school}
+          onChange={(e) => handleChange("school", e.target.value)}
+          error={!!errors.school}
+          helperText={errors.school}
         />
       </Box>
 

@@ -108,7 +108,7 @@ export async function DELETE(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, first_name, last_name, email, role, grade, section, status } = body;
+    const { username, first_name, last_name, email, role, grade, section, school, dob, gender, status } = body;
 
     if (!username || !first_name || !email) {
       return NextResponse.json(
@@ -117,24 +117,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (role === "student" && (!grade || !school || !dob || !gender)) {
+      return NextResponse.json(
+        { success: false, error: "Grade, School, Date of Birth, and Gender are required for students." },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(body.password, 10);
+
     // Create user with student details if applicable
     const userData: any = {
       username,
       first_name,
       last_name,
       email,
+      password_hash: hashedPassword,
       role: role as any,
       status: status as any,
     };
 
-    if (role === "student" && (grade || section)) {
+    if (role === "student") {
       userData.student_details = {
         create: {
-          grade: grade || null,
+          grade: grade || "",
           section: section || null,
-          dob: null,
-          gender: "male",
-          school: "",
+          dob: new Date(dob),
+          gender: gender as any,
+          school: school || "",
         },
       };
     }
