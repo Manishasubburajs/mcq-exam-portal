@@ -21,43 +21,99 @@ interface EditUserModalProps {
   onUserUpdated: (updatedUser: any) => void;
 }
 
+interface User {
+  user_id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+  status: string;
+
+  // Student details (optional)
+  grade?: string;
+  section?: string;
+  school?: string;
+  dob?: string;
+  gender?: string;
+}
+
 const EditUserModal: React.FC<EditUserModalProps> = ({
   open,
   onClose,
   user,
   onUserUpdated,
 }) => {
-  const [editUser, setEditUser] = useState<any>(user);
+  const [editUser, setEditUser] = useState<User | null>(null);
 
+  // --------------------------------------------
+  // LOAD USER DETAILS INTO MODAL (FORMAT DOB)
+  // --------------------------------------------
   useEffect(() => {
-    setEditUser(user);
+    if (user) {
+      setEditUser({
+        ...user,
+
+        // Fix DOB formatting for HTML date input (YYYY-MM-DD)
+        dob: user.student_details?.dob
+          ? user.student_details.dob.split("T")[0]
+          : "",
+
+        grade: user.student_details?.grade || "",
+        section: user.student_details?.section || "",
+        school: user.student_details?.school || "",
+        gender: user.student_details?.gender || "",
+      });
+    }
   }, [user]);
 
   if (!editUser) return null;
 
+  // --------------------------------------------
+  // SAVE CHANGES
+  // --------------------------------------------
   const handleSave = async () => {
     try {
-      const res = await fetch("/api/users", {
+      const updateData: any = {
+        user_id: editUser.user_id,
+        username: editUser.username,
+        first_name: editUser.first_name,
+        last_name: editUser.last_name,
+        email: editUser.email,
+        role: editUser.role,
+        status: editUser.status,
+      };
+
+      // If role = student → send student detail fields
+      if (editUser.role === "student") {
+        updateData.grade = editUser.grade || null;
+        updateData.section = editUser.section || null;
+        updateData.school = editUser.school || null;
+
+        // FIX: Convert date to ISO to avoid Prisma crash
+        updateData.dob = editUser.dob
+          ? new Date(editUser.dob + "T00:00:00").toISOString()
+          : null;
+
+        updateData.gender = editUser.gender || null;
+      }
+
+      console.log("Sending update data:", updateData);
+
+      const res = await fetch("/api/users?id=" + editUser.user_id, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: editUser.user_id,
-          username: editUser.username,
-          first_name: editUser.first_name,
-          last_name: editUser.last_name,
-          email: editUser.email,
-          role: editUser.role,
-          status: editUser.status,
-          grade: editUser.grade || null,
-        }),
+        body: JSON.stringify(updateData),
       });
 
       const data = await res.json();
-      if (data.success) {
+      console.log("Response data:", data);
+
+      if (data.user) {
         onUserUpdated(data.user);
         onClose();
       } else {
-        alert("Error: " + data.error);
+        alert("Error: " + data.message);
       }
     } catch (err) {
       console.error("Error saving user:", err);
@@ -74,21 +130,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           display: "flex",
           flexDirection: "column",
           gap: 2,
-          
-          pt: 1.5, // adds internal top padding
+          pt: 1.5,
         }}
       >
-        {/* Username - visible but disabled */}
+        {/* Username - disabled */}
         <TextField
           label="Username"
           value={editUser.username}
           disabled
           fullWidth
-          sx={{
-            backgroundColor: "#f9f9f9",
-            borderRadius: 1,
-            mt:2
-          }}
+          sx={{ backgroundColor: "#f9f9f9", borderRadius: 1, mt: 2 }}
         />
 
         <TextField
@@ -128,17 +179,66 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           </Select>
         </FormControl>
 
+        {/* STUDENT FIELDS */}
         {editUser.role === "student" && (
-          <TextField
-            label="Class / Grade"
-            value={editUser.grade || ""}
-            onChange={(e) =>
-              setEditUser({ ...editUser, grade: e.target.value })
-            }
-            fullWidth
-          />
+          <>
+            <TextField
+              label="Grade"
+              value={editUser.grade || ""}
+              onChange={(e) =>
+                setEditUser({ ...editUser, grade: e.target.value })
+              }
+              fullWidth
+            />
+
+            <TextField
+              label="Section"
+              value={editUser.section || ""}
+              onChange={(e) =>
+                setEditUser({ ...editUser, section: e.target.value })
+              }
+              fullWidth
+            />
+
+            <TextField
+              label="School"
+              value={editUser.school || ""}
+              onChange={(e) =>
+                setEditUser({ ...editUser, school: e.target.value })
+              }
+              fullWidth
+            />
+
+            <TextField
+              label="Date of Birth"
+              type="date"
+              value={editUser.dob || ""}
+              onChange={(e) =>
+                setEditUser({ ...editUser, dob: e.target.value })
+              }
+              fullWidth
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+
+            <FormControl fullWidth>
+              <InputLabel>Gender</InputLabel>
+              <Select
+                value={editUser.gender || ""}
+                label="Gender"
+                onChange={(e) =>
+                  setEditUser({ ...editUser, gender: e.target.value })
+                }
+              >
+                <MenuItem value="">Select</MenuItem>
+                <MenuItem value="male">Male</MenuItem>
+                <MenuItem value="female">Female</MenuItem>
+                <MenuItem value="other">Other</MenuItem>
+              </Select>
+            </FormControl>
+          </>
         )}
 
+        {/* STATUS */}
         <FormControl fullWidth>
           <InputLabel>Status</InputLabel>
           <Select value={editUser.status} label="Status" disabled>

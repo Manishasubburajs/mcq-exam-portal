@@ -95,7 +95,7 @@ model student_answers {
 
 model student_details {
   student_id Int                    @id @default(autoincrement())
-  user_id    Int
+  user_id    Int                    @unique(map: "user_id_unique")
   dob        DateTime               @db.Date
   gender     student_details_gender
   school     String                 @db.VarChar(100)
@@ -152,7 +152,7 @@ model users {
   department            String?                 @db.VarChar(100)
   exams                 exams[]
   questions             questions[]
-  student_details       student_details[]
+  student_details       student_details?
   student_exam_attempts student_exam_attempts[]
   subjects              subjects[]
 

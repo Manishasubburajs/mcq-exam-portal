@@ -28,14 +28,13 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { Edit, Delete, VpnKey, Download, PersonAdd } from "@mui/icons-material";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
 import AddUserModal from "../../components/AddUserModal";
 import EditUserModal from "../../components/EditUserModal";
 import ConfirmDeleteDialog from "@/app/components/ConfirmDeleteModal";
 
-const Header = dynamic(() => import('../../components/Header'), { ssr: false });
-
+const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
 interface User {
   user_id: number;
@@ -81,8 +80,16 @@ const UserManagement: React.FC = () => {
       try {
         const res = await fetch("/api/users", { signal: controller.signal });
         const data = await res.json();
+
         if (data.success) {
-          setUsers(data.data);
+          const normalized = data.data.map((u: any) => ({
+            ...u,
+            grade: u.student_details?.grade || "",
+            section: u.student_details?.section || "",
+            department: u.department || "",
+          }));
+
+          setUsers(normalized);
         } else {
           console.error("Failed to fetch users:", data.error);
         }
@@ -94,7 +101,6 @@ const UserManagement: React.FC = () => {
     };
 
     fetchUsers();
-
     return () => controller.abort();
   }, []);
 
@@ -102,10 +108,14 @@ const UserManagement: React.FC = () => {
   useEffect(() => {
     const getRoleByTabIndex = (index: number): string => {
       switch (index) {
-        case 0: return "student";
-        case 1: return "teacher";
-        case 2: return "admin";
-        default: return "student";
+        case 0:
+          return "student";
+        case 1:
+          return "teacher";
+        case 2:
+          return "admin";
+        default:
+          return "student";
       }
     };
 
@@ -120,7 +130,7 @@ const UserManagement: React.FC = () => {
 
       const getUserClass = (user: User): string => {
         if (!user.grade && !user.section) return "";
-        return `${user.grade || ""}${user.section ? ' - ' + user.section : ""}`;
+        return `${user.grade || ""}${user.section ? " - " + user.section : ""}`;
       };
 
       const userClass = getUserClass(user);
@@ -135,21 +145,20 @@ const UserManagement: React.FC = () => {
 
   // Paginate
   const startIndex = (currentPage - 1) * usersPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    startIndex,
+    startIndex + usersPerPage
+  );
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
   // Unique class/group list
   const getUserClass = (user: User): string => {
     if (!user.grade && !user.section) return "";
-    return `${user.grade || ""}${user.section ? ' - ' + user.section : ""}`;
+    return `${user.grade || ""}${user.section ? " - " + user.section : ""}`;
   };
 
   const classGroups = Array.from(
-    new Set(
-      users
-        .filter((u) => u.grade || u.section)
-        .map(getUserClass)
-    )
+    new Set(users.filter((u) => u.grade || u.section).map(getUserClass))
   );
 
   // Color helpers
@@ -199,35 +208,58 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "grey.50" }}
+    >
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
             zIndex: 999,
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
-        ml: sidebarOpen && isDesktop ? '220px' : 0,
-        transition: 'margin-left 0.3s ease',
-        paddingTop: { xs: '50px', md: '80px' }
-      }}>
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="User Management" sidebarOpen={sidebarOpen} />
+      <Box
+        className={`main-content ${
+          sidebarOpen ? "sidebar-open" : "sidebar-closed"
+        }`}
+        sx={{
+          ml: sidebarOpen && isDesktop ? "220px" : 0,
+          transition: "margin-left 0.3s ease",
+          paddingTop: { xs: "50px", md: "80px" },
+        }}
+      >
+        <Header
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          title="User Management"
+          sidebarOpen={sidebarOpen}
+        />
 
         {/* Filters Section */}
-        <Paper elevation={1} sx={{ padding: '20px', marginBottom: '25px', borderRadius: '10px' }}>
-          <Typography variant="h6" sx={{ marginBottom: '15px', color: 'text.primary' }}>
+        <Paper
+          elevation={1}
+          sx={{ padding: "20px", marginBottom: "25px", borderRadius: "10px" }}
+        >
+          <Typography
+            variant="h6"
+            sx={{ marginBottom: "15px", color: "text.primary" }}
+          >
             Filter Users
           </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 2,
+            }}
+          >
             <TextField
               label="Search"
               variant="outlined"
@@ -266,7 +298,14 @@ const UserManagement: React.FC = () => {
               </Select>
             </FormControl>
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 2,
+              marginTop: "15px",
+            }}
+          >
             <Button
               variant="outlined"
               color="secondary"
@@ -282,8 +321,8 @@ const UserManagement: React.FC = () => {
               variant="contained"
               onClick={() => {}}
               sx={{
-                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                '&:hover': { opacity: 0.9 }
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
               }}
             >
               Apply Filters
@@ -333,20 +372,40 @@ const UserManagement: React.FC = () => {
         </Paper>
 
         {/* Users Table */}
-        <Paper elevation={1} sx={{ borderRadius: '10px', overflow: 'hidden' }}>
-          <Box sx={{ padding: '20px', borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" sx={{ color: 'text.primary' }}>
+        <Paper elevation={1} sx={{ borderRadius: "10px", overflow: "hidden" }}>
+          <Box
+            sx={{
+              padding: "20px",
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="h6" sx={{ color: "text.primary" }}>
                 {(() => {
                   switch (tabIndex) {
-                    case 0: return "All Students";
-                    case 1: return "All Teachers";
-                    case 2: return "All Administrators";
-                    default: return "All Users";
+                    case 0:
+                      return "All Students";
+                    case 1:
+                      return "All Teachers";
+                    case 2:
+                      return "All Administrators";
+                    default:
+                      return "All Users";
                   }
                 })()}
               </Typography>
-              <Button variant="outlined" color="secondary" startIcon={<Download />}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<Download />}
+              >
                 Export Users
               </Button>
             </Box>
@@ -359,14 +418,18 @@ const UserManagement: React.FC = () => {
           ) : (
             <TableContainer>
               <Table>
-                <TableHead sx={{ backgroundColor: 'grey.50' }}>
+                <TableHead sx={{ backgroundColor: "grey.50" }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>User</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Class/Group</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Last Login</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>User</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Role</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Class/Group
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Last Login
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
 
@@ -375,7 +438,9 @@ const UserManagement: React.FC = () => {
                     const fullName = `${user.first_name} ${user.last_name}`;
                     const getDisplayClass = (user: User): string => {
                       if (!user.grade && !user.section) return "-";
-                      return `${user.grade || ""}${user.section ? ' - ' + user.section : ""}`;
+                      return `${user.grade || ""}${
+                        user.section ? " - " + user.section : ""
+                      }`;
                     };
 
                     const classGroup = getDisplayClass(user);
@@ -447,7 +512,9 @@ const UserManagement: React.FC = () => {
                                 size="small"
                                 color="warning"
                                 onClick={() => {
-                                  alert(`Password reset email sent to ${fullName}`);
+                                  alert(
+                                    `Password reset email sent to ${fullName}`
+                                  );
                                 }}
                               >
                                 <VpnKey />
@@ -477,7 +544,9 @@ const UserManagement: React.FC = () => {
           )}
 
           {/* Pagination */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "center", padding: "20px" }}
+          >
             <Pagination
               count={totalPages}
               page={currentPage}
@@ -495,10 +564,14 @@ const UserManagement: React.FC = () => {
         onUserAdded={(newUser) => setUsers((prev) => [...prev, newUser])}
         defaultRole={(() => {
           switch (tabIndex) {
-            case 0: return "student";
-            case 1: return "teacher";
-            case 2: return "admin";
-            default: return "student";
+            case 0:
+              return "student";
+            case 1:
+              return "teacher";
+            case 2:
+              return "admin";
+            default:
+              return "student";
           }
         })()}
       />
