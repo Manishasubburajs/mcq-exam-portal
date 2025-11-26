@@ -15,7 +15,10 @@ import {
    Typography,
    Divider,
    Box,
+   IconButton,
+   InputAdornment,
  } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
 
 interface AddUserModalProps {
@@ -32,6 +35,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
   defaultRole,
 }) => {
   const [errors, setErrors] = useState<any>({});
+  const [showPassword, setShowPassword] = useState(false);
 
   const [newUser, setNewUser] = useState({
     username: "",
@@ -70,14 +74,19 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
    }
  }, [open, defaultRole]);
 
-  // ✅ Validation Schema
+  // ✅ Validation Schema - Same as Registration Form
   const studentSchema = yup.object({
-    username: yup.string().required("Username is required"),
+    username: yup
+      .string()
+      .min(4, "Username must be at least 4 characters")
+      .required("Username is required"),
     email: yup.string().email("Invalid email").required("Email is required"),
     password: yup
       .string()
-      .min(6, "Password must be at least 6 characters")
-      .required(),
+      .min(8, "Password must be at least 8 characters")
+      .matches(/[a-zA-Z]/, "Password must contain letters")
+      .matches(/\d/, "Password must contain numbers")
+      .required("Password is required"),
     first_name: yup.string().required("First Name is required"),
     last_name: yup.string().required("Last Name is required"),
     dob: yup.string().required("Date of Birth is required"),
@@ -87,26 +96,53 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     school: yup.string().required("School is required"),
   });
 
+  const teacherAdminSchema = yup.object({
+    username: yup
+      .string()
+      .min(4, "Username must be at least 4 characters")
+      .required("Username is required"),
+    email: yup.string().email("Invalid email").required("Email is required"),
+    password: yup
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .matches(/[a-zA-Z]/, "Password must contain letters")
+      .matches(/\d/, "Password must contain numbers")
+      .required("Password is required"),
+    first_name: yup.string().required("First Name is required"),
+    last_name: yup.string().required("Last Name is required"),
+    department: yup.string().required("Department is required"),
+  });
+
   const handleChange = (field: string, value: string) => {
     setNewUser((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
     try {
+      // Use appropriate validation schema based on role
       if (newUser.role === "student") {
         await studentSchema.validate(newUser, { abortEarly: false });
+      } else {
+        await teacherAdminSchema.validate(newUser, { abortEarly: false });
       }
       setErrors({});
+
+      // Transform password to password_hash for API compatibility
+      const { password, ...userDataWithoutPassword } = newUser;
+      const userData = {
+        ...userDataWithoutPassword,
+        password_hash: password,
+      };
 
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser),
+        body: JSON.stringify(userData),
       });
 
       const data = await res.json();
       if (data.success) {
-        onUserAdded(data.user);
+        onUserAdded(data.data);
         onClose();
       } else {
         alert("Error: " + data.error);
@@ -150,12 +186,25 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         />
         <TextField
           label="Password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           fullWidth
           value={newUser.password}
           onChange={(e) => handleChange("password", e.target.value)}
           error={!!errors.password}
           helperText={errors.password}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={() => setShowPassword(!showPassword)}
+                  edge="end"
+                  aria-label="toggle password visibility"
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          }}
         />
       </Box>
 
@@ -220,14 +269,29 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       <Divider sx={{ mb: 2 }} />
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          label="Grade"
-          fullWidth
-          value={newUser.grade}
-          onChange={(e) => handleChange("grade", e.target.value)}
-          error={!!errors.grade}
-          helperText={errors.grade}
-        />
+        <FormControl fullWidth>
+          <InputLabel>Grade</InputLabel>
+          <Select
+            value={newUser.grade}
+            label="Grade"
+            onChange={(e) => handleChange("grade", e.target.value)}
+            error={!!errors.grade}
+          >
+            <MenuItem value="">Select Grade</MenuItem>
+            <MenuItem value="9">9th Grade</MenuItem>
+            <MenuItem value="10">10th Grade</MenuItem>
+            <MenuItem value="11">11th Grade</MenuItem>
+            <MenuItem value="12">12th Grade</MenuItem>
+            <MenuItem value="college">College</MenuItem>
+            <MenuItem value="other">Other</MenuItem>
+          </Select>
+          {errors.grade && (
+            <Typography color="error" variant="caption">
+              {errors.grade}
+            </Typography>
+          )}
+        </FormControl>
+        
         <TextField
           label="Section"
           fullWidth
@@ -262,45 +326,97 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     </Box>
   );
 
-  // 👩‍🏫 Simple form for Teacher/Admin
+  // 👩‍🏫 Enhanced form for Teacher/Admin with proper validation
   const renderOtherForm = () => (
-    <>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* Account Details */}
+      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
+        Account Details
+      </Typography>
+      <Divider sx={{ mb: 2 }} />
+
       <TextField
         label="Username"
         fullWidth
         value={newUser.username}
         onChange={(e) => handleChange("username", e.target.value)}
+        error={!!errors.username}
+        helperText={errors.username}
         sx={{ mb: 2 }}
       />
+      
+      <TextField
+        label="Email"
+        type="email"
+        fullWidth
+        value={newUser.email}
+        onChange={(e) => handleChange("email", e.target.value)}
+        error={!!errors.email}
+        helperText={errors.email}
+        sx={{ mb: 2 }}
+      />
+      
+      <TextField
+        label="Password"
+        type={showPassword ? "text" : "password"}
+        fullWidth
+        value={newUser.password}
+        onChange={(e) => handleChange("password", e.target.value)}
+        error={!!errors.password}
+        helperText={errors.password}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                onClick={() => setShowPassword(!showPassword)}
+                edge="end"
+                aria-label="toggle password visibility"
+              >
+                {showPassword ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
+        sx={{ mb: 2 }}
+      />
+
+      {/* Personal Details */}
+      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
+        Personal Details
+      </Typography>
+      <Divider sx={{ mb: 2 }} />
+
       <TextField
         label="First Name"
         fullWidth
         value={newUser.first_name}
         onChange={(e) => handleChange("first_name", e.target.value)}
+        error={!!errors.first_name}
+        helperText={errors.first_name}
         sx={{ mb: 2 }}
       />
+      
       <TextField
         label="Last Name"
         fullWidth
         value={newUser.last_name}
         onChange={(e) => handleChange("last_name", e.target.value)}
+        error={!!errors.last_name}
+        helperText={errors.last_name}
         sx={{ mb: 2 }}
       />
+      
       <TextField
-        label="Email"
-        fullWidth
-        value={newUser.email}
-        onChange={(e) => handleChange("email", e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      <TextField
-        label="Department / Group"
+        label="Department"
         fullWidth
         value={newUser.department}
         onChange={(e) => handleChange("department", e.target.value)}
+        error={!!errors.department}
+        helperText={errors.department}
         sx={{ mb: 2 }}
       />
-      <DialogActions>
+
+      <DialogActions sx={{ mt: 2 }}>
         <Button onClick={onClose}>Cancel</Button>
         <Button
           variant="contained"
@@ -313,7 +429,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
           Save {newUser.role === "teacher" ? "Teacher" : "Admin"}
         </Button>
       </DialogActions>
-    </>
+    </Box>
   );
 
   return (
