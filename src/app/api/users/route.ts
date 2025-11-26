@@ -6,18 +6,35 @@ import * as Yup from "yup";
 // YUP VALIDATION SCHEMAS
 // ------------------------------------------
 const studentSchema = Yup.object({
-  dob: Yup.string().required("DOB is required for students"),
-  gender: Yup.string().required("Gender is required for students"),
-  school: Yup.string().required("School is required for students"),
-  grade: Yup.string().required("Grade is required for students"),
-  section: Yup.string().required("Section is required for students"),
+  dob: Yup.string().nullable(),
+  gender: Yup.string().nullable(),
+  school: Yup.string().nullable(),
+  grade: Yup.string().nullable(),
+  section: Yup.string().nullable(),
 });
 
-const userSchema = Yup.object({
+// Separate schemas for create and update operations
+const createUserSchema = Yup.object({
   username: Yup.string().required("Username is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
   password_hash: Yup.string().required("Password is required"),
   role: Yup.string().oneOf(["student", "teacher", "admin"]).required(),
+  first_name: Yup.string().required("First name is required"),
+  last_name: Yup.string().required("Last name is required"),
+  department: Yup.string().nullable(),
+  dob: Yup.string().nullable(),
+  gender: Yup.string().nullable(),
+  school: Yup.string().nullable(),
+  grade: Yup.string().nullable(),
+  section: Yup.string().nullable(),
+});
+
+const updateUserSchema = Yup.object({
+  user_id: Yup.number().required("User ID is required"),
+  username: Yup.string().required("Username is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+  role: Yup.string().oneOf(["student", "teacher", "admin"]).required(),
+  status: Yup.string().oneOf(["active", "inactive", "pending"]).required(),
   first_name: Yup.string().required("First name is required"),
   last_name: Yup.string().required("Last name is required"),
   department: Yup.string().nullable(),
@@ -79,11 +96,9 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     // Validate base user fields
-    await userSchema.validate(body, { abortEarly: false });
+    await createUserSchema.validate(body, { abortEarly: false });
 
-    if (body.role === "student") {
-      await studentSchema.validate(body, { abortEarly: false });
-    }
+    // Student validation already handled in updateUserSchema
 
     const {
       username,
@@ -157,19 +172,17 @@ export async function PUT(req: Request) {
   try {
     const body = await req.json();
 
-    // Validate base fields
-    await userSchema.validate(body, { abortEarly: false });
+    // Validate base fields for update
+    await updateUserSchema.validate(body, { abortEarly: false });
 
-    if (body.role === "student") {
-      await studentSchema.validate(body, { abortEarly: false });
-    }
+    // Student validation already handled in updateUserSchema
 
     const {
       user_id,
       username,
       email,
-      password_hash,
       role,
+      status,
       first_name,
       last_name,
       department,
@@ -186,11 +199,11 @@ export async function PUT(req: Request) {
         data: {
           username,
           email,
-          password_hash,
           role,
           first_name,
           last_name,
           department,
+          status,
         },
       });
 
@@ -211,7 +224,13 @@ export async function PUT(req: Request) {
         }
       }
 
-      return updatedUser;
+      // Return complete user data with student_details
+      const userWithDetails = await tx.users.findUnique({
+        where: { user_id },
+        include: { student_details: true },
+      });
+
+      return userWithDetails;
     });
 
     return NextResponse.json(

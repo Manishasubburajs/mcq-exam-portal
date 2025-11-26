@@ -12,6 +12,8 @@ import {
   Select,
   MenuItem,
   Button,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 
 interface EditUserModalProps {
@@ -45,25 +47,32 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   onUserUpdated,
 }) => {
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [errorOpen, setErrorOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // --------------------------------------------
   // LOAD USER DETAILS INTO MODAL (FORMAT DOB)
   // --------------------------------------------
   useEffect(() => {
     if (user) {
-      setEditUser({
+      // Handle both nested and flattened data structure
+      const userData = {
         ...user,
+        // Handle flattened data (from UserManagement page)
+        dob: user.dob || user.student_details?.dob || "",
+        grade: user.grade || user.student_details?.grade || "",
+        section: user.section || user.student_details?.section || "",
+        school: user.school || user.student_details?.school || "",
+        gender: user.gender || user.student_details?.gender || "",
+      };
 
-        // Fix DOB formatting for HTML date input (YYYY-MM-DD)
-        dob: user.student_details?.dob
-          ? user.student_details.dob.split("T")[0]
-          : "",
+      // Fix DOB formatting for HTML date input (YYYY-MM-DD)
+      if (userData.dob && typeof userData.dob === 'string' && userData.dob.includes('T')) {
+        userData.dob = userData.dob.split('T')[0];
+      }
 
-        grade: user.student_details?.grade || "",
-        section: user.student_details?.section || "",
-        school: user.student_details?.school || "",
-        gender: user.student_details?.gender || "",
-      });
+      setEditUser(userData);
     }
   }, [user]);
 
@@ -109,15 +118,26 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       const data = await res.json();
       console.log("Response data:", data);
 
-      if (data.user) {
-        onUserUpdated(data.user);
-        onClose();
+      if (data.success && data.data) {
+        // Show success popup
+        setSuccessOpen(true);
+        
+        // Update the user in the parent component
+        onUserUpdated(data.data);
+        
+        // Close the modal after a short delay
+        setTimeout(() => {
+          onClose();
+        }, 2000);
       } else {
-        alert("Error: " + data.message);
+        // Show error popup
+        setErrorMessage(data.error || "Failed to update user");
+        setErrorOpen(true);
       }
     } catch (err) {
       console.error("Error saving user:", err);
-      alert("Something went wrong!");
+      setErrorMessage("Something went wrong while updating the user!");
+      setErrorOpen(true);
     }
   };
 
@@ -262,6 +282,38 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           Save Changes
         </Button>
       </DialogActions>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={successOpen}
+        autoHideDuration={3000}
+        onClose={() => setSuccessOpen(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSuccessOpen(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          User updated successfully!
+        </Alert>
+      </Snackbar>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={errorOpen}
+        autoHideDuration={4000}
+        onClose={() => setErrorOpen(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setErrorOpen(false)}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };

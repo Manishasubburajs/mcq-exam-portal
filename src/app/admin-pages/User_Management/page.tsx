@@ -580,11 +580,19 @@ const UserManagement: React.FC = () => {
         open={editUserOpen}
         onClose={() => setEditUserOpen(false)}
         user={selectedUser}
-        onUserUpdated={(updated) =>
+        onUserUpdated={(updated) => {
+          // Normalize the updated user data to match the expected format
+          const normalizedUser = {
+            ...updated,
+            grade: updated.student_details?.grade || "",
+            section: updated.student_details?.section || "",
+            department: updated.department || "",
+          };
+          
           setUsers((prev) =>
-            prev.map((u) => (u.user_id === updated.user_id ? updated : u))
-          )
-        }
+            prev.map((u) => (u.user_id === updated.user_id ? normalizedUser : u))
+          );
+        }}
       />
 
       <ConfirmDeleteDialog
