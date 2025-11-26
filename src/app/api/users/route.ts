@@ -259,18 +259,26 @@ export async function PUT(req: Request) {
 // ------------------------------------------
 export async function DELETE(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("id");
+    const body = await req.json();
+    const { user_id } = body;
 
-    if (!userId) {
+    if (!user_id) {
       return NextResponse.json(
         { success: false, error: "User ID is required" },
         { status: 400 }
       );
     }
 
-    await prisma.users.delete({
-      where: { user_id: Number(userId) },
+    await prisma.$transaction(async (tx) => {
+      // First delete associated student_details if they exist
+      await tx.student_details.deleteMany({
+        where: { user_id: Number(user_id) },
+      });
+
+      // Then delete the user
+      await tx.users.delete({
+        where: { user_id: Number(user_id) },
+      });
     });
 
     return NextResponse.json(

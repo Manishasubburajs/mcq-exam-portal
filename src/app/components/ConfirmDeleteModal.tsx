@@ -40,10 +40,8 @@ const ConfirmDeleteDialog: React.FC<ConfirmDeleteDialogProps> = ({
         <Button
           variant="contained"
           color="error"
-          onClick={() => {
-            onConfirm();
-            onClose();
-          }}
+          onClick={onConfirm}
+          autoFocus
         >
           Delete
         </Button>

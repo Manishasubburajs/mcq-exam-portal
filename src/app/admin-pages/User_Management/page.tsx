@@ -196,14 +196,28 @@ const UserManagement: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.user_id }),
       });
+      
       const data = await res.json();
+      
       if (data.success) {
+        // Update the users list immediately
         setUsers((prev) => prev.filter((u) => u.user_id !== user.user_id));
+        
+        // Show success message
+        alert(`✅ User "${user.first_name} ${user.last_name}" has been deleted successfully.`);
       } else {
+        // Show error message
+        alert(`❌ Failed to delete user: ${data.error || "Unknown error"}`);
         console.error("Delete failed:", data.error);
       }
     } catch (err) {
+      const errorMessage = "Network error or server unavailable";
+      alert(`❌ ${errorMessage}`);
       console.error("Error deleting user:", err);
+    } finally {
+      // Always close the confirm dialog
+      setConfirmDeleteOpen(false);
+      setSelectedUser(null);
     }
   };
 
