@@ -16,7 +16,10 @@ import {
   MenuItem,
   Checkbox,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
 import styles from "./page.module.css";
 
@@ -49,7 +52,7 @@ const personalSchema = yup.object({
 });
 
 const academicSchema = yup.object({
-  studentId: yup.string().required("Student ID is required"),
+  // studentId: yup.string().required("Student ID is required"),
   school: yup.string().required("School is required"),
   grade: yup.string().required("Grade is required"),
   agree: yup.bool().oneOf([true], "You must agree to terms"),
@@ -59,6 +62,8 @@ const stepSchemas = [accountSchema, personalSchema, academicSchema];
 
 export default function Register() {
   const [activeStep, setActiveStep] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -69,7 +74,7 @@ export default function Register() {
     lastName: "",
     dob: "",
     gender: "",
-    studentId: "",
+    // studentId: "",
     school: "",
     grade: "",
     section: "",
@@ -233,25 +238,79 @@ export default function Register() {
             {/* Step 1: Account */}
             {activeStep === 0 && (
               <Box>
-                {["email", "username", "password", "confirmPassword"].map(
-                  (field) => (
-                    <TextField
-                      key={field}
-                      fullWidth
-                      margin="normal"
-                      label={
-                        field === "confirmPassword"
-                          ? "Confirm Password"
-                          : field.charAt(0).toUpperCase() + field.slice(1)
-                      }
-                      type={field.includes("password") ? "password" : "text"}
-                      value={formData[field as keyof typeof formData]}
-                      onChange={(e) => handleChange(field, e.target.value)}
-                      error={!!errors[field]}
-                      helperText={errors[field]}
-                    />
-                  )
-                )}
+                {/* Email */}
+                <TextField
+                  fullWidth
+                  margin="normal"
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                />
+
+                {/* Username */}
+                <TextField
+                  fullWidth
+                  margin="normal"
+                  label="Username"
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => handleChange("username", e.target.value)}
+                  error={!!errors.username}
+                  helperText={errors.username}
+                />
+
+                {/* Password */}
+                <TextField
+                  fullWidth
+                  margin="normal"
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                          aria-label="toggle password visibility"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                {/* Confirm Password */}
+                <TextField
+                  fullWidth
+                  margin="normal"
+                  label="Confirm Password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  error={!!errors.confirmPassword}
+                  helperText={errors.confirmPassword}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                          aria-label="toggle confirm password visibility"
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Box>
             )}
 
@@ -326,7 +385,7 @@ export default function Register() {
             {/* Step 3: Academic */}
             {activeStep === 2 && (
               <Box>
-                <TextField
+                {/* <TextField
                   fullWidth
                   margin="normal"
                   label="Student ID"
@@ -334,7 +393,7 @@ export default function Register() {
                   onChange={(e) => handleChange("studentId", e.target.value)}
                   error={!!errors.studentId}
                   helperText={errors.studentId}
-                />
+                /> */}
                 <TextField
                   fullWidth
                   margin="normal"

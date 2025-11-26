@@ -23,7 +23,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [activeTab, setActiveTab] = useState<"student" | "admin">("student");
   const [mounted, setMounted] = useState(false);
   const isMobile = useMediaQuery("(max-width:768px)");
   const router = useRouter();
@@ -37,7 +36,7 @@ export default function Login() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role: activeTab }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
@@ -137,45 +136,9 @@ export default function Login() {
             <Typography variant="h4" sx={{ color: "#2575fc", fontWeight: 700 }}>
               MCQ{" "}
               <Box component="span" sx={{ color: "#6a11cb" }}>
-                {activeTab === "student" ? "Exam Portal" : "Admin Portal"}
+                 Exam Portal 
               </Box>
             </Typography>
-          </Box>
-
-          {/* Tabs */}
-          <Box
-            sx={{ display: "flex", mb: 3, borderBottom: "2px solid #f1f1f1" }}
-          >
-            <Box
-              sx={{
-                flex: 1,
-                textAlign: "center",
-                py: 1,
-                cursor: "pointer",
-                fontWeight: 600,
-                color: activeTab === "student" ? "#2575fc" : "#888",
-                borderBottom:
-                  activeTab === "student" ? "3px solid #2575fc" : "none",
-              }}
-              onClick={() => setActiveTab("student")}
-            >
-              Student Login
-            </Box>
-            <Box
-              sx={{
-                flex: 1,
-                textAlign: "center",
-                py: 1,
-                cursor: "pointer",
-                fontWeight: 600,
-                color: activeTab === "admin" ? "#2575fc" : "#888",
-                borderBottom:
-                  activeTab === "admin" ? "3px solid #2575fc" : "none",
-              }}
-              onClick={() => setActiveTab("admin")}
-            >
-              Admin Login
-            </Box>
           </Box>
 
           <Box
