@@ -28,7 +28,8 @@ model exams {
   status                exams_status?           @default(draft)
   subject_id            Int?
   time_limit_minutes    Int?                    @default(30)
-  total_marks           Int?                    @default(0)
+  duration_minutes      Int?                    @default(0) // optional synonym for time limit if you prefer
+  total_marks           Decimal?                @default(0) @db.Decimal(12, 4)
   question_count        Int?                    @default(0)
   scheduled_start       DateTime?               @db.DateTime(0)
   scheduled_end         DateTime?               @db.DateTime(0)
@@ -57,24 +58,29 @@ model questions {
   option_b        String?               @db.Text
   option_c        String?               @db.Text
   option_d        String?               @db.Text
-  correct_answer  String?               @db.Text
-  points          Int?                  @default(1)
+  correct_answer  String?               @db.Char(1) // 'A' | 'B' | 'C' | 'D'
+  marks           Decimal?              @default(1) @db.Decimal(8, 4) // points for correct answer
+  negative_marks  Decimal?              @default(0) @db.Decimal(8, 4) // penalty to subtract for wrong answer (positive value stored)
   difficulty      questions_difficulty? @default(Medium)
   subject_id      Int?
+  topic_id        Int?
   created_by      Int?
   created_at      DateTime?             @default(now()) @db.Timestamp(0)
   updated_at      DateTime?             @default(now()) @db.Timestamp(0)
   is_draft        Boolean?              @default(false)
   exam_questions  exam_questions[]
   subjects        subjects?             @relation(fields: [subject_id], references: [subject_id], onUpdate: NoAction, map: "questions_ibfk_1")
-  users           users?                @relation(fields: [created_by], references: [user_id], onUpdate: NoAction, map: "questions_ibfk_2")
-  exams           exams?                @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade, onUpdate: NoAction, map: "questions_ibfk_3")
+  topics          topics?               @relation(fields: [topic_id], references: [topic_id], onUpdate: NoAction, map: "questions_ibfk_2")
+  users           users?                @relation(fields: [created_by], references: [user_id], onUpdate: NoAction, map: "questions_ibfk_3")
   student_answers student_answers[]
+  exams           exams?                @relation(fields: [examsExam_id], references: [exam_id])
+  examsExam_id    Int?
 
   @@index([created_by], map: "created_by")
   @@index([exam_id], map: "exam_id")
   @@index([difficulty], map: "idx_difficulty")
   @@index([subject_id], map: "idx_subject")
+  @@index([topic_id], map: "idx_topic")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -85,6 +91,12 @@ model student_answers {
   selected_answer       String?               @db.Char(1)
   is_correct            Boolean?              @default(false)
   answered_at           DateTime?             @default(now()) @db.Timestamp(0)
+  // Timing / metrics fields
+  time_taken_seconds    Int? // time taken to answer THIS question (seconds)
+  view_time_seconds     Int? // accumulated seconds spent viewing this question
+  first_viewed_at       DateTime? // first time the question was shown
+  last_viewed_at        DateTime? // last time the question was visible / updated
+  marks_awarded         Decimal?              @default(0) @db.Decimal(12, 4) // actual marks added (can be negative)
   student_exam_attempts student_exam_attempts @relation(fields: [attempt_id], references: [attempt_id], onDelete: Cascade, onUpdate: NoAction, map: "student_answers_ibfk_1")
   questions             questions             @relation(fields: [question_id], references: [question_id], onDelete: Cascade, onUpdate: NoAction, map: "student_answers_ibfk_2")
 
@@ -107,18 +119,23 @@ model student_details {
 }
 
 model student_exam_attempts {
-  attempt_id      Int                           @id @default(autoincrement())
-  student_id      Int
-  exam_id         Int
-  start_time      DateTime                      @db.DateTime(0)
-  end_time        DateTime?                     @db.DateTime(0)
-  score           Int?                          @default(0)
-  total_questions Int
-  correct_answers Int?                          @default(0)
-  status          student_exam_attempts_status? @default(in_progress)
-  student_answers student_answers[]
-  users           users                         @relation(fields: [student_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "student_exam_attempts_ibfk_1")
-  exams           exams                         @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade, onUpdate: NoAction, map: "student_exam_attempts_ibfk_2")
+  attempt_id          Int                           @id @default(autoincrement())
+  student_id          Int
+  exam_id             Int
+  start_time          DateTime                      @db.DateTime(0)
+  end_time            DateTime?                     @db.DateTime(0)
+  total_time_seconds  Int? // actual total time used (seconds)
+  score               Decimal?                      @default(0) @db.Decimal(12, 4)
+  total_questions     Int
+  correct_answers     Int?                          @default(0)
+  wrong_answers       Int?                          @default(0)
+  unanswered          Int?                          @default(0)
+  status              student_exam_attempts_status? @default(in_progress)
+  current_question_id Int? // optional: quick lookup of which question user is currently viewing
+  last_activity       DateTime? // last heartbeat or activity timestamp
+  student_answers     student_answers[]
+  users               users                         @relation(fields: [student_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "student_exam_attempts_ibfk_1")
+  exams               exams                         @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade, onUpdate: NoAction, map: "student_exam_attempts_ibfk_2")
 
   @@index([exam_id], map: "exam_id")
   @@index([start_time], map: "idx_start_time")
@@ -126,16 +143,29 @@ model student_exam_attempts {
 }
 
 model subjects {
-  subject_id   Int         @id @default(autoincrement())
-  subject_name String      @unique(map: "subject_name") @db.VarChar(100)
-  description  String?     @db.Text
-  created_by   Int?
-  created_at   DateTime?   @default(now()) @db.Timestamp(0)
-  exams        exams[]
-  questions    questions[]
-  users        users?      @relation(fields: [created_by], references: [user_id], onUpdate: NoAction, map: "subjects_ibfk_1")
+  subject_id   Int      @id @default(autoincrement())
+  subject_name String   @unique(map: "subject_name") @db.VarChar(100)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
 
-  @@index([created_by], map: "created_by")
+  // Relations
+  exams       exams[]
+  questions   questions[]
+  topics      topics[]
+  topic_count Int         @default(0)
+
+  @@index([subject_name])
+}
+
+model topics {
+  topic_id   Int      @id @default(autoincrement())
+  subject_id Int
+  topic_name String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  subjects  subjects    @relation(fields: [subject_id], references: [subject_id], onDelete: Cascade, onUpdate: NoAction)
+  questions questions[]
+
+  @@index([subject_id])
 }
 
 model users {
@@ -154,7 +184,6 @@ model users {
   questions             questions[]
   student_details       student_details?
   student_exam_attempts student_exam_attempts[]
-  subjects              subjects[]
 
   @@index([email], map: "idx_email")
   @@index([role], map: "idx_role")

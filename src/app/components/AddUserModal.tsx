@@ -142,19 +142,48 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
       const data = await res.json();
       if (data.success) {
-        onUserAdded(data.data);
+        // Normalize the response data to match expected format
+        const normalizedUser = {
+          ...data.data,
+          grade: data.data.student_details?.grade || "",
+          section: data.data.student_details?.section || "",
+          department: data.data.department || "",
+        };
+        
+        onUserAdded(normalizedUser);
         onClose();
+        
+        // Show success message
+        alert(`✅ User "${newUser.first_name} ${newUser.last_name}" has been created successfully!`);
       } else {
-        alert("Error: " + data.error);
+        // Handle validation errors from backend
+        const errorMessage = data.validationErrors 
+          ? Object.values(data.validationErrors).join(", ")
+          : data.error || "Unknown error occurred";
+        alert(`❌ Failed to create user: ${errorMessage}`);
       }
     } catch (err: any) {
+      // Handle validation errors
       const newErrs: any = {};
       if (err.inner) {
         for (const e of err.inner) {
           newErrs[e.path] = e.message;
         }
       }
+      
+      // Handle network errors (when fetch request fails)
+      if (!err.inner) {
+        alert("❌ Network error or server unavailable. Please check your connection and try again.");
+        return;
+      }
+      
       setErrors(newErrs);
+      
+      // Show summary of validation errors
+      if (Object.keys(newErrs).length > 0) {
+        const errorSummary = Object.values(newErrs).join(", ");
+        console.error("Validation errors:", newErrs);
+      }
     }
   };
 

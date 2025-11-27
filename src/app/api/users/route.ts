@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import * as Yup from "yup";
+import bcrypt from "bcryptjs";
 
 // ------------------------------------------
 // YUP VALIDATION SCHEMAS
@@ -115,12 +116,15 @@ export async function POST(req: Request) {
       section,
     } = body;
 
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password_hash, 10);
+
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.users.create({
         data: {
           username,
           email,
-          password_hash,
+          password_hash: hashedPassword,
           role,
           first_name,
           last_name,
@@ -129,19 +133,38 @@ export async function POST(req: Request) {
       });
 
       if (role === "student") {
+        // Ensure dob is always valid (required field)
+        if (!dob || dob.trim() === "") {
+          throw new Error("Date of birth is required for students");
+        }
+        
+        // Convert YYYY-MM-DD to Date object for Prisma DateTime field
+        const formattedDob = new Date(dob);
+        
+        // Validate that the date conversion worked
+        if (isNaN(formattedDob.getTime())) {
+          throw new Error("Invalid date format for date of birth");
+        }
+        
         await tx.student_details.create({
           data: {
             user_id: user.user_id,
-            dob,
-            gender,
-            school,
-            grade,
-            section,
+            dob: formattedDob,
+            gender: gender as any, // Type assertion for enum
+            school: school || "",
+            grade: grade || "",
+            section: section || null,
           },
         });
       }
 
-      return user;
+      // Return complete user data with student_details to match GET response structure
+      const userWithDetails = await tx.users.findUnique({
+        where: { user_id: user.user_id },
+        include: { student_details: true },
+      });
+
+      return userWithDetails;
     });
 
     return NextResponse.json(
