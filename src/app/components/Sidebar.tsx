@@ -16,6 +16,7 @@ import {
   Book,
   BarChart,
   Settings,
+  School,
 } from '@mui/icons-material';
 import { FaTachometerAlt, FaSignOutAlt, FaQuestionCircle, FaPlusCircle } from 'react-icons/fa';
 import styles from './Sidebar.module.css';
@@ -33,6 +34,7 @@ const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
     { text: 'Dashboard', icon: <FaTachometerAlt />, route: '/admin-pages' },
     { text: 'Create Exam', icon: <FaPlusCircle />, route: '/admin-pages/Create_Exam' },
     { text: 'Exam Management', icon: <Book />, route: '/admin-pages/Exam_Management' },
+    { text: 'Subjects & Topics', icon: <School />, route: '/admin-pages/subject_details' },
     { text: 'Results Analytics', icon: <BarChart />, route: '/admin-pages/Results_Analytics' },
     { text: 'User Management', icon: <People />, route: '/admin-pages/User_Management' },
     { text: 'Question Bank', icon: <FaQuestionCircle />, route: '/admin-pages/Question_Bank' },

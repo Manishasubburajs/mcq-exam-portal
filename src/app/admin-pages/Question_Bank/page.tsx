@@ -34,6 +34,7 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon,
   Visibility as VisibilityIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
@@ -46,8 +47,16 @@ export default function QuestionBankPage() {
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
   const [questions, setQuestions] = useState<any[]>([]);
+  const [filteredQuestions, setFilteredQuestions] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [topics, setTopics] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Search and filter states
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number>(0);
+  const [selectedTopicId, setSelectedTopicId] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [showTable, setShowTable] = useState<boolean>(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -87,6 +96,23 @@ export default function QuestionBankPage() {
     }
   };
 
+  const fetchTopics = async (subjectId: number) => {
+    try {
+      const res = await fetch("/api/subjects");
+      const data = await res.json();
+      const subjectsData = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+      const subject = subjectsData.find((s: any) => s.subject_id === subjectId);
+      if (subject) {
+        setTopics(subject.topics || []);
+      } else {
+        setTopics([]);
+      }
+    } catch (err) {
+      console.error("Error fetching topics:", err);
+      setTopics([]);
+    }
+  };
+
   const fetchQuestions = async () => {
     setLoading(true);
     try {
@@ -103,6 +129,28 @@ export default function QuestionBankPage() {
     fetchSubjects();
     fetchQuestions();
   }, []);
+
+  // Filter questions based on search term, subject, and topic
+  useEffect(() => {
+    let filtered = [...questions];
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(q => 
+        q.question_text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        q.difficulty?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by subject
+    if (selectedSubjectId) {
+      filtered = filtered.filter(q => q.subject_id === selectedSubjectId);
+    }
+
+    setFilteredQuestions(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [questions, searchTerm, selectedSubjectId, selectedTopicId]);
 
   const subjectColors: { [key: string]: { bg: string; text: string } } = {
     Math: { bg: "#e0f7fa", text: "#006064" },
@@ -218,7 +266,30 @@ export default function QuestionBankPage() {
     setViewModalOpen(true);
   };
 
-  const paginatedQuestions = questions.slice(
+  const handleSubjectChange = (subjectId: number) => {
+    setSelectedSubjectId(subjectId);
+    setSelectedTopicId(0); // Reset topic selection
+    if (subjectId) {
+      fetchTopics(subjectId);
+    } else {
+      setTopics([]);
+    }
+  };
+
+  const handleSearch = () => {
+    // Show table when search is performed
+    setShowTable(true);
+  };
+
+  const handleReset = () => {
+    setSelectedSubjectId(0);
+    setSelectedTopicId(0);
+    setSearchTerm("");
+    setTopics([]);
+    setShowTable(false); // Hide table when reset
+  };
+
+  const paginatedQuestions = filteredQuestions.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -244,7 +315,7 @@ export default function QuestionBankPage() {
         className={`main-content ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
         sx={{
           ml: sidebarOpen && isDesktop ? "220px" : 0,
-          transition: "margin-left 0.3s ease",
+          transition: "margin-left 0.3s ease",mt:2,
           paddingTop: { xs: "50px", md: "80px" },
         }}
       >
@@ -254,9 +325,9 @@ export default function QuestionBankPage() {
           sidebarOpen={sidebarOpen}
         />
 
-        <Paper elevation={1} sx={{ p: 3, borderRadius: "10px", backgroundColor: "white" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-            <Typography variant="h6">All Questions</Typography>
+        <Paper elevation={1} sx={{ p: 3, borderRadius: "10px", backgroundColor: "white", mb: 3 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+            <Typography variant="h6">Question Bank</Typography>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -270,70 +341,178 @@ export default function QuestionBankPage() {
             </Button>
           </Box>
 
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
-                    <TableCell>ID</TableCell>
-                    <TableCell>Question</TableCell>
-                    <TableCell>Subject</TableCell>
-                    <TableCell>Difficulty</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedQuestions.map((q) => (
-                    <TableRow key={q.question_id}>
-                      <TableCell>{q.question_id}</TableCell>
-                      <TableCell>
-                        <Tooltip title={q.question_text}>
-                          <span>{q.question_text?.slice(0, 50)}...</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={q.subject_name || "N/A"}
-                          sx={{
-                            backgroundColor: getSubjectColor(q.subject_name),
-                            color: getSubjectTextColor(q.subject_name),
-                            fontWeight: "600",
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={q.difficulty} color={getDifficultyColor(q.difficulty)} />
-                      </TableCell>
-                      <TableCell>
-                        <IconButton sx={{ color: "#1976d2" }} onClick={() => handleViewQuestion(q)}>
-                          <VisibilityIcon />
-                        </IconButton>
-                        <IconButton sx={{ color: "#2575fc" }} onClick={() => handleEditQuestion(q)}>
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton sx={{ color: "#f44336" }} onClick={() => handleDeleteQuestion(q.question_id)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
+          {/* Search and Filter Controls */}
+          <Paper elevation={1} sx={{ p: 3, borderRadius: "10px", backgroundColor: "#f8f9fa" }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Search & Filter</Typography>
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 2, mb: 2 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Select Subject</InputLabel>
+                <Select
+                  value={selectedSubjectId}
+                  onChange={(e) => handleSubjectChange(Number(e.target.value))}
+                  label="Select Subject"
+                >
+                  <MenuItem value={0}>All Subjects</MenuItem>
+                  {subjects.map((subject) => (
+                    <MenuItem key={subject.subject_id} value={subject.subject_id}>
+                      {subject.subject_name}
+                    </MenuItem>
                   ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+                </Select>
+              </FormControl>
 
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-            <Pagination
-              count={Math.ceil(questions.length / itemsPerPage)}
-              page={currentPage}
-              onChange={(e, page) => setCurrentPage(page)}
-            />
-          </Box>
+              <FormControl fullWidth size="small">
+                <InputLabel>Select Topic</InputLabel>
+                <Select
+                  value={selectedTopicId}
+                  onChange={(e) => setSelectedTopicId(Number(e.target.value))}
+                  label="Select Topic"
+                  disabled={!selectedSubjectId}
+                >
+                  <MenuItem value={0}>All Topics</MenuItem>
+                  {topics.map((topic) => (
+                    <MenuItem key={topic.topic_id} value={topic.topic_id}>
+                      {topic.topic_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button
+                variant="contained"
+                onClick={handleSearch}
+                sx={{
+                  background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                  "&:hover": { opacity: 0.9 },
+                }}
+              >
+                Search
+              </Button>
+              <Button variant="outlined" onClick={handleReset}>
+                Reset
+              </Button>
+            </Box>
+          </Paper>
         </Paper>
+
+        {/* Table Card - Separate Card */}
+        {showTable && (
+          <Paper elevation={1} sx={{ p: 3, borderRadius: "10px", backgroundColor: "white" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <Typography variant="h6">Search Results</Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <TextField
+                  size="small"
+                  placeholder="Filter results..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />
+                  }}
+                  sx={{ minWidth: 250 }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {filteredQuestions.length} question(s) found
+                </Typography>
+              </Box>
+            </Box>
+
+            {loading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
+                        <TableCell sx={{ fontWeight: "bold" }}>S.No</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Questions</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Difficulty</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedQuestions.length > 0 ? (
+                        paginatedQuestions.map((q, index) => (
+                          <TableRow key={q.question_id} hover>
+                            <TableCell>
+                              {((currentPage - 1) * itemsPerPage) + index + 1}
+                            </TableCell>
+                            <TableCell>
+                              <Tooltip title={q.question_text}>
+                                <span>{q.question_text?.slice(0, 80)}{q.question_text?.length > 80 ? '...' : ''}</span>
+                              </Tooltip>
+                            </TableCell>
+                            <TableCell>
+                              <Chip 
+                                label={q.difficulty} 
+                                color={getDifficultyColor(q.difficulty)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: "flex", gap: 1 }}>
+                                <Tooltip title="View" arrow>
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleViewQuestion(q)}
+                                  >
+                                    <VisibilityIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Edit" arrow>
+                                  <IconButton 
+                                    size="small" 
+                                    color="secondary"
+                                    onClick={() => handleEditQuestion(q)}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete" arrow>
+                                  <IconButton 
+                                    size="small" 
+                                    color="error"
+                                    onClick={() => handleDeleteQuestion(q.question_id)}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" sx={{ py: 5 }}>
+                            <Typography variant="body1" color="text.secondary">
+                              {searchTerm || selectedSubjectId || selectedTopicId 
+                                ? "No Data Found" 
+                                : "No questions available"}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                  <Pagination
+                    count={Math.ceil(filteredQuestions.length / itemsPerPage)}
+                    page={currentPage}
+                    onChange={(e, page) => setCurrentPage(page)}
+                    disabled={filteredQuestions.length === 0}
+                  />
+                </Box>
+              </>
+            )}
+          </Paper>
+        )}
 
         {/* Add/Edit Modal */}
         <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
