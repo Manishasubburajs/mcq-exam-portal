@@ -21,10 +21,11 @@ export async function GET() {
       option_c: q.option_c,
       option_d: q.option_d,
       correct_answer: q.correct_answer,
-      points: q.points,
+      points: q.marks, // Map marks to points for frontend compatibility
       difficulty: q.difficulty,
       subject_name: q.subjects?.subject_name,
       subject_id: q.subject_id,
+      topic_id: q.topic_id,
       created_at: q.created_at,
       is_draft: q.is_draft,
     }));
@@ -50,6 +51,7 @@ export async function POST(req: Request) {
       points,
       difficulty,
       subject_id,
+      topic_id,
       is_draft,
     } = body;
 
@@ -57,6 +59,15 @@ export async function POST(req: Request) {
     if (!question_text || !correct_answer || !subject_id) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Validate correct answer is a single character (A, B, C, or D)
+    const validAnswers = ['A', 'B', 'C', 'D'];
+    if (!validAnswers.includes(correct_answer.toUpperCase())) {
+      return NextResponse.json(
+        { error: "Correct answer must be one of: A, B, C, or D" },
         { status: 400 }
       );
     }
@@ -92,10 +103,11 @@ export async function POST(req: Request) {
         option_b: option_b?.trim() || "",
         option_c: option_c?.trim() || "",
         option_d: option_d?.trim() || "",
-        correct_answer: correct_answer.trim(),
-        points: safePoints,
+        correct_answer: correct_answer.trim().toUpperCase(),
+        marks: safePoints,
         difficulty: normalizedDifficulty as any,
         subject_id: subject_id,
+        topic_id: topic_id || null,
         is_draft: draftFlag,
       },
     });
@@ -113,6 +125,115 @@ export async function POST(req: Request) {
   }
 }
 
+
+// ✅ PUT — update an existing question
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json();
+    const {
+      question_id,
+      question_text,
+      option_a,
+      option_b,
+      option_c,
+      option_d,
+      correct_answer,
+      points,
+      difficulty,
+      subject_id,
+      topic_id,
+      is_draft,
+    } = body;
+
+    // ✅ Validate required fields
+    if (!question_id) {
+      return NextResponse.json(
+        { error: "Question ID is required for update" },
+        { status: 400 }
+      );
+    }
+
+    if (!question_text || !correct_answer || !subject_id) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Validate correct answer is a single character (A, B, C, or D)
+    const validAnswers = ['A', 'B', 'C', 'D'];
+    if (!validAnswers.includes(correct_answer.toUpperCase())) {
+      return NextResponse.json(
+        { error: "Correct answer must be one of: A, B, C, or D" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Normalize difficulty (MySQL ENUM is case-sensitive)
+    const validDifficulties = ["Easy", "Medium", "Hard"];
+    const normalizedDifficulty =
+      validDifficulties.includes(difficulty) ? difficulty : "Medium";
+
+    // ✅ Normalize points — must be positive integer
+    const safePoints =
+      typeof points === "number" && points > 0 ? points : 1;
+
+    // ✅ Normalize draft flag — always 0 or 1
+    const draftFlag = is_draft ? true : false;
+
+    // ✅ Ensure subject exists
+    const subjectExists = await prisma.subjects.findUnique({
+      where: { subject_id: subject_id },
+    });
+    if (!subjectExists) {
+      return NextResponse.json(
+        { error: "Invalid subject selected" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Check if question exists
+    const existingQuestion = await prisma.questions.findUnique({
+      where: { question_id: question_id },
+    });
+    if (!existingQuestion) {
+      return NextResponse.json(
+        { error: "Question not found" },
+        { status: 404 }
+      );
+    }
+
+    // ✅ Update the question
+    const updatedQuestion = await prisma.questions.update({
+      where: { question_id: question_id },
+      data: {
+        question_text: question_text.trim(),
+        option_a: option_a?.trim() || "",
+        option_b: option_b?.trim() || "",
+        option_c: option_c?.trim() || "",
+        option_d: option_d?.trim() || "",
+        correct_answer: correct_answer.trim().toUpperCase(),
+        marks: safePoints,
+        difficulty: normalizedDifficulty as any,
+        subject_id: subject_id,
+        topic_id: topic_id || null,
+        is_draft: draftFlag,
+        updated_at: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      message: "Question updated successfully",
+      question_id: updatedQuestion.question_id,
+    });
+  } catch (error: any) {
+    console.error("PUT /api/questions error:", error);
+    return NextResponse.json(
+      { error: "Failed to update question", details: error.message },
+      { status: 500 }
+    );
+  }
+}
 
 // ✅ DELETE — delete question
 export async function DELETE(req: Request) {
