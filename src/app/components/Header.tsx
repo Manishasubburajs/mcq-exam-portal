@@ -38,7 +38,7 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
   }, []);
 
   const handleNewExam = () => {
-    router.push('/admin-pages/Create_Exam');
+    router.push('/admin-pages/Exam_Management');
   };
 
   return (
@@ -87,9 +87,9 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
         >
           New Exam
         </Button>
-        <Button variant="outlined" color="secondary" size={isMobile ? 'small' : 'medium'}>
+        {/* <Button variant="outlined" color="secondary" size={isMobile ? 'small' : 'medium'}>
           Export Data
-        </Button>
+        </Button> */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Avatar sx={{ bgcolor: 'primary.main', color: 'white', width: isMobile ? 20 : 40, height: isMobile ? 20 : 40, marginRight: isMobile ? '2px' : '10px' }}>
             <AdminPanelSettings sx={{ fontSize: isMobile ? 12 : 20 }} />
