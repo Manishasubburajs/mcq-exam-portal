@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// ✅ GET — fetch all questions
+// ============================
+// GET — fetch all questions
+// ============================
 export async function GET() {
   try {
     const questions = await prisma.questions.findMany({
       include: {
-        subjects: true,
+        subject: true, // ✅ correct relation name
       },
       orderBy: {
         created_at: "desc",
       },
     });
 
-    const formattedQuestions = questions.map((q:any) => ({
+    const formattedQuestions = questions.map((q) => ({
       question_id: q.question_id,
       question_text: q.question_text,
       option_a: q.option_a,
@@ -21,23 +23,27 @@ export async function GET() {
       option_c: q.option_c,
       option_d: q.option_d,
       correct_answer: q.correct_answer,
-      points: q.marks, // Map marks to points for frontend compatibility
+      points: q.marks,
       difficulty: q.difficulty,
-      subject_name: q.subjects?.subject_name,
       subject_id: q.subject_id,
+      subject_name: q.subject?.subject_name,
       topic_id: q.topic_id,
       created_at: q.created_at,
-      is_draft: q.is_draft,
     }));
 
     return NextResponse.json(formattedQuestions);
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET /api/questions error:", error);
-    return NextResponse.json({ error: "Failed to fetch questions" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch questions" },
+      { status: 500 }
+    );
   }
 }
 
-// ✅ POST — add a new question
+// ============================
+// POST — add new question
+// ============================
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -52,41 +58,34 @@ export async function POST(req: Request) {
       difficulty,
       subject_id,
       topic_id,
-      is_draft,
     } = body;
 
-    // ✅ Validate required fields
-    if (!question_text || !correct_answer || !subject_id) {
+    if (!question_text || !correct_answer || !subject_id || !topic_id) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // ✅ Validate correct answer is a single character (A, B, C, or D)
-    const validAnswers = ['A', 'B', 'C', 'D'];
+    const validAnswers = ["A", "B", "C", "D"];
     if (!validAnswers.includes(correct_answer.toUpperCase())) {
       return NextResponse.json(
-        { error: "Correct answer must be one of: A, B, C, or D" },
+        { error: "Correct answer must be A, B, C, or D" },
         { status: 400 }
       );
     }
 
-    // ✅ Normalize difficulty (MySQL ENUM is case-sensitive)
     const validDifficulties = ["Easy", "Medium", "Hard"];
-    const normalizedDifficulty =
-      validDifficulties.includes(difficulty) ? difficulty : "Medium";
+    const normalizedDifficulty = validDifficulties.includes(difficulty)
+      ? difficulty
+      : "Medium";
 
-    // ✅ Normalize points — must be positive integer
     const safePoints =
-      typeof points === "number" && points > 0 ? points : 1;
+      typeof points === "number" && points > 0 ? points : 2;
 
-    // ✅ Normalize draft flag — always 0 or 1
-    const draftFlag = is_draft ? true : false;
-
-    // ✅ Ensure subject exists
+    // Ensure subject exists
     const subjectExists = await prisma.subjects.findUnique({
-      where: { subject_id: subject_id },
+      where: { subject_id },
     });
     if (!subjectExists) {
       return NextResponse.json(
@@ -95,20 +94,29 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Insert safe question data
+    // Ensure topic exists
+    const topicExists = await prisma.topics.findUnique({
+      where: { topic_id },
+    });
+    if (!topicExists) {
+      return NextResponse.json(
+        { error: "Invalid topic selected" },
+        { status: 400 }
+      );
+    }
+
     const newQuestion = await prisma.questions.create({
       data: {
         question_text: question_text.trim(),
-        option_a: option_a?.trim() || "",
-        option_b: option_b?.trim() || "",
-        option_c: option_c?.trim() || "",
-        option_d: option_d?.trim() || "",
-        correct_answer: correct_answer.trim().toUpperCase(),
+        option_a: option_a || null,
+        option_b: option_b || null,
+        option_c: option_c || null,
+        option_d: option_d || null,
+        correct_answer: correct_answer.toUpperCase(),
         marks: safePoints,
-        difficulty: normalizedDifficulty as any,
-        subject_id: subject_id,
-        topic_id: topic_id || null,
-        is_draft: draftFlag,
+        difficulty: normalizedDifficulty,
+        subject_id,
+        topic_id,
       },
     });
 
@@ -119,14 +127,15 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("POST /api/questions error:", error);
     return NextResponse.json(
-      { error: "Failed to add question", details: error.message },
+      { error: "Failed to add question" },
       { status: 500 }
     );
   }
 }
 
-
-// ✅ PUT — update an existing question
+// ============================
+// PUT — update question
+// ============================
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
@@ -142,48 +151,34 @@ export async function PUT(req: Request) {
       difficulty,
       subject_id,
       topic_id,
-      is_draft,
     } = body;
 
-    // ✅ Validate required fields
-    if (!question_id) {
-      return NextResponse.json(
-        { error: "Question ID is required for update" },
-        { status: 400 }
-      );
-    }
-
-    if (!question_text || !correct_answer || !subject_id) {
+    if (!question_id || !question_text || !correct_answer || !subject_id || !topic_id) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // ✅ Validate correct answer is a single character (A, B, C, or D)
-    const validAnswers = ['A', 'B', 'C', 'D'];
+    const validAnswers = ["A", "B", "C", "D"];
     if (!validAnswers.includes(correct_answer.toUpperCase())) {
       return NextResponse.json(
-        { error: "Correct answer must be one of: A, B, C, or D" },
+        { error: "Correct answer must be A, B, C, or D" },
         { status: 400 }
       );
     }
 
-    // ✅ Normalize difficulty (MySQL ENUM is case-sensitive)
     const validDifficulties = ["Easy", "Medium", "Hard"];
-    const normalizedDifficulty =
-      validDifficulties.includes(difficulty) ? difficulty : "Medium";
+    const normalizedDifficulty = validDifficulties.includes(difficulty)
+      ? difficulty
+      : "Medium";
 
-    // ✅ Normalize points — must be positive integer
     const safePoints =
-      typeof points === "number" && points > 0 ? points : 1;
+      typeof points === "number" && points > 0 ? points : 2;
 
-    // ✅ Normalize draft flag — always 0 or 1
-    const draftFlag = is_draft ? true : false;
-
-    // ✅ Ensure subject exists
+    // Ensure subject exists
     const subjectExists = await prisma.subjects.findUnique({
-      where: { subject_id: subject_id },
+      where: { subject_id },
     });
     if (!subjectExists) {
       return NextResponse.json(
@@ -192,63 +187,72 @@ export async function PUT(req: Request) {
       );
     }
 
-    // ✅ Check if question exists
-    const existingQuestion = await prisma.questions.findUnique({
-      where: { question_id: question_id },
+    // Ensure topic exists
+    const topicExists = await prisma.topics.findUnique({
+      where: { topic_id },
     });
-    if (!existingQuestion) {
+    if (!topicExists) {
       return NextResponse.json(
-        { error: "Question not found" },
-        { status: 404 }
+        { error: "Invalid topic selected" },
+        { status: 400 }
       );
     }
 
-    // ✅ Update the question
-    const updatedQuestion = await prisma.questions.update({
-      where: { question_id: question_id },
+    await prisma.questions.update({
+      where: { question_id },
       data: {
         question_text: question_text.trim(),
-        option_a: option_a?.trim() || "",
-        option_b: option_b?.trim() || "",
-        option_c: option_c?.trim() || "",
-        option_d: option_d?.trim() || "",
-        correct_answer: correct_answer.trim().toUpperCase(),
+        option_a: option_a || null,
+        option_b: option_b || null,
+        option_c: option_c || null,
+        option_d: option_d || null,
+        correct_answer: correct_answer.toUpperCase(),
         marks: safePoints,
-        difficulty: normalizedDifficulty as any,
-        subject_id: subject_id,
-        topic_id: topic_id || null,
-        is_draft: draftFlag,
+        difficulty: normalizedDifficulty,
+        subject_id,
+        topic_id,
         updated_at: new Date(),
       },
     });
 
     return NextResponse.json({
       message: "Question updated successfully",
-      question_id: updatedQuestion.question_id,
     });
   } catch (error: any) {
     console.error("PUT /api/questions error:", error);
     return NextResponse.json(
-      { error: "Failed to update question", details: error.message },
+      { error: "Failed to update question" },
       { status: 500 }
     );
   }
 }
 
-// ✅ DELETE — delete question
+// ============================
+// DELETE — delete question
+// ============================
 export async function DELETE(req: Request) {
   try {
     const { id } = await req.json();
+
     if (!id) {
-      return NextResponse.json({ error: "Missing question ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Question ID is required" },
+        { status: 400 }
+      );
     }
 
     await prisma.questions.delete({
       where: { question_id: id },
     });
-    return NextResponse.json({ message: "Question deleted successfully" });
-  } catch (error: any) {
+
+    return NextResponse.json({
+      message: "Question deleted successfully",
+    });
+  } catch (error) {
     console.error("DELETE /api/questions error:", error);
-    return NextResponse.json({ error: "Failed to delete question" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete question" },
+      { status: 500 }
+    );
   }
 }

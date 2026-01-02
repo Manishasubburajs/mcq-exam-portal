@@ -13,101 +13,110 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate and normalize questions
     const validDifficulties = ["Easy", "Medium", "Hard"];
-    const normalizedQuestions: any[] = [];
+    const validAnswers = ["A", "B", "C", "D"];
+
     const errors: string[] = [];
+    const normalizedQuestions: any[] = [];
 
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
-      
-      try {
-        // Validate required fields
-        if (!q.question_text || !q.correct_answer || !q.subject_id) {
-          errors.push(`Question ${i + 1}: Missing required fields`);
-          continue;
-        }
+    // 🔹 Collect subject & topic IDs (OPTIMIZED)
+    const subjectIds = [...new Set(questions.map((q) => q.subject_id))];
+    const topicIds = [...new Set(questions.map((q) => q.topic_id))];
 
-        // Validate correct answer is a single character (A, B, C, or D)
-        const validAnswers = ['A', 'B', 'C', 'D'];
-        if (!validAnswers.includes(q.correct_answer.toUpperCase())) {
-          errors.push(`Question ${i + 1}: Correct answer must be one of: A, B, C, or D`);
-          continue;
-        }
+    const subjects = await prisma.subjects.findMany({
+      where: { subject_id: { in: subjectIds } },
+      select: { subject_id: true },
+    });
 
-        // Validate difficulty
-        const difficulty = validDifficulties.includes(q.difficulty) ? q.difficulty : "Medium";
+    const topics = await prisma.topics.findMany({
+      where: { topic_id: { in: topicIds } },
+      select: { topic_id: true },
+    });
 
-        // Validate points
-        const points = typeof q.points === "number" && q.points > 0 ? q.points : 1;
+    const subjectSet = new Set(subjects.map((s) => s.subject_id));
+    const topicSet = new Set(topics.map((t) => t.topic_id));
 
-        // Ensure subject exists
-        const subjectExists = await prisma.subjects.findUnique({
-          where: { subject_id: q.subject_id },
-        });
+    // 🔹 Validate each question
+    questions.forEach((q, index) => {
+      const row = index + 1;
 
-        if (!subjectExists) {
-          errors.push(`Question ${i + 1}: Invalid subject selected`);
-          continue;
-        }
-
-        normalizedQuestions.push({
-          question_text: q.question_text.trim(),
-          option_a: q.option_a?.trim() || "",
-          option_b: q.option_b?.trim() || "",
-          option_c: q.option_c?.trim() || "",
-          option_d: q.option_d?.trim() || "",
-          correct_answer: q.correct_answer.trim().toUpperCase(),
-          marks: points,
-          difficulty: difficulty as any,
-          subject_id: q.subject_id,
-          topic_id: q.topic_id || null,
-          is_draft: q.is_draft ? true : false,
-        });
-      } catch (err) {
-        errors.push(`Question ${i + 1}: ${err}`);
+      if (
+        !q.question_text ||
+        !q.correct_answer ||
+        !q.subject_id ||
+        !q.topic_id
+      ) {
+        errors.push(`Row ${row}: Missing required fields`);
+        return;
       }
-    }
+
+      if (!validAnswers.includes(q.correct_answer.toUpperCase())) {
+        errors.push(
+          `Row ${row}: Correct answer must be A, B, C, or D`
+        );
+        return;
+      }
+
+      if (!subjectSet.has(q.subject_id)) {
+        errors.push(`Row ${row}: Invalid subject`);
+        return;
+      }
+
+      if (!topicSet.has(q.topic_id)) {
+        errors.push(`Row ${row}: Invalid topic`);
+        return;
+      }
+
+      const difficulty = validDifficulties.includes(q.difficulty)
+        ? q.difficulty
+        : "Medium";
+
+      const points =
+        typeof q.points === "number" && q.points > 0 ? q.points : 1;
+
+      normalizedQuestions.push({
+        question_text: q.question_text.trim(),
+        option_a: q.option_a?.trim() || "",
+        option_b: q.option_b?.trim() || "",
+        option_c: q.option_c?.trim() || "",
+        option_d: q.option_d?.trim() || "",
+        correct_answer: q.correct_answer.trim().toUpperCase(),
+        marks: points, // ✅ DB column
+        difficulty: difficulty as any,
+        subject_id: q.subject_id,
+        topic_id: q.topic_id,
+      });
+    });
 
     if (normalizedQuestions.length === 0) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: "No valid questions to upload",
-          validation_errors: errors 
+          validation_errors: errors,
         },
         { status: 400 }
       );
     }
 
-    // Insert all questions in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      const createdQuestions = [];
-      
-      for (const questionData of normalizedQuestions) {
-        const created = await tx.questions.create({
-          data: questionData,
-        });
-        createdQuestions.push(created);
-      }
-      
-      return createdQuestions;
+    // 🔹 Bulk insert (FAST)
+    await prisma.questions.createMany({
+      data: normalizedQuestions,
     });
 
     return NextResponse.json({
       success: true,
-      message: `Successfully uploaded ${result.length} questions`,
-      count: result.length,
-      validation_errors: errors.length > 0 ? errors : undefined,
+      message: `Successfully uploaded ${normalizedQuestions.length} questions`,
+      count: normalizedQuestions.length,
+      validation_errors: errors.length ? errors : undefined,
     });
-
   } catch (error: any) {
     console.error("Bulk upload error:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: "Failed to upload questions",
-        details: error.message 
+        details: error.message,
       },
       { status: 500 }
     );
