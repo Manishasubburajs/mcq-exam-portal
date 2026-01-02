@@ -19,38 +19,68 @@ export async function POST(req: Request) {
       grade,
       section,
     } = body;
-    const trimmedEmail = email.trim();
+
+    // Basic validation
+    if (!email || !username || !password || !firstName || !lastName) {
+      return NextResponse.json(
+        { error: "Please fill in all required fields." },
+        { status: 400 }
+      );
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedUsername = username.trim();
+
+    // Check if email or username already exists
+    const existingUser = await prisma.users.findFirst({
+      where: {
+        OR: [
+          { email: trimmedEmail },
+          { username: trimmedUsername },
+        ],
+      },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "User already exists" },
+        { status: 409 }
+      );
+    }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user with student details in a transaction
+    // Create user with student details
     const newUser = await prisma.users.create({
       data: {
-        username,
-        email: trimmedEmail.toLowerCase(),
+        username: trimmedUsername,
+        email: trimmedEmail,
         password_hash: hashedPassword,
         role: "student",
-        first_name: firstName,
-        last_name: lastName,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
         student_details: {
           create: {
             dob: new Date(dob),
-            gender: gender as any,
-            school,
+            gender,
+            school: school.trim(),
             grade,
-            section,
+            section: section?.trim() || null,
           },
         },
       },
     });
 
     return NextResponse.json(
-      { message: "User registered successfully", userId: newUser.user_id },
+      { message: "Registration successful!", userId: newUser.user_id },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Server Error:", error);
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    console.error("Registration Error:", error);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again later." },
+      { status: 500 }
+    );
   }
 }

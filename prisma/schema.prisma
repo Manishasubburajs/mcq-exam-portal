@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
@@ -8,9 +8,201 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/*
-  Enums
-*/
+model users {
+  user_id                Int                        @id @default(autoincrement())
+  username               String                     @unique @db.VarChar(50)
+  email                  String                     @unique @db.VarChar(100)
+  password_hash          String                     @db.VarChar(255)
+  role                   String
+  first_name             String                     @db.VarChar(50)
+  last_name              String                     @db.VarChar(50)
+  created_at             DateTime                   @default(now())
+  status                 users_status               @default(active)
+  examAssignmentStudents exam_assignment_students[]
+  assignments            exam_assignments[]         @relation("AssignmentsGiven")
+  exams_created          exams[]                    @relation("ExamsCreated")
+  questions              questions[]
+  student_details        student_details?
+  attempts               student_exam_attempts[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model subjects {
+  subject_id           Int                    @id @default(autoincrement())
+  subject_name         String                 @unique @db.VarChar(100)
+  created_at           DateTime               @default(now())
+  exam_subject_configs exam_subject_configs[]
+  questions            questions[]
+  topics               topics[]
+}
+
+model topics {
+  topic_id             Int                    @id @default(autoincrement())
+  subject_id           Int
+  topic_name           String                 @db.VarChar(255)
+  exam_subject_configs exam_subject_configs[]
+  questions            questions[]
+  subject              subjects               @relation(fields: [subject_id], references: [subject_id], onDelete: Cascade)
+
+  @@index([subject_id])
+}
+
+model exams {
+  exam_id                 Int                     @id @default(autoincrement())
+  exam_title              String                  @db.VarChar(255)
+  description             String?                 @db.Text
+  time_limit_minutes      Int                     @default(30)
+  total_marks             Decimal                 @default(0.0000) @db.Decimal(12, 4)
+  question_count          Int                     @default(0)
+  scheduled_start         DateTime?
+  scheduled_end           DateTime?
+  is_active               Boolean                 @default(true)
+  created_by              Int?
+  created_at              DateTime                @default(now())
+  allow_multiple_attempts Boolean                 @default(true)
+  exam_type               exam_type               @default(practice)
+  updated_at              DateTime                @updatedAt
+  updated_by              Int?
+  exam_assignments        exam_assignments[]
+  exam_questions          exam_questions[]
+  exam_subject_configs    exam_subject_configs[]
+  creator                 users?                  @relation("ExamsCreated", fields: [created_by], references: [user_id])
+  student_exam_attempts   student_exam_attempts[]
+
+  @@index([created_by])
+  @@index([exam_type])
+}
+
+model exam_subject_configs {
+  id             Int      @id @default(autoincrement())
+  exam_id        Int
+  subject_id     Int
+  topic_id       Int?
+  question_count Int
+  exam           exams    @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade)
+  subject        subjects @relation(fields: [subject_id], references: [subject_id])
+  topic          topics?  @relation(fields: [topic_id], references: [topic_id])
+
+  @@index([exam_id])
+  @@index([subject_id], map: "exam_subject_configs_subject_id_fkey")
+  @@index([topic_id], map: "exam_subject_configs_topic_id_fkey")
+}
+
+model exam_questions {
+  exam_question_id  Int       @id @default(autoincrement())
+  exam_id           Int
+  question_id       Int
+  question_order    Int
+  assigned_marks    Decimal   @db.Decimal(8, 4)
+  assigned_negative Decimal   @db.Decimal(8, 4)
+  exam              exams     @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade)
+  question          questions @relation(fields: [question_id], references: [question_id], onDelete: Cascade)
+
+  @@unique([exam_id, question_id])
+  @@index([question_id], map: "exam_questions_question_id_fkey")
+}
+
+model questions {
+  question_id     Int                  @id @default(autoincrement())
+  question_text   String               @db.Text
+  option_a        String?              @db.Text
+  option_b        String?              @db.Text
+  option_c        String?              @db.Text
+  option_d        String?              @db.Text
+  correct_answer  String?              @db.Char(1)
+  marks           Decimal              @default(2.0000) @db.Decimal(8, 4)
+  negative_marks  Decimal              @default(0.6600) @db.Decimal(8, 4)
+  difficulty      questions_difficulty @default(Medium)
+  subject_id      Int
+  topic_id        Int
+  created_by      Int?
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
+  updated_by      Int?
+  exam_questions  exam_questions[]
+  creator         users?               @relation(fields: [created_by], references: [user_id])
+  subject         subjects             @relation(fields: [subject_id], references: [subject_id])
+  topic           topics               @relation(fields: [topic_id], references: [topic_id])
+  student_answers student_answers[]
+
+  @@index([subject_id])
+  @@index([topic_id])
+  @@index([created_by], map: "questions_created_by_fkey")
+}
+
+model student_details {
+  student_id Int                    @id @default(autoincrement())
+  user_id    Int                    @unique
+  dob        DateTime               @db.Date
+  gender     student_details_gender
+  grade      String?                @db.VarChar(50)
+  school     String?                @db.VarChar(255)
+  section    String?                @db.VarChar(10)
+  user       users                  @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model student_exam_attempts {
+  attempt_id         Int                          @id @default(autoincrement())
+  student_id         Int
+  exam_id            Int
+  start_time         DateTime
+  end_time           DateTime?
+  total_time_seconds Int?
+  score              Decimal                      @default(0.0000) @db.Decimal(12, 4)
+  correct_answers    Int                          @default(0)
+  wrong_answers      Int                          @default(0)
+  unanswered         Int                          @default(0)
+  status             student_exam_attempts_status @default(in_progress)
+  student_answers    student_answers[]
+  exam               exams                        @relation(fields: [exam_id], references: [exam_id])
+  student            users                        @relation(fields: [student_id], references: [user_id])
+
+  @@unique([student_id, exam_id])
+  @@index([exam_id], map: "student_exam_attempts_exam_id_fkey")
+}
+
+model exam_assignments {
+  id          Int                        @id @default(autoincrement())
+  exam_id     Int
+  assigned_by Int?
+  assigned_at DateTime                   @default(now())
+  mode        assignment_mode
+  students    exam_assignment_students[]
+  admin       users?                     @relation("AssignmentsGiven", fields: [assigned_by], references: [user_id])
+  exam        exams                      @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade)
+
+  @@index([assigned_by], map: "exam_assignments_assigned_by_fkey")
+  @@index([exam_id], map: "exam_assignments_exam_id_fkey")
+}
+
+model exam_assignment_students {
+  id            Int              @id @default(autoincrement())
+  assignment_id Int
+  student_id    Int
+  assignment    exam_assignments @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+  student       users            @relation(fields: [student_id], references: [user_id])
+
+  @@unique([assignment_id, student_id])
+  @@index([student_id], map: "exam_assignment_students_student_id_fkey")
+}
+
+model student_answers {
+  answer_id          Int                   @id @default(autoincrement())
+  attempt_id         Int
+  question_id        Int
+  selected_answer    String?               @db.Char(1)
+  is_correct         Boolean               @default(false)
+  time_taken_seconds Int?
+  marks_awarded      Decimal               @default(0.0000) @db.Decimal(12, 4)
+  attempt            student_exam_attempts @relation(fields: [attempt_id], references: [attempt_id], onDelete: Cascade)
+  question           questions             @relation(fields: [question_id], references: [question_id])
+
+  @@unique([attempt_id, question_id])
+  @@index([question_id], map: "student_answers_question_id_fkey")
+}
+
 enum exam_type {
   practice
   mock
@@ -23,24 +215,14 @@ enum assignment_mode {
   random
 }
 
-enum exams_status {
-  draft
-  published
-}
-
 enum student_details_gender {
   male
   female
   other
 }
 
-enum users_role {
-  admin
-  student
-}
-
 enum student_exam_attempts_status {
-  in_progress @map("in-progress")
+  in_progress
   completed
   expired
 }
@@ -55,265 +237,4 @@ enum users_status {
   active
   inactive
   blocked
-}
-
-/*
-  Models
-*/
-
-model exams {
-  exam_id               Int                     @id @default(autoincrement())
-  exam_title            String                  @db.VarChar(255)
-  description           String?                 @db.Text
-  exam_type             exam_type               @default(practice)
-  allow_multiple_attempts Boolean?              @default(true)
-  single_attempt        Boolean?                @default(false)
-  subject_id            Int?
-  time_limit_minutes    Int?                    @default(30)
-  duration_minutes      Int?                    @default(0)
-  total_marks           Decimal?                @default(0) @db.Decimal(12,4)
-  question_count        Int?                    @default(0)
-  scheduled_start       DateTime?               @db.DateTime(0)
-  scheduled_end         DateTime?               @db.DateTime(0)
-  is_active             Boolean?                @default(true)
-  created_by            Int?
-  created_at            DateTime?               @default(now()) @db.Timestamp(0)
-
-  // relations
-  exam_questions        exam_questions[]
-  exam_subject_configs  exam_subject_configs[]
-  student_exam_attempts student_exam_attempts[]
-  subjects              subjects?               @relation(fields: [subject_id], references: [subject_id], onUpdate: NoAction, map: "exams_ibfk_1")
-  users                 users?                  @relation(fields: [created_by], references: [user_id], onUpdate: NoAction, map: "exams_ibfk_2")
-  questions             questions[]
-
-  @@unique([subject_id, exam_title], map: "uq_subject_title")
-  @@index([created_by], map: "created_by")
-  @@index([is_active], map: "idx_active")
-  @@index([scheduled_start, scheduled_end], map: "idx_scheduled_time")
-  @@index([subject_id], map: "subject_id")
-}
-
-model exam_subject_configs {
-  id             Int     @id @default(autoincrement())
-  exam_id        Int
-  subject_id     Int
-  topic_id       Int?    // optional - if a specific topic was chosen
-  question_count Int     @default(0)
-
-  exams    exams    @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade)
-  subjects subjects @relation(fields: [subject_id], references: [subject_id], onDelete: Cascade)
-
-  @@index([exam_id])
-}
-
-model exam_questions {
-  exam_question_id  Int       @id @default(autoincrement())
-  exam_id           Int
-  question_id       Int
-  question_order    Int
-  assigned_marks    Decimal?  @db.Decimal(8,4)
-  assigned_negative Decimal?  @db.Decimal(8,4)
-
-  exams     exams     @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade, onUpdate: NoAction, map: "exam_questions_ibfk_1")
-  questions questions @relation(fields: [question_id], references: [question_id], onDelete: Cascade, onUpdate: NoAction, map: "exam_questions_ibfk_2")
-
-  @@unique([exam_id, question_id], map: "unique_exam_question")
-  @@index([exam_id, question_order], map: "idx_exam_order")
-  @@index([question_id], map: "question_id")
-}
-
-model questions {
-  question_id     Int                   @id @default(autoincrement())
-  exam_id         Int?
-  question_text   String                @db.Text
-  option_a        String?               @db.Text
-  option_b        String?               @db.Text
-  option_c        String?               @db.Text
-  option_d        String?               @db.Text
-  correct_answer  String?               @db.Char(1)            // 'A' | 'B' | 'C' | 'D'
-  marks           Decimal?              @default(1) @db.Decimal(8,4)   // points for correct answer
-  negative_marks  Decimal?              @default(0) @db.Decimal(8,4)   // penalty to subtract for wrong answer (positive value stored)
-  difficulty      questions_difficulty? @default(Medium)
-  subject_id      Int?
-  topic_id        Int?
-  created_by      Int?
-  created_at      DateTime?             @default(now()) @db.Timestamp(0)
-  updated_at      DateTime?             @default(now()) @db.Timestamp(0)
-  is_draft        Boolean?              @default(false)
-  exam_questions  exam_questions[]
-  subjects        subjects?             @relation(fields: [subject_id], references: [subject_id], onUpdate: NoAction, map: "questions_ibfk_1")
-  topics          topics?               @relation(fields: [topic_id], references: [topic_id], onUpdate: NoAction, map: "questions_ibfk_2")
-  users           users?                @relation(fields: [created_by], references: [user_id], onUpdate: NoAction, map: "questions_ibfk_3")
-  student_answers student_answers[]
-  exams           exams?                @relation(fields: [examsExam_id], references: [exam_id])
-  examsExam_id    Int?
-
-  @@index([created_by], map: "created_by")
-  @@index([exam_id], map: "exam_id")
-  @@index([difficulty], map: "idx_difficulty")
-  @@index([subject_id], map: "idx_subject")
-  @@index([topic_id], map: "idx_topic")
-}
-
-model student_answers {
-  answer_id             Int                   @id @default(autoincrement())
-  attempt_id            Int
-  question_id           Int
-  selected_answer       String?               @db.Char(1)
-  is_correct            Boolean?              @default(false)
-  answered_at           DateTime?             @default(now()) @db.Timestamp(0)
-  // Timing / metrics fields
-  time_taken_seconds    Int?                  // time taken to answer THIS question (seconds)
-  view_time_seconds     Int?                  // accumulated seconds spent viewing this question
-  first_viewed_at       DateTime?             // first time the question was shown
-  last_viewed_at        DateTime?             // last time the question was visible / updated
-  marks_awarded         Decimal?              @default(0) @db.Decimal(12,4) // actual marks added (can be negative)
-  student_exam_attempts student_exam_attempts @relation(fields: [attempt_id], references: [attempt_id], onDelete: Cascade, onUpdate: NoAction, map: "student_answers_ibfk_1")
-  questions             questions             @relation(fields: [question_id], references: [question_id], onDelete: Cascade, onUpdate: NoAction, map: "student_answers_ibfk_2")
-
-  @@unique([attempt_id, question_id], map: "unique_attempt_question")
-  @@index([attempt_id], map: "idx_attempt_id")
-  @@index([question_id], map: "question_id")
-}
-
-model student_details {
-  student_id Int                    @id @default(autoincrement())
-  user_id    Int                    @unique(map: "user_id_unique")
-  dob        DateTime               @db.Date
-  gender     student_details_gender
-  school     String                 @db.VarChar(100)
-  grade      String                 @db.VarChar(20)
-  section    String?                @db.VarChar(20)
-  users      users                  @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "student_details_ibfk_1")
-
-  @@index([user_id], map: "user_id")
-}
-
-model student_exam_attempts {
-  attempt_id          Int                           @id @default(autoincrement())
-  student_id          Int
-  exam_id             Int
-  start_time          DateTime                      @db.DateTime(0)
-  end_time            DateTime?                     @db.DateTime(0)
-  total_time_seconds  Int?                          // actual total time used (seconds)
-  score               Decimal?                      @default(0) @db.Decimal(12,4)
-  total_questions     Int
-  correct_answers     Int?                          @default(0)
-  wrong_answers       Int?                          @default(0)
-  unanswered          Int?                          @default(0)
-  status              student_exam_attempts_status? @default(in_progress)
-  current_question_id Int?                          // optional: quick lookup of which question user is currently viewing
-  last_activity       DateTime?                     // last heartbeat or activity timestamp
-  student_answers     student_answers[]
-  users               users                         @relation(fields: [student_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "student_exam_attempts_ibfk_1")
-  exams               exams                         @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade, onUpdate: NoAction, map: "student_exam_attempts_ibfk_2")
-
-  @@index([exam_id], map: "exam_id")
-  @@index([start_time], map: "idx_start_time")
-  @@index([student_id, exam_id], map: "idx_student_exam")
-}
-
-/*
-  Assignments / per-student question sets
-*/
-
-model exam_assignments {
-  id            Int                        @id @default(autoincrement())
-  exam_id       Int
-  assigned_by   Int?
-  assigned_at   DateTime                   @default(now())
-  mode          assignment_mode
-  note          String?
-
-  exam          exams                      @relation(fields: [exam_id], references: [exam_id], onDelete: Cascade)
-  students      exam_assignment_students[]
-
-  @@index([exam_id])
-}
-
-model exam_assignment_students {
-  id                    Int       @id @default(autoincrement())
-  assignment_id         Int
-  student_id            Int
-  override_question_count Int?
-  assigned_at           DateTime  @default(now())
-
-  assignment            exam_assignments @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
-  users                 users            @relation(fields: [student_id], references: [user_id], onDelete: Cascade)
-  student_questions     student_exam_questions[]
-
-  @@index([assignment_id])
-  @@index([student_id])
-}
-
-model student_exam_questions {
-  id                     Int       @id @default(autoincrement())
-  attempt_id             Int?      // optional - will be set when attempt is created (if generated earlier)
-  assignment_student_id  Int?      // links back to exam_assignment_students if generated during assignment
-  student_id             Int
-  exam_id                Int
-  question_id            Int
-  question_order         Int
-  assigned_marks         Decimal?  @db.Decimal(8,4)
-  assigned_negative      Decimal?  @db.Decimal(8,4)
-  created_at             DateTime  @default(now())
-
-  @@index([attempt_id])
-  @@index([assignment_student_id])
-  @@index([student_id, exam_id])
-}
-
-/*
-  Subjects, Topics, Users (existing models)
-*/
-
-model subjects {
-  subject_id   Int       @id @default(autoincrement())
-  subject_name String    @unique(map: "subject_name") @db.VarChar(100)
-  created_at   DateTime  @default(now()) @db.Timestamp(0)
-
-  // Relations
-  exams        exams[]
-  questions    questions[]
-  topics       topics[]
-  topic_count  Int       @default(0)
-
-  @@index([subject_name])
-}
-
-model topics {
-  topic_id   Int      @id @default(autoincrement())
-  subject_id Int
-  topic_name String   @db.VarChar(255)
-  created_at DateTime @default(now()) @db.Timestamp(0)
-
-  subjects  subjects    @relation(fields: [subject_id], references: [subject_id], onDelete: Cascade, onUpdate: NoAction)
-  questions questions[]
-
-  @@index([subject_id])
-}
-
-model users {
-  user_id               Int                     @id @default(autoincrement())
-  username              String                  @unique(map: "username") @db.VarChar(50)
-  email                 String                  @unique(map: "email") @db.VarChar(100)
-  password_hash         String                  @db.VarChar(255)
-  role                  users_role
-  first_name            String                  @db.VarChar(50)
-  last_name             String                  @db.VarChar(50)
-  created_at            DateTime?               @default(now()) @db.Timestamp(0)
-  last_login            DateTime?               @db.Timestamp(0)
-  status                users_status            @default(active)
-  department            String?                 @db.VarChar(100)
-  exams                 exams[]
-  questions             questions[]
-  student_details       student_details?
-  student_exam_attempts student_exam_attempts[]
-  // relationships to assignments
-  exam_assignments_given exam_assignments[]      @relation("exam_assignments_given", references: [id], fields: [])
-  exam_assignment_rows   exam_assignment_students[]  // relation mapped by exam_assignment_students.users
-
-  @@index([email], map: "idx_email")
-  @@index([role], map: "idx_role")
 }

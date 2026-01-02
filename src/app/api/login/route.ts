@@ -8,43 +8,69 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { email, password } = body;
-    const trimmedEmail = email.trim();
 
-    // Check if user exists (case-insensitive)
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 400 }
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Find user (case-insensitive handled by normalization)
     const user = await prisma.users.findFirst({
       where: {
-        email: trimmedEmail.toLowerCase(),
+        email: normalizedEmail,
       },
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
     }
 
     // Compare password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
+
     if (!isPasswordValid) {
-      return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
     }
 
-    // Log user credentials (safe, no password)
+    // Ensure JWT secret exists
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is missing");
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    // Generate JWT token (1 hour expiry)
+    const token = jwt.sign(
+      { userId: user.user_id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // Extract username from email
+    const username = normalizedEmail.split("@")[0];
+
+    // Safe log
     console.log("User login:", {
       userId: user.user_id,
-      email: trimmedEmail,
+      email: normalizedEmail,
       role: user.role,
     });
 
-    // Generate JWT token, expires in 1 hour
-    const token = jwt.sign(
-      { userId: user.user_id, role: user.role },
-      process.env.JWT_SECRET || "secret",
-      { expiresIn: "1h" } // token valid for 1 hour from now
-    );
-
-    // Extract username from email (part before @)
-    const username = trimmedEmail.split('@')[0];
-
-    // Return success response
     return NextResponse.json({
       message: "Login successful",
       role: user.role,
@@ -52,7 +78,10 @@ export async function POST(req: Request) {
       username,
     });
   } catch (error) {
-    console.error("Server Error:", error);
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    console.error("Login API Error:", error);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

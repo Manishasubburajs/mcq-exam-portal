@@ -17,6 +17,9 @@ interface ExamData {
   duration: number; // minutes
   totalQuestions: number;
   questions: Question[];
+  examType: 'practice' | 'mock' | 'live';
+  proctoringEnabled?: boolean;
+  autoSubmit?: boolean;
 }
 
 const ExamContent: React.FC = () => {

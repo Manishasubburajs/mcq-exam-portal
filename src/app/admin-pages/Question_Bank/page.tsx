@@ -151,9 +151,14 @@ export default function QuestionBankPage() {
     try {
       const res = await fetch("/api/questions");
       const data = await res.json();
-      setQuestions(data);
+      if (Array.isArray(data)) {
+        setQuestions(data);
+      } else {
+        setQuestions([]);
+      }
     } catch (err) {
       console.error(err);
+      setQuestions([]);
       showSnackbar("Failed to load questions", "error");
     }
     setLoading(false);

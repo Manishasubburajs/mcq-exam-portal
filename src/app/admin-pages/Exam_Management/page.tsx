@@ -103,12 +103,15 @@ const ExamManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Question availability states
+  const [questionCounts, setQuestionCounts] = useState<{[key: string]: number}>({});
+  const [loadingCounts, setLoadingCounts] = useState(false);
+
   // Form states for different exam types
   const [practiceExamForm, setPracticeExamForm] = useState({
     examName: '',
-    subjectId: 0,
-    topicId: 0,
-    timePerQuestion: 2,
+    subjects: [] as { subjectId: number, questionCount: number }[],
+    totalMarks: 0,
     randomizeQuestions: true,
     showResults: true,
     allowReview: true,
@@ -116,10 +119,10 @@ const ExamManagement: React.FC = () => {
 
   const [mockExamForm, setMockExamForm] = useState({
     examName: '',
-    subjectId: 0,
-    topicId: 0,
+    selectedSubjectId: 0,
+    topics: [] as { topicId: number, questionCount: number }[],
     totalDuration: 60,
-    questionCount: 20,
+    totalMarks: 0,
     negativeMarking: false,
     passPercentage: 50,
     startDate: '',
@@ -130,10 +133,11 @@ const ExamManagement: React.FC = () => {
 
   const [liveExamForm, setLiveExamForm] = useState({
     examName: '',
-    subjectId: 0,
-    topicId: 0,
+    selectedSubjectId: 0,
+    topics: [] as { topicId: number, questionCount: number }[],
+    totalDuration: 60,
+    totalMarks: 0,
     startDateTime: '',
-    duration: 90,
     participantCapacity: 100,
     registrationDeadline: '',
     proctoringEnabled: true,
@@ -188,8 +192,13 @@ const ExamManagement: React.FC = () => {
     try {
       const res = await fetch("/api/exams");
       const data = await res.json();
-      setAllExams(data);
-      setFilteredExams(data);
+      if (Array.isArray(data)) {
+        setAllExams(data);
+        setFilteredExams(data);
+      } else {
+        setAllExams([]);
+        setFilteredExams([]);
+      }
     } catch (err) {
       console.error("Error fetching exams:", err);
       setAllExams([]);
@@ -198,9 +207,23 @@ const ExamManagement: React.FC = () => {
     setLoading(false);
   };
 
+  const fetchQuestionCounts = async () => {
+    setLoadingCounts(true);
+    try {
+      const res = await fetch("/api/questions/counts");
+      const data = await res.json();
+      setQuestionCounts(data);
+    } catch (err) {
+      console.error("Error fetching question counts:", err);
+      setQuestionCounts({});
+    }
+    setLoadingCounts(false);
+  };
+
   useEffect(() => {
     fetchSubjects();
     fetchExams();
+    fetchQuestionCounts();
   }, []);
 
   // Filter exams based on subject and topic
@@ -278,6 +301,7 @@ const ExamManagement: React.FC = () => {
   const handleCreateExam = () => {
     setExamTypeSelection('select');
     setCreateExamModalOpen(true);
+    fetchQuestionCounts();
   };
 
   const handleExamTypeSelect = (type: 'practice' | 'mock' | 'live') => {
@@ -290,19 +314,18 @@ const ExamManagement: React.FC = () => {
     // Reset all forms
     setPracticeExamForm({
       examName: '',
-      subjectId: 0,
-      topicId: 0,
-      timePerQuestion: 2,
+      subjects: [],
+      totalMarks: 0,
       randomizeQuestions: true,
       showResults: true,
       allowReview: true,
     });
     setMockExamForm({
       examName: '',
-      subjectId: 0,
-      topicId: 0,
+      selectedSubjectId: 0,
+      topics: [],
       totalDuration: 60,
-      questionCount: 20,
+      totalMarks: 0,
       negativeMarking: false,
       passPercentage: 50,
       startDate: '',
@@ -312,10 +335,11 @@ const ExamManagement: React.FC = () => {
     });
     setLiveExamForm({
       examName: '',
-      subjectId: 0,
-      topicId: 0,
+      selectedSubjectId: 0,
+      topics: [],
+      totalDuration: 60,
+      totalMarks: 0,
       startDateTime: '',
-      duration: 90,
       participantCapacity: 100,
       registrationDeadline: '',
       proctoringEnabled: true,
@@ -354,31 +378,145 @@ const ExamManagement: React.FC = () => {
     setDeleteModalOpen(false);
   };
 
-  const handleSubmitPracticeExam = () => {
-    if (!practiceExamForm.examName || !practiceExamForm.subjectId) {
+  const handleSubmitPracticeExam = async () => {
+    if (!practiceExamForm.examName || practiceExamForm.subjects.length === 0 || practiceExamForm.totalMarks <= 0) {
       alert('Please fill in all required fields');
       return;
     }
-    alert('Practice exam created successfully!');
-    handleCloseCreateModal();
+
+    // Validate question counts
+    for (const subj of practiceExamForm.subjects) {
+      const available = questionCounts[`subject_${subj.subjectId}`] || 0;
+      if (subj.questionCount > available) {
+        alert(`Not enough questions for subject ${subjects.find(s => s.subject_id === subj.subjectId)?.subject_name}. Available: ${available}`);
+        return;
+      }
+    }
+
+    const payload = {
+      exam_title: practiceExamForm.examName,
+      exam_type: 'practice',
+      total_marks: practiceExamForm.totalMarks,
+      subject_configs: practiceExamForm.subjects.map(s => ({
+        subject_id: s.subjectId,
+        question_count: s.questionCount
+      })),
+      randomize_questions: practiceExamForm.randomizeQuestions,
+      show_results: practiceExamForm.showResults,
+      allow_review: practiceExamForm.allowReview,
+    };
+
+    try {
+      const res = await fetch('/api/exams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.success) {
+        alert('Practice exam created successfully!');
+        fetchExams();
+        handleCloseCreateModal();
+      } else {
+        alert(data.error || 'Error creating exam');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error creating exam');
+    }
   };
 
-  const handleSubmitMockExam = () => {
-    if (!mockExamForm.examName || !mockExamForm.subjectId || !mockExamForm.startDate) {
+  const handleSubmitMockExam = async () => {
+    if (!mockExamForm.examName || mockExamForm.topics.length === 0 || !mockExamForm.startDate || !mockExamForm.endDate || mockExamForm.totalMarks <= 0 || mockExamForm.totalDuration <= 0) {
       alert('Please fill in all required fields');
       return;
     }
-    alert('Mock exam created successfully!');
-    handleCloseCreateModal();
+
+    // Validate question counts
+    for (const topic of mockExamForm.topics) {
+      const available = questionCounts[`topic_${topic.topicId}`] || 0;
+      if (topic.questionCount > available) {
+        alert(`Not enough questions for topic ${topics.find(t => t.topic_id === topic.topicId)?.topic_name}. Available: ${available}`);
+        return;
+      }
+    }
+
+    const payload = {
+      exam_title: mockExamForm.examName,
+      exam_type: 'mock',
+      total_marks: mockExamForm.totalMarks,
+      time_limit_minutes: mockExamForm.totalDuration,
+      scheduled_start: mockExamForm.startDate,
+      scheduled_end: mockExamForm.endDate,
+      topic_configs: mockExamForm.topics.map(t => ({
+        topic_id: t.topicId,
+        question_count: t.questionCount
+      })),
+      negative_marking: mockExamForm.negativeMarking,
+      pass_percentage: mockExamForm.passPercentage,
+      proctoring: mockExamForm.proctoring,
+      randomize_questions: mockExamForm.randomizeQuestions,
+    };
+
+    try {
+      const res = await fetch('/api/exams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.success) {
+        alert('Mock exam created successfully!');
+        fetchExams();
+        handleCloseCreateModal();
+      } else {
+        alert(data.error || 'Error creating exam');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error creating exam');
+    }
   };
 
-  const handleSubmitLiveExam = () => {
-    if (!liveExamForm.examName || !liveExamForm.subjectId || !liveExamForm.startDateTime) {
+  const handleSubmitLiveExam = async () => {
+    if (!liveExamForm.examName || liveExamForm.topics.length === 0 || !liveExamForm.startDateTime || liveExamForm.totalMarks <= 0 || liveExamForm.totalDuration <= 0) {
       alert('Please fill in all required fields');
       return;
     }
-    alert('Live exam created successfully!');
-    handleCloseCreateModal();
+
+    // Validate question counts
+    for (const topic of liveExamForm.topics) {
+      const available = questionCounts[`topic_${topic.topicId}`] || 0;
+      if (topic.questionCount > available) {
+        alert(`Not enough questions for topic ${topics.find(t => t.topic_id === topic.topicId)?.topic_name}. Available: ${available}`);
+        return;
+      }
+    }
+
+    const payload = {
+      exam_title: liveExamForm.examName,
+      exam_type: 'live',
+      total_marks: liveExamForm.totalMarks,
+      time_limit_minutes: liveExamForm.totalDuration,
+      scheduled_start: liveExamForm.startDateTime,
+      topic_configs: liveExamForm.topics.map(t => ({
+        topic_id: t.topicId,
+        question_count: t.questionCount
+      })),
+      participant_capacity: liveExamForm.participantCapacity,
+      registration_deadline: liveExamForm.registrationDeadline,
+      proctoring_enabled: liveExamForm.proctoringEnabled,
+      auto_submit: liveExamForm.autoSubmit,
+      allow_camera: liveExamForm.allowCamera,
+      require_id: liveExamForm.requireID,
+    };
+
+    try {
+      const res = await fetch('/api/exams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (data.success) {
+        alert('Live exam created successfully!');
+        fetchExams();
+        handleCloseCreateModal();
+      } else {
+        alert(data.error || 'Error creating exam');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error creating exam');
+    }
   };
 
   const paginatedExams = filteredExams.slice(
@@ -703,9 +841,9 @@ const ExamManagement: React.FC = () => {
             {examTypeSelection === 'practice' && (
               <Box sx={{ p: 2 }}>
                 <Typography variant="h6" sx={{ mb: 3 }}>Practice Exam Setup</Typography>
-                
+
                 <Grid container spacing={2}>
-                  <Grid size = {{xs:12}} >
+                  <Grid size={{xs:12}}>
                     <TextField
                       fullWidth
                       label="Exam Name *"
@@ -714,57 +852,68 @@ const ExamManagement: React.FC = () => {
                       required
                     />
                   </Grid>
-                  
-                  <Grid size= {{xs:12 ,md:6}} >
-                    <FormControl fullWidth>
-                      <InputLabel>Subject *</InputLabel>
-                      <Select
-                        value={practiceExamForm.subjectId}
-                        onChange={(e) => setPracticeExamForm({...practiceExamForm, subjectId: Number(e.target.value)})}
-                        label="Subject *"
-                        required
-                      >
-                        <MenuItem value={0}>Select Subject</MenuItem>
-                        {subjects.map((subject) => (
-                          <MenuItem key={subject.subject_id} value={subject.subject_id}>
-                            {subject.subject_name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+
+                  <Grid size={{xs:12}}>
+                    <Typography variant="subtitle1" sx={{ mb: 2 }}>Select Subjects and Question Counts</Typography>
+                    {subjects.map((subject) => (
+                      <Card key={subject.subject_id} sx={{ mb: 2, p: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Checkbox
+                            checked={practiceExamForm.subjects.some(s => s.subjectId === subject.subject_id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPracticeExamForm({
+                                  ...practiceExamForm,
+                                  subjects: [...practiceExamForm.subjects, { subjectId: subject.subject_id, questionCount: 1 }]
+                                });
+                              } else {
+                                setPracticeExamForm({
+                                  ...practiceExamForm,
+                                  subjects: practiceExamForm.subjects.filter(s => s.subjectId !== subject.subject_id)
+                                });
+                              }
+                            }}
+                          />
+                          <Typography sx={{ flex: 1 }}>{subject.subject_name}</Typography>
+                          {practiceExamForm.subjects.find(s => s.subjectId === subject.subject_id) && (
+                            <TextField
+                              type="number"
+                              label="Questions"
+                              size="small"
+                              value={practiceExamForm.subjects.find(s => s.subjectId === subject.subject_id)?.questionCount || 1}
+                              onChange={(e) => {
+                                const count = Math.max(1, Number(e.target.value));
+                                setPracticeExamForm({
+                                  ...practiceExamForm,
+                                  subjects: practiceExamForm.subjects.map(s =>
+                                    s.subjectId === subject.subject_id ? { ...s, questionCount: count } : s
+                                  )
+                                });
+                              }}
+                              inputProps={{ min: 1 }}
+                              sx={{ width: 100 }}
+                            />
+                          )}
+                          <Typography variant="caption" color="text.secondary">
+                            Available: {questionCounts[`subject_${subject.subject_id}`] || 0}
+                          </Typography>
+                        </Box>
+                      </Card>
+                    ))}
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}} >
-                    <FormControl fullWidth disabled={!practiceExamForm.subjectId}>
-                      <InputLabel>Topic</InputLabel>
-                      <Select
-                        value={practiceExamForm.topicId}
-                        onChange={(e) => setPracticeExamForm({...practiceExamForm, topicId: Number(e.target.value)})}
-                        label="Topic"
-                      >
-                        <MenuItem value={0}>All Topics</MenuItem>
-                        {topics.map((topic) => (
-                          <MenuItem key={topic.topic_id} value={topic.topic_id}>
-                            {topic.topic_name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
-                    <Typography gutterBottom>Time per Question (minutes)</Typography>
-                    <Slider
-                      value={practiceExamForm.timePerQuestion}
-                      onChange={(e, value) => setPracticeExamForm({...practiceExamForm, timePerQuestion: value as number})}
-                      min={0.5}
-                      max={10}
-                      step={0.5}
-                      marks
-                      valueLabelDisplay="auto"
+
+                  <Grid size={{xs:12, md:6}}>
+                    <TextField
+                      fullWidth
+                      label="Total Marks *"
+                      type="number"
+                      value={practiceExamForm.totalMarks}
+                      onChange={(e) => setPracticeExamForm({...practiceExamForm, totalMarks: Number(e.target.value)})}
+                      inputProps={{ min: 1 }}
+                      required
                     />
                   </Grid>
-                  
+
                   <Grid size={{xs:12}}>
                     <FormGroup>
                       <FormControlLabel
@@ -804,7 +953,7 @@ const ExamManagement: React.FC = () => {
             {examTypeSelection === 'mock' && (
               <Box sx={{ p: 2 }}>
                 <Typography variant="h6" sx={{ mb: 3 }}>Mock Exam Setup</Typography>
-                
+
                 <Grid container spacing={2}>
                   <Grid size={{xs:12}}>
                     <TextField
@@ -815,14 +964,18 @@ const ExamManagement: React.FC = () => {
                       required
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
                     <FormControl fullWidth>
-                      <InputLabel>Subject *</InputLabel>
+                      <InputLabel>Select Subject *</InputLabel>
                       <Select
-                        value={mockExamForm.subjectId}
-                        onChange={(e) => setMockExamForm({...mockExamForm, subjectId: Number(e.target.value)})}
-                        label="Subject *"
+                        value={mockExamForm.selectedSubjectId}
+                        onChange={(e) => {
+                          const subjectId = Number(e.target.value);
+                          setMockExamForm({...mockExamForm, selectedSubjectId: subjectId, topics: []});
+                          fetchTopicsForSubject(subjectId);
+                        }}
+                        label="Select Subject *"
                         required
                       >
                         <MenuItem value={0}>Select Subject</MenuItem>
@@ -834,26 +987,20 @@ const ExamManagement: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
-                    <FormControl fullWidth disabled={!mockExamForm.subjectId}>
-                      <InputLabel>Topic</InputLabel>
-                      <Select
-                        value={mockExamForm.topicId}
-                        onChange={(e) => setMockExamForm({...mockExamForm, topicId: Number(e.target.value)})}
-                        label="Topic"
-                      >
-                        <MenuItem value={0}>All Topics</MenuItem>
-                        {topics.map((topic) => (
-                          <MenuItem key={topic.topic_id} value={topic.topic_id}>
-                            {topic.topic_name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+
+                  <Grid size={{xs:12, md:6}}>
+                    <TextField
+                      fullWidth
+                      label="Total Marks *"
+                      type="number"
+                      value={mockExamForm.totalMarks}
+                      onChange={(e) => setMockExamForm({...mockExamForm, totalMarks: Number(e.target.value)})}
+                      inputProps={{ min: 1 }}
+                      required
+                    />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
                     <TextField
                       fullWidth
                       label="Total Duration (minutes) *"
@@ -864,19 +1011,19 @@ const ExamManagement: React.FC = () => {
                       required
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
                     <TextField
                       fullWidth
-                      label="Number of Questions"
+                      label="Pass Percentage"
                       type="number"
-                      value={mockExamForm.questionCount}
-                      onChange={(e) => setMockExamForm({...mockExamForm, questionCount: Number(e.target.value)})}
-                      inputProps={{ min: 1 }}
+                      value={mockExamForm.passPercentage}
+                      onChange={(e) => setMockExamForm({...mockExamForm, passPercentage: Number(e.target.value)})}
+                      inputProps={{ min: 0, max: 100 }}
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
                     <TextField
                       fullWidth
                       label="Start Date & Time *"
@@ -887,8 +1034,8 @@ const ExamManagement: React.FC = () => {
                       required
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
                     <TextField
                       fullWidth
                       label="End Date & Time *"
@@ -899,18 +1046,58 @@ const ExamManagement: React.FC = () => {
                       required
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
-                    <TextField
-                      fullWidth
-                      label="Pass Percentage"
-                      type="number"
-                      value={mockExamForm.passPercentage}
-                      onChange={(e) => setMockExamForm({...mockExamForm, passPercentage: Number(e.target.value)})}
-                      inputProps={{ min: 0, max: 100 }}
-                    />
-                  </Grid>
-                  
+
+                  {mockExamForm.selectedSubjectId > 0 && (
+                    <Grid size={{xs:12}}>
+                      <Typography variant="subtitle1" sx={{ mb: 2 }}>Select Topics and Question Counts</Typography>
+                      {topics.map((topic) => (
+                        <Card key={topic.topic_id} sx={{ mb: 2, p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Checkbox
+                              checked={mockExamForm.topics.some(t => t.topicId === topic.topic_id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setMockExamForm({
+                                    ...mockExamForm,
+                                    topics: [...mockExamForm.topics, { topicId: topic.topic_id, questionCount: 1 }]
+                                  });
+                                } else {
+                                  setMockExamForm({
+                                    ...mockExamForm,
+                                    topics: mockExamForm.topics.filter(t => t.topicId !== topic.topic_id)
+                                  });
+                                }
+                              }}
+                            />
+                            <Typography sx={{ flex: 1 }}>{topic.topic_name}</Typography>
+                            {mockExamForm.topics.find(t => t.topicId === topic.topic_id) && (
+                              <TextField
+                                type="number"
+                                label="Questions"
+                                size="small"
+                                value={mockExamForm.topics.find(t => t.topicId === topic.topic_id)?.questionCount || 1}
+                                onChange={(e) => {
+                                  const count = Math.max(1, Number(e.target.value));
+                                  setMockExamForm({
+                                    ...mockExamForm,
+                                    topics: mockExamForm.topics.map(t =>
+                                      t.topicId === topic.topic_id ? { ...t, questionCount: count } : t
+                                    )
+                                  });
+                                }}
+                                inputProps={{ min: 1 }}
+                                sx={{ width: 100 }}
+                              />
+                            )}
+                            <Typography variant="caption" color="text.secondary">
+                              Available: {questionCounts[`topic_${topic.topic_id}`] || 0}
+                            </Typography>
+                          </Box>
+                        </Card>
+                      ))}
+                    </Grid>
+                  )}
+
                   <Grid size={{xs:12}}>
                     <FormGroup>
                       <FormControlLabel
@@ -950,7 +1137,7 @@ const ExamManagement: React.FC = () => {
             {examTypeSelection === 'live' && (
               <Box sx={{ p: 2 }}>
                 <Typography variant="h6" sx={{ mb: 3 }}>Live Exam Setup</Typography>
-                
+
                 <Grid container spacing={2}>
                   <Grid size={{xs:12}}>
                     <TextField
@@ -961,14 +1148,18 @@ const ExamManagement: React.FC = () => {
                       required
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
                     <FormControl fullWidth>
-                      <InputLabel>Subject *</InputLabel>
+                      <InputLabel>Select Subject *</InputLabel>
                       <Select
-                        value={liveExamForm.subjectId}
-                        onChange={(e) => setLiveExamForm({...liveExamForm, subjectId: Number(e.target.value)})}
-                        label="Subject *"
+                        value={liveExamForm.selectedSubjectId}
+                        onChange={(e) => {
+                          const subjectId = Number(e.target.value);
+                          setLiveExamForm({...liveExamForm, selectedSubjectId: subjectId, topics: []});
+                          fetchTopicsForSubject(subjectId);
+                        }}
+                        label="Select Subject *"
                         required
                       >
                         <MenuItem value={0}>Select Subject</MenuItem>
@@ -980,26 +1171,43 @@ const ExamManagement: React.FC = () => {
                       </Select>
                     </FormControl>
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
-                    <FormControl fullWidth disabled={!liveExamForm.subjectId}>
-                      <InputLabel>Topic</InputLabel>
-                      <Select
-                        value={liveExamForm.topicId}
-                        onChange={(e) => setLiveExamForm({...liveExamForm, topicId: Number(e.target.value)})}
-                        label="Topic"
-                      >
-                        <MenuItem value={0}>All Topics</MenuItem>
-                        {topics.map((topic) => (
-                          <MenuItem key={topic.topic_id} value={topic.topic_id}>
-                            {topic.topic_name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+
+                  <Grid size={{xs:12, md:6}}>
+                    <TextField
+                      fullWidth
+                      label="Total Marks *"
+                      type="number"
+                      value={liveExamForm.totalMarks}
+                      onChange={(e) => setLiveExamForm({...liveExamForm, totalMarks: Number(e.target.value)})}
+                      inputProps={{ min: 1 }}
+                      required
+                    />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
+                    <TextField
+                      fullWidth
+                      label="Total Duration (minutes) *"
+                      type="number"
+                      value={liveExamForm.totalDuration}
+                      onChange={(e) => setLiveExamForm({...liveExamForm, totalDuration: Number(e.target.value)})}
+                      inputProps={{ min: 1 }}
+                      required
+                    />
+                  </Grid>
+
+                  <Grid size={{xs:12, md:6}}>
+                    <TextField
+                      fullWidth
+                      label="Participant Capacity"
+                      type="number"
+                      value={liveExamForm.participantCapacity}
+                      onChange={(e) => setLiveExamForm({...liveExamForm, participantCapacity: Number(e.target.value)})}
+                      inputProps={{ min: 1 }}
+                    />
+                  </Grid>
+
+                  <Grid size={{xs:12, md:6}}>
                     <TextField
                       fullWidth
                       label="Start Date & Time *"
@@ -1010,8 +1218,8 @@ const ExamManagement: React.FC = () => {
                       required
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
+
+                  <Grid size={{xs:12, md:6}}>
                     <TextField
                       fullWidth
                       label="Registration Deadline"
@@ -1021,29 +1229,58 @@ const ExamManagement: React.FC = () => {
                       InputLabelProps={{ shrink: true }}
                     />
                   </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
-                    <TextField
-                      fullWidth
-                      label="Duration (minutes)"
-                      type="number"
-                      value={liveExamForm.duration}
-                      onChange={(e) => setLiveExamForm({...liveExamForm, duration: Number(e.target.value)})}
-                      inputProps={{ min: 1 }}
-                    />
-                  </Grid>
-                  
-                  <Grid size={{xs:12 , md:6}}>
-                    <TextField
-                      fullWidth
-                      label="Participant Capacity"
-                      type="number"
-                      value={liveExamForm.participantCapacity}
-                      onChange={(e) => setLiveExamForm({...liveExamForm, participantCapacity: Number(e.target.value)})}
-                      inputProps={{ min: 1 }}
-                    />
-                  </Grid>
-                  
+
+                  {liveExamForm.selectedSubjectId > 0 && (
+                    <Grid size={{xs:12}}>
+                      <Typography variant="subtitle1" sx={{ mb: 2 }}>Select Topics and Question Counts</Typography>
+                      {topics.map((topic) => (
+                        <Card key={topic.topic_id} sx={{ mb: 2, p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Checkbox
+                              checked={liveExamForm.topics.some(t => t.topicId === topic.topic_id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setLiveExamForm({
+                                    ...liveExamForm,
+                                    topics: [...liveExamForm.topics, { topicId: topic.topic_id, questionCount: 1 }]
+                                  });
+                                } else {
+                                  setLiveExamForm({
+                                    ...liveExamForm,
+                                    topics: liveExamForm.topics.filter(t => t.topicId !== topic.topic_id)
+                                  });
+                                }
+                              }}
+                            />
+                            <Typography sx={{ flex: 1 }}>{topic.topic_name}</Typography>
+                            {liveExamForm.topics.find(t => t.topicId === topic.topic_id) && (
+                              <TextField
+                                type="number"
+                                label="Questions"
+                                size="small"
+                                value={liveExamForm.topics.find(t => t.topicId === topic.topic_id)?.questionCount || 1}
+                                onChange={(e) => {
+                                  const count = Math.max(1, Number(e.target.value));
+                                  setLiveExamForm({
+                                    ...liveExamForm,
+                                    topics: liveExamForm.topics.map(t =>
+                                      t.topicId === topic.topic_id ? { ...t, questionCount: count } : t
+                                    )
+                                  });
+                                }}
+                                inputProps={{ min: 1 }}
+                                sx={{ width: 100 }}
+                              />
+                            )}
+                            <Typography variant="caption" color="text.secondary">
+                              Available: {questionCounts[`topic_${topic.topic_id}`] || 0}
+                            </Typography>
+                          </Box>
+                        </Card>
+                      ))}
+                    </Grid>
+                  )}
+
                   <Grid size={{xs:12}}>
                     <FormGroup>
                       <FormControlLabel

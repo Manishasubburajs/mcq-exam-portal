@@ -27,17 +27,32 @@ const steps = ["Account", "Personal", "Academic"];
 
 // Step-wise validation schemas
 const accountSchema = yup.object({
-  email: yup.string().email("Invalid email").required("Email is required"),
+  email: yup
+    .string()
+    .required("Email is required")
+    .trim("Email should not contain spaces")
+    .email("Enter a valid email address")
+    .matches(
+      /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+      "Enter a valid email with proper domain"
+    ),
+
   username: yup
     .string()
     .min(4, "Username must be at least 4 characters")
     .required("Username is required"),
   password: yup
     .string()
+    .required("Password is required")
     .min(8, "Password must be at least 8 characters")
-    .matches(/[a-zA-Z]/, "Password must contain letters")
-    .matches(/\d/, "Password must contain numbers")
-    .required("Password is required"),
+    .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .matches(/[a-z]/, "Password must contain at least one lowercase letter")
+    .matches(/\d/, "Password must contain at least one number")
+    .matches(
+      /[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/?]/,
+      "Password must contain at least one special character"
+    ),
+
   confirmPassword: yup
     .string()
     .oneOf([yup.ref("password")], "Passwords do not match")
@@ -110,20 +125,23 @@ export default function Register() {
         body: JSON.stringify(formData),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        alert("✅ Registration successful!");
-        console.log("Saved user:", data);
+      const data = await res.json();
 
-        // Redirect to login page or student dashboard
-        globalThis.location.href = "/";
+      if (res.status === 201) {
+        alert("✅ " + data.message);
+        console.log("Saved user:", data);
+        globalThis.location.href = "/"; // redirect to login/dashboard
+      } else if (res.status === 409) {
+        alert("❌ " + data.error); // user already exists
+        console.log(data.error);
       } else {
-        const err = await res.json();
-        alert("❌ Error: " + err.error);
+        console.log(data.error);
+        alert("❌ " + (data.error || "Something went wrong."));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Submit failed:", error);
-      alert("❌ Something went wrong.");
+      alert("❌ Something went wrong: " + error.message);
+      console.log(error.message);
     }
   };
 
@@ -168,16 +186,16 @@ export default function Register() {
             borderRadius: 3,
             overflow: "hidden",
             display: "flex",
-            flexDirection: { xs: 'column', md: 'row' },
-            minHeight: { xs: 'auto', md: 600 },
+            flexDirection: { xs: "column", md: "row" },
+            minHeight: { xs: "auto", md: 600 },
           }}
         >
           {/* Left Banner with Gradient */}
           <Box
             className={styles.bannerGradient}
             sx={{
-              flex: 'none',
-              width: { xs: '100%', md: '50%' },
+              flex: "none",
+              width: { xs: "100%", md: "50%" },
               height: { xs: 500, md: 600 },
               color: "white",
               p: 4,
@@ -205,13 +223,8 @@ export default function Register() {
                 "24/7 availability from any device",
                 "Expert-curated question bank",
               ].map((item) => (
-                <li
-                  key={item}
-                  className={styles.featureListItem}
-                >
-                  <span className={styles.featureIcon}>
-                    ✔
-                  </span>
+                <li key={item} className={styles.featureListItem}>
+                  <span className={styles.featureIcon}>✔</span>
                   {item}
                 </li>
               ))}
@@ -219,7 +232,7 @@ export default function Register() {
           </Box>
 
           {/* Form Side */}
-          <Box sx={{ flex: 1, p: 4, width: { xs: '100%', md: '50%' } }}>
+          <Box sx={{ flex: 1, p: 4, width: { xs: "100%", md: "50%" } }}>
             <Box textAlign="center" mb={3}>
               <Typography variant="h4" color="primary">
                 MCQ <span className={styles.portalTitle}>Exam Portal</span>
@@ -294,18 +307,26 @@ export default function Register() {
                   label="Confirm Password"
                   type={showConfirmPassword ? "text" : "password"}
                   value={formData.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("confirmPassword", e.target.value)
+                  }
                   error={!!errors.confirmPassword}
                   helperText={errors.confirmPassword}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
                           edge="end"
                           aria-label="toggle confirm password visibility"
                         >
-                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                          {showConfirmPassword ? (
+                            <VisibilityOff />
+                          ) : (
+                            <Visibility />
+                          )}
                         </IconButton>
                       </InputAdornment>
                     ),
@@ -317,12 +338,14 @@ export default function Register() {
             {/* Step 2: Personal */}
             {activeStep === 1 && (
               <Box>
-                <Box sx={{
-                  display: 'flex',
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  gap: 2,
-                  mb: 2
-                }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: { xs: "column", sm: "row" },
+                    gap: 2,
+                    mb: 2,
+                  }}
+                >
                   <Box sx={{ flex: 1 }}>
                     <TextField
                       fullWidth
@@ -397,33 +420,21 @@ export default function Register() {
                 <TextField
                   fullWidth
                   margin="normal"
-                  label="School / Institution"
+                  label="School / College Name"
                   value={formData.school}
                   onChange={(e) => handleChange("school", e.target.value)}
                   error={!!errors.school}
                   helperText={errors.school}
                 />
-                <Select
+                <TextField
                   fullWidth
-                  displayEmpty
+                  margin="normal"
+                  label="Grade/Department"
                   value={formData.grade}
                   onChange={(e) => handleChange("grade", e.target.value)}
-                  sx={{ mt: 2 }}
                   error={!!errors.grade}
-                >
-                  <MenuItem value="">Select Grade</MenuItem>
-                  <MenuItem value="9">9th Grade</MenuItem>
-                  <MenuItem value="10">10th Grade</MenuItem>
-                  <MenuItem value="11">11th Grade</MenuItem>
-                  <MenuItem value="12">12th Grade</MenuItem>
-                  <MenuItem value="college">College</MenuItem>
-                  <MenuItem value="other">Other</MenuItem>
-                </Select>
-                {errors.grade && (
-                  <Typography color="error" variant="caption">
-                    {errors.grade}
-                  </Typography>
-                )}
+                  helperText={errors.grade}
+                />
                 <TextField
                   fullWidth
                   margin="normal"

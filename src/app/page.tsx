@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // ✅ for redirect
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import * as Yup from "yup";
 import {
   Box,
   Card,
@@ -22,12 +23,50 @@ import GoogleIcon from "@mui/icons-material/Google";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import TwitterIcon from "@mui/icons-material/Twitter";
 
+/* =========================
+   YUP VALIDATION SCHEMA
+========================= */
+const loginSchema = Yup.object({
+  email: Yup.string()
+    .required("Email is required")
+    .trim()
+    .matches(
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      "Enter a valid email address"
+    ),
+
+  password: Yup.string()
+    .required("Password is required")
+    .min(8, "Password must be at least 8 characters")
+    .matches(
+      /[A-Z]/,
+      "Password must contain at least one uppercase letter"
+    )
+    .matches(
+      /[a-z]/,
+      "Password must contain at least one lowercase letter"
+    )
+    .matches(
+      /[0-9]/,
+      "Password must contain at least one number"
+    )
+    .matches(
+      /[@$!%*?&#]/,
+      "Password must contain at least one special character"
+    ),
+});
+
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {}
+  );
+
   const isMobile = useMediaQuery("(max-width:768px)");
   const router = useRouter();
 
@@ -35,8 +74,35 @@ export default function Login() {
     setMounted(true);
   }, []);
 
+  /* =========================
+     FIELD LEVEL VALIDATION
+  ========================= */
+  const validateField = async (field: "email" | "password", value: string) => {
+    try {
+      await loginSchema.validateAt(field, {
+        email,
+        password,
+        [field]: value,
+      });
+
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    } catch (err: any) {
+      setErrors((prev) => ({ ...prev, [field]: err.message }));
+    }
+  };
+
+  /* =========================
+     LOGIN HANDLER
+  ========================= */
   const handleLogin = async () => {
     try {
+      setErrors({});
+
+      await loginSchema.validate(
+        { email, password },
+        { abortEarly: false }
+      );
+
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,21 +116,20 @@ export default function Login() {
         return;
       }
 
-      // ✅ Remember Me implementation
       const sessionStartTime = Date.now().toString();
+
       if (rememberMe) {
-        localStorage.setItem("token", data.token); // persist
-        localStorage.setItem("username", data.username); // persist username
-        localStorage.setItem("role", data.role); // persist role
-        localStorage.setItem("sessionStartTime", sessionStartTime); // persist session start time
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("username", data.username);
+        localStorage.setItem("role", data.role);
+        localStorage.setItem("sessionStartTime", sessionStartTime);
       } else {
-        sessionStorage.setItem("token", data.token); // session-only
-        sessionStorage.setItem("username", data.username); // session-only username
-        sessionStorage.setItem("role", data.role); // session-only role
-        sessionStorage.setItem("sessionStartTime", sessionStartTime); // session-only session start time
+        sessionStorage.setItem("token", data.token);
+        sessionStorage.setItem("username", data.username);
+        sessionStorage.setItem("role", data.role);
+        sessionStorage.setItem("sessionStartTime", sessionStartTime);
       }
 
-      // Redirect based on role
       if (data.role === "admin") {
         router.push("/admin-pages");
       } else if (data.role === "student") {
@@ -72,9 +137,17 @@ export default function Login() {
       } else {
         alert("Invalid user role. Please contact support.");
       }
-    } catch (err) {
-      console.error("Login Error:", err);
-      alert("Something went wrong. Try again.");
+    } catch (err: any) {
+      if (err.name === "ValidationError") {
+        const fieldErrors: any = {};
+        err.inner.forEach((e: any) => {
+          fieldErrors[e.path] = e.message;
+        });
+        setErrors(fieldErrors);
+      } else {
+        console.error("Login Error:", err);
+        alert("Something went wrong. Try again.");
+      }
     }
   };
 
@@ -140,7 +213,7 @@ export default function Login() {
             <Typography variant="h4" sx={{ color: "#2575fc", fontWeight: 700 }}>
               MCQ{" "}
               <Box component="span" sx={{ color: "#6a11cb" }}>
-                 Exam Portal 
+                Exam Portal
               </Box>
             </Typography>
           </Box>
@@ -154,38 +227,35 @@ export default function Login() {
           >
             <TextField
               margin="normal"
-              required
               fullWidth
-              id="email"
               label="Enter Email Id"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              sx={{
-                "& .MuiOutlinedInput-root": { borderRadius: 2 },
-                "& .MuiInputLabel-root": { fontWeight: 500 },
+              onChange={(e) => {
+                setEmail(e.target.value);
+                validateField("email", e.target.value);
               }}
+              error={!!errors.email}
+              helperText={errors.email}
             />
+
             <TextField
               margin="normal"
-              required
               fullWidth
-              name="password"
               label="Password"
               type={showPassword ? "text" : "password"}
-              id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              sx={{
-                "& .MuiOutlinedInput-root": { borderRadius: 2 },
-                "& .MuiInputLabel-root": { fontWeight: 500 },
+              onChange={(e) => {
+                setPassword(e.target.value);
+                validateField("password", e.target.value);
               }}
+              error={!!errors.password}
+              helperText={errors.password}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
-                      aria-label="toggle password visibility"
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -193,6 +263,7 @@ export default function Login() {
                 ),
               }}
             />
+
             <Box
               sx={{
                 display: "flex",
@@ -235,8 +306,15 @@ export default function Login() {
 
             <Divider sx={{ my: 3 }}>Or login with</Divider>
 
+            {/* ✅ SOCIAL MEDIA ICONS (RESTORED) */}
             <Box
-              sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 2 }}
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 2,
+                mb: 2,
+                flexWrap: "wrap",
+              }}
             >
               <Button
                 sx={{ minWidth: 0, width: 50, height: 50, borderRadius: "50%" }}

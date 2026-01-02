@@ -128,7 +128,7 @@ export async function POST(req: Request) {
           role,
           first_name,
           last_name,
-          department,
+         
         },
       });
 
@@ -225,7 +225,6 @@ export async function PUT(req: Request) {
           role,
           first_name,
           last_name,
-          department,
           status,
         },
       });
