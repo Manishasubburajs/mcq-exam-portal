@@ -2,22 +2,22 @@
 
 import React, { useEffect, useState } from "react";
 import {
-   Dialog,
-   DialogTitle,
-   DialogContent,
-   DialogActions,
-   TextField,
-   FormControl,
-   InputLabel,
-   Select,
-   MenuItem,
-   Button,
-   Typography,
-   Divider,
-   Box,
-   IconButton,
-   InputAdornment,
- } from "@mui/material";
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  Typography,
+  Divider,
+  Box,
+  IconButton,
+  InputAdornment,
+} from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
 
@@ -49,37 +49,32 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     grade: "",
     section: "",
     school: "",
-    department: "",
     status: "active",
   });
 
   useEffect(() => {
-   if (open) {
-     setNewUser({
-       username: "",
-       first_name: "",
-       last_name: "",
-       email: "",
-       password: "",
-       dob: "",
-       gender: "",
-       role: defaultRole,
-       grade: "",
-       section: "",
-       school: "",
-       department: "",
-       status: "active",
-     });
-     setErrors({});
-   }
- }, [open, defaultRole]);
+    if (open) {
+      setNewUser({
+        username: "",
+        first_name: "",
+        last_name: "",
+        email: "",
+        password: "",
+        dob: "",
+        gender: "",
+        role: defaultRole,
+        grade: "",
+        section: "",
+        school: "",
+        status: "active",
+      });
+      setErrors({});
+    }
+  }, [open, defaultRole]);
 
-  // ✅ Validation Schema - Same as Registration Form
-  const studentSchema = yup.object({
-    username: yup
-      .string()
-      .min(4, "Username must be at least 4 characters")
-      .required("Username is required"),
+  // ----------------- VALIDATION SCHEMAS -----------------
+  const studentSchema = yup.object().shape({
+    username: yup.string().min(4, "Username must be at least 4 characters").required("Username is required"),
     email: yup.string().email("Invalid email").required("Email is required"),
     password: yup
       .string()
@@ -87,8 +82,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       .matches(/[a-zA-Z]/, "Password must contain letters")
       .matches(/\d/, "Password must contain numbers")
       .required("Password is required"),
-    first_name: yup.string().required("First Name is required"),
-    last_name: yup.string().required("Last Name is required"),
+    first_name: yup.string().required("First name is required"),
+    last_name: yup.string().required("Last name is required"),
     dob: yup.string().required("Date of Birth is required"),
     gender: yup.string().required("Gender is required"),
     grade: yup.string().required("Grade is required"),
@@ -96,11 +91,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     school: yup.string().required("School is required"),
   });
 
-  const teacherAdminSchema = yup.object({
-    username: yup
-      .string()
-      .min(4, "Username must be at least 4 characters")
-      .required("Username is required"),
+  const teacherAdminSchema = yup.object().shape({
+    username: yup.string().min(4, "Username must be at least 4 characters").required("Username is required"),
     email: yup.string().email("Invalid email").required("Email is required"),
     password: yup
       .string()
@@ -110,362 +102,146 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       .required("Password is required"),
     first_name: yup.string().required("First Name is required"),
     last_name: yup.string().required("Last Name is required"),
-    department: yup.string().required("Department is required"),
   });
 
-  const handleChange = (field: string, value: string) => {
+  // ----------------- HANDLE CHANGE WITH REAL-TIME VALIDATION -----------------
+  const handleChange = async (field: string, value: string) => {
     setNewUser((prev) => ({ ...prev, [field]: value }));
+
+    // Determine schema
+    const schema = newUser.role === "student" ? studentSchema : teacherAdminSchema;
+
+    try {
+      // Validate only this field
+      await schema.validateAt(field, { ...newUser, [field]: value });
+      setErrors((prev:any) => ({ ...prev, [field]: "" })); // clear error if valid
+    } catch (err: any) {
+      setErrors((prev:any) => ({ ...prev, [field]: err.message }));
+    }
   };
 
+  // ----------------- SUBMIT -----------------
   const handleSubmit = async () => {
+    const schema = newUser.role === "student" ? studentSchema : teacherAdminSchema;
     try {
-      // Use appropriate validation schema based on role
-      if (newUser.role === "student") {
-        await studentSchema.validate(newUser, { abortEarly: false });
-      } else {
-        await teacherAdminSchema.validate(newUser, { abortEarly: false });
-      }
+      await schema.validate(newUser, { abortEarly: false });
       setErrors({});
 
-      // Transform password to password_hash for API compatibility
-      const { password, ...userDataWithoutPassword } = newUser;
-      const userData = {
-        ...userDataWithoutPassword,
-        password_hash: password,
-      };
+      const { password, ...rest } = newUser;
+      const payload = { ...rest, password_hash: password };
 
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (data.success) {
-        // Normalize the response data to match expected format
-        const normalizedUser = {
-          ...data.data,
-          grade: data.data.student_details?.grade || "",
-          section: data.data.student_details?.section || "",
-          department: data.data.department || "",
-        };
-        
-        onUserAdded(normalizedUser);
-        onClose();
-        
-        // Show success message
-        alert(`✅ User "${newUser.first_name} ${newUser.last_name}" has been created successfully!`);
-      } else {
-        // Handle validation errors from backend
-        const errorMessage = data.validationErrors 
+
+      if (!data.success) {
+        const backendErrors = data.validationErrors
           ? Object.values(data.validationErrors).join(", ")
-          : data.error || "Unknown error occurred";
-        alert(`❌ Failed to create user: ${errorMessage}`);
-      }
-    } catch (err: any) {
-      // Handle validation errors
-      const newErrs: any = {};
-      if (err.inner) {
-        for (const e of err.inner) {
-          newErrs[e.path] = e.message;
-        }
-      }
-      
-      // Handle network errors (when fetch request fails)
-      if (!err.inner) {
-        alert("❌ Network error or server unavailable. Please check your connection and try again.");
+          : data.error || "Unknown error";
+        alert(`❌ Failed: ${backendErrors}`);
         return;
       }
-      
-      setErrors(newErrs);
-      
-      // Show summary of validation errors
-      if (Object.keys(newErrs).length > 0) {
-        const errorSummary = Object.values(newErrs).join(", ");
-        console.error("Validation errors:", newErrs);
+
+      const normalizedUser = {
+        ...data.data,
+        grade: data.data.student_details?.grade || "",
+        section: data.data.student_details?.section || "",
+      };
+
+      onUserAdded(normalizedUser);
+      onClose();
+      alert(`✅ ${newUser.first_name} ${newUser.last_name} created successfully!`);
+    } catch (err: any) {
+      if (err.inner) {
+        const newErrors: any = {};
+        err.inner.forEach((e: any) => {
+          newErrors[e.path] = e.message;
+        });
+        setErrors(newErrors);
+      } else {
+        alert("❌ Network or server error. Try again.");
       }
     }
   };
 
-  // 🎓 Student Form (single page with sections)
+  // ----------------- FORM RENDER -----------------
   const renderStudentForm = () => (
     <Box>
-      {/* Account Details */}
-      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
-        Account Details
-      </Typography>
+      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>Account Details</Typography>
       <Divider sx={{ mb: 2 }} />
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          label="Username"
-          fullWidth
-          value={newUser.username}
-          onChange={(e) => handleChange("username", e.target.value)}
-          error={!!errors.username}
-          helperText={errors.username}
-        />
-        <TextField
-          label="Email"
-          fullWidth
-          value={newUser.email}
-          onChange={(e) => handleChange("email", e.target.value)}
-          error={!!errors.email}
-          helperText={errors.email}
-        />
-        <TextField
-          label="Password"
-          type={showPassword ? "text" : "password"}
-          fullWidth
-          value={newUser.password}
-          onChange={(e) => handleChange("password", e.target.value)}
-          error={!!errors.password}
-          helperText={errors.password}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowPassword(!showPassword)}
-                  edge="end"
-                  aria-label="toggle password visibility"
-                >
-                  {showPassword ? <VisibilityOff /> : <Visibility />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
+      <TextField label="Username" fullWidth value={newUser.username} onChange={(e) => handleChange("username", e.target.value)} error={!!errors.username} helperText={errors.username} sx={{ mb: 2 }} />
+      <TextField label="Email" fullWidth value={newUser.email} onChange={(e) => handleChange("email", e.target.value)} error={!!errors.email} helperText={errors.email} sx={{ mb: 2 }} />
+      <TextField label="Password" type={showPassword ? "text" : "password"} fullWidth value={newUser.password} onChange={(e) => handleChange("password", e.target.value)} error={!!errors.password} helperText={errors.password} sx={{ mb: 2 }}
+        InputProps={{ endAdornment: (<InputAdornment position="end"><IconButton onClick={() => setShowPassword(!showPassword)}>{showPassword ? <VisibilityOff /> : <Visibility />}</IconButton></InputAdornment>) }} />
 
-      {/* Personal Details */}
-      <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 600 }}>
-        Personal Details
-      </Typography>
-      <Divider sx={{ mb: 2 }} />
+      <TextField label="First Name" fullWidth value={newUser.first_name} onChange={(e) => handleChange("first_name", e.target.value)} error={!!errors.first_name} helperText={errors.first_name} sx={{ mb: 2 }} />
+      <TextField label="Last Name" fullWidth value={newUser.last_name} onChange={(e) => handleChange("last_name", e.target.value)} error={!!errors.last_name} helperText={errors.last_name} sx={{ mb: 2 }} />
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField
-          label="First Name"
-          fullWidth
-          value={newUser.first_name}
-          onChange={(e) => handleChange("first_name", e.target.value)}
-          error={!!errors.first_name}
-          helperText={errors.first_name}
-        />
-        <TextField
-          label="Last Name"
-          fullWidth
-          value={newUser.last_name}
-          onChange={(e) => handleChange("last_name", e.target.value)}
-          error={!!errors.last_name}
-          helperText={errors.last_name}
-        />
-        <TextField
-          label="Date of Birth"
-          type="date"
-          slotProps={{ inputLabel: { shrink: true } }}
-          fullWidth
-          value={newUser.dob}
-          onChange={(e) => handleChange("dob", e.target.value)}
-          error={!!errors.dob}
-          helperText={errors.dob}
-        />
-        <FormControl fullWidth>
-          <InputLabel>Gender</InputLabel>
-          <Select
-            value={newUser.gender}
-            label="Gender"
-            onChange={(e) => handleChange("gender", e.target.value)}
-            error={!!errors.gender}
-          >
-            <MenuItem value="">Select</MenuItem>
-            <MenuItem value="male">Male</MenuItem>
-            <MenuItem value="female">Female</MenuItem>
-            <MenuItem value="other">Other</MenuItem>
-          </Select>
-          {errors.gender && (
-            <Typography color="error" variant="caption">
-              {errors.gender}
-            </Typography>
-          )}
-        </FormControl>
-      </Box>
+      <TextField label="Date of Birth" type="date" InputLabelProps={{ shrink: true }} fullWidth value={newUser.dob} onChange={(e) => handleChange("dob", e.target.value)} error={!!errors.dob} helperText={errors.dob} sx={{ mb: 2 }} />
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Gender</InputLabel>
+        <Select value={newUser.gender} label="Gender" onChange={(e) => handleChange("gender", e.target.value)} error={!!errors.gender}>
+          <MenuItem value="">Select</MenuItem>
+          <MenuItem value="male">Male</MenuItem>
+          <MenuItem value="female">Female</MenuItem>
+          <MenuItem value="other">Other</MenuItem>
+        </Select>
+        {errors.gender && <Typography color="error" variant="caption">{errors.gender}</Typography>}
+      </FormControl>
 
-      {/* Academic Details */}
-      <Typography variant="h6" sx={{ mt: 3, mb: 1, fontWeight: 600 }}>
-        Academic Details
-      </Typography>
-      <Divider sx={{ mb: 2 }} />
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Grade</InputLabel>
+        <Select value={newUser.grade} label="Grade" onChange={(e) => handleChange("grade", e.target.value)} error={!!errors.grade}>
+          <MenuItem value="">Select Grade</MenuItem>
+          <MenuItem value="9">9th Grade</MenuItem>
+          <MenuItem value="10">10th Grade</MenuItem>
+          <MenuItem value="11">11th Grade</MenuItem>
+          <MenuItem value="12">12th Grade</MenuItem>
+          <MenuItem value="college">College</MenuItem>
+          <MenuItem value="other">Other</MenuItem>
+        </Select>
+        {errors.grade && <Typography color="error" variant="caption">{errors.grade}</Typography>}
+      </FormControl>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <FormControl fullWidth>
-          <InputLabel>Grade</InputLabel>
-          <Select
-            value={newUser.grade}
-            label="Grade"
-            onChange={(e) => handleChange("grade", e.target.value)}
-            error={!!errors.grade}
-          >
-            <MenuItem value="">Select Grade</MenuItem>
-            <MenuItem value="9">9th Grade</MenuItem>
-            <MenuItem value="10">10th Grade</MenuItem>
-            <MenuItem value="11">11th Grade</MenuItem>
-            <MenuItem value="12">12th Grade</MenuItem>
-            <MenuItem value="college">College</MenuItem>
-            <MenuItem value="other">Other</MenuItem>
-          </Select>
-          {errors.grade && (
-            <Typography color="error" variant="caption">
-              {errors.grade}
-            </Typography>
-          )}
-        </FormControl>
-        
-        <TextField
-          label="Section"
-          fullWidth
-          value={newUser.section}
-          onChange={(e) => handleChange("section", e.target.value)}
-          error={!!errors.section}
-          helperText={errors.section}
-        />
-        <TextField
-          label="School"
-          fullWidth
-          value={newUser.school}
-          onChange={(e) => handleChange("school", e.target.value)}
-          error={!!errors.school}
-          helperText={errors.school}
-        />
-      </Box>
+      <TextField label="Section" fullWidth value={newUser.section} onChange={(e) => handleChange("section", e.target.value)} error={!!errors.section} helperText={errors.section} sx={{ mb: 2 }} />
+      <TextField label="School" fullWidth value={newUser.school} onChange={(e) => handleChange("school", e.target.value)} error={!!errors.school} helperText={errors.school} sx={{ mb: 2 }} />
 
-      <DialogActions sx={{ mt: 3 }}>
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          sx={{
-            background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-            '&:hover': { opacity: 0.9 }
-          }}
-        >
-          Save Student
-        </Button>
+        <Button variant="contained" onClick={handleSubmit}>Save Student</Button>
       </DialogActions>
     </Box>
   );
 
-  // 👩‍🏫 Enhanced form for Teacher/Admin with proper validation
   const renderOtherForm = () => (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Account Details */}
-      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
-        Account Details
-      </Typography>
+    <Box>
+      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>Account Details</Typography>
       <Divider sx={{ mb: 2 }} />
 
-      <TextField
-        label="Username"
-        fullWidth
-        value={newUser.username}
-        onChange={(e) => handleChange("username", e.target.value)}
-        error={!!errors.username}
-        helperText={errors.username}
-        sx={{ mb: 2 }}
-      />
-      
-      <TextField
-        label="Email"
-        type="email"
-        fullWidth
-        value={newUser.email}
-        onChange={(e) => handleChange("email", e.target.value)}
-        error={!!errors.email}
-        helperText={errors.email}
-        sx={{ mb: 2 }}
-      />
-      
-      <TextField
-        label="Password"
-        type={showPassword ? "text" : "password"}
-        fullWidth
-        value={newUser.password}
-        onChange={(e) => handleChange("password", e.target.value)}
-        error={!!errors.password}
-        helperText={errors.password}
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position="end">
-              <IconButton
-                onClick={() => setShowPassword(!showPassword)}
-                edge="end"
-                aria-label="toggle password visibility"
-              >
-                {showPassword ? <VisibilityOff /> : <Visibility />}
-              </IconButton>
-            </InputAdornment>
-          ),
-        }}
-        sx={{ mb: 2 }}
-      />
+      <TextField label="Username" fullWidth value={newUser.username} onChange={(e) => handleChange("username", e.target.value)} error={!!errors.username} helperText={errors.username} sx={{ mb: 2 }} />
+      <TextField label="Email" fullWidth value={newUser.email} onChange={(e) => handleChange("email", e.target.value)} error={!!errors.email} helperText={errors.email} sx={{ mb: 2 }} />
+      <TextField label="Password" type={showPassword ? "text" : "password"} fullWidth value={newUser.password} onChange={(e) => handleChange("password", e.target.value)} error={!!errors.password} helperText={errors.password} sx={{ mb: 2 }}
+        InputProps={{ endAdornment: (<InputAdornment position="end"><IconButton onClick={() => setShowPassword(!showPassword)}>{showPassword ? <VisibilityOff /> : <Visibility />}</IconButton></InputAdornment>) }} />
 
-      {/* Personal Details */}
-      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
-        Personal Details
-      </Typography>
-      <Divider sx={{ mb: 2 }} />
+      <TextField label="First Name" fullWidth value={newUser.first_name} onChange={(e) => handleChange("first_name", e.target.value)} error={!!errors.first_name} helperText={errors.first_name} sx={{ mb: 2 }} />
+      <TextField label="Last Name" fullWidth value={newUser.last_name} onChange={(e) => handleChange("last_name", e.target.value)} error={!!errors.last_name} helperText={errors.last_name} sx={{ mb: 2 }} />
+      <TextField label="Role" fullWidth value={newUser.role} disabled sx={{ mb: 2 }} />
 
-      <TextField
-        label="First Name"
-        fullWidth
-        value={newUser.first_name}
-        onChange={(e) => handleChange("first_name", e.target.value)}
-        error={!!errors.first_name}
-        helperText={errors.first_name}
-        sx={{ mb: 2 }}
-      />
-      
-      <TextField
-        label="Last Name"
-        fullWidth
-        value={newUser.last_name}
-        onChange={(e) => handleChange("last_name", e.target.value)}
-        error={!!errors.last_name}
-        helperText={errors.last_name}
-        sx={{ mb: 2 }}
-      />
-      
-      <TextField
-        label="Department"
-        fullWidth
-        value={newUser.department}
-        onChange={(e) => handleChange("department", e.target.value)}
-        error={!!errors.department}
-        helperText={errors.department}
-        sx={{ mb: 2 }}
-      />
-
-      <DialogActions sx={{ mt: 2 }}>
+      <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          sx={{
-            background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-            '&:hover': { opacity: 0.9 }
-          }}
-        >
-          Save {newUser.role === "teacher" ? "Teacher" : "Admin"}
-        </Button>
+        <Button variant="contained" onClick={handleSubmit}>Save {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}</Button>
       </DialogActions>
     </Box>
   );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 600 }}>
-        Add New {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}
-      </DialogTitle>
+      <DialogTitle>Add New {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}</DialogTitle>
       <DialogContent sx={{ mt: 1 }}>
         {newUser.role === "student" ? renderStudentForm() : renderOtherForm()}
       </DialogContent>

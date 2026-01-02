@@ -3,12 +3,20 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import * as yup from "yup";
 
+// ----------------------
+// Validation Schema
+// ----------------------
 const createSubjectSchema = yup.object({
   subject_name: yup.string().required("Subject name is required"),
-  topics: yup.array().of(yup.string().required("Topic name is required")).min(1, "At least one topic is required")
+  topics: yup
+    .array()
+    .of(yup.string().required("Topic name is required"))
+    .min(1, "At least one topic is required"),
 });
 
-// GET - Fetch all subjects with topic counts
+// ----------------------
+// GET - Fetch all subjects
+// ----------------------
 export async function GET() {
   try {
     const subjects = await prisma.subjects.findMany({
@@ -17,16 +25,14 @@ export async function GET() {
           select: {
             topic_id: true,
             topic_name: true,
-          }
-        }
+          },
+        },
       },
-      orderBy: {
-        subject_name: "asc",
-      },
+      orderBy: { subject_name: "asc" },
     });
 
-    // Transform data to include topic count
-    const formattedSubjects = subjects.map(subject => ({
+    // Add topic count dynamically
+    const formattedSubjects = subjects.map((subject) => ({
       subject_id: subject.subject_id,
       subject_name: subject.subject_name,
       topic_count: subject.topics.length,
@@ -35,8 +41,8 @@ export async function GET() {
     }));
 
     return NextResponse.json({ success: true, data: formattedSubjects });
-  } catch (err) {
-    console.error("Error fetching subjects:", err);
+  } catch (error) {
+    console.error("❌ GET /subjects error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to load subjects" },
       { status: 500 }
@@ -44,55 +50,38 @@ export async function GET() {
   }
 }
 
-// POST - Create new subject with topics
+// ----------------------
+// POST - Create subject + topics
+// ----------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    
-    // Validate input
     await createSubjectSchema.validate(body, { abortEarly: false });
 
     const { subject_name, topics } = body;
 
-    // Create subject with topics in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create the subject first
-      const subject = await tx.subjects.create({
-        data: {
-          subject_name,
-        },
-      });
-
-      // Create all topics for this subject
-      const topicCreates = topics.map((topicName: string) =>
-        tx.topics.create({
-          data: {
-            subject_id: subject.subject_id,
+    const subject = await prisma.subjects.create({
+      data: {
+        subject_name,
+        topics: {
+          create: topics.map((topicName: string) => ({
             topic_name: topicName,
-          },
-        })
-      );
-
-      await Promise.all(topicCreates);
-
-      // Update topic count
-      await tx.subjects.update({
-        where: { subject_id: subject.subject_id },
-        data: { topic_count: topics.length },
-      });
-
-      return subject;
+          })),
+        },
+      },
+      include: {
+        topics: true,
+      },
     });
 
     return NextResponse.json({
       success: true,
       message: "Subject created successfully",
-      data: result,
+      data: subject,
     });
   } catch (error: any) {
-    console.error("Error creating subject:", error);
+    console.error("❌ POST /subjects error:", error);
 
-    // Handle validation errors
     if (error.name === "ValidationError") {
       return NextResponse.json(
         { success: false, errors: error.errors },
@@ -100,7 +89,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Handle duplicate subject name
     if (error.code === "P2002") {
       return NextResponse.json(
         { success: false, message: "Subject name already exists" },
@@ -115,7 +103,9 @@ export async function POST(req: Request) {
   }
 }
 
-// PUT - Update subject and its topics
+// ----------------------
+// PUT - Update subject + topics (FIXED)
+// ----------------------
 export async function PUT(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -129,41 +119,31 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    
-    // Validate input
     await createSubjectSchema.validate(body, { abortEarly: false });
 
     const { subject_name, topics } = body;
 
     await prisma.$transaction(async (tx) => {
-      // Update the subject name
+      // 1️⃣ Update subject name
       await tx.subjects.update({
         where: { subject_id: Number(subjectId) },
         data: { subject_name },
       });
 
-      // Delete existing topics
+      // 2️⃣ Delete old topics
       await tx.topics.deleteMany({
         where: { subject_id: Number(subjectId) },
       });
 
-      // Create new topics
-      const topicCreates = topics.map((topicName: string) =>
-        tx.topics.create({
+      // 3️⃣ Re-create topics (SAFE WAY)
+      for (const topicName of topics) {
+        await tx.topics.create({
           data: {
             subject_id: Number(subjectId),
             topic_name: topicName,
           },
-        })
-      );
-
-      await Promise.all(topicCreates);
-
-      // Update topic count
-      await tx.subjects.update({
-        where: { subject_id: Number(subjectId) },
-        data: { topic_count: topics.length },
-      });
+        });
+      }
     });
 
     return NextResponse.json({
@@ -171,9 +151,8 @@ export async function PUT(req: Request) {
       message: "Subject updated successfully",
     });
   } catch (error: any) {
-    console.error("Error updating subject:", error);
+    console.error("❌ PUT /subjects error:", error);
 
-    // Handle validation errors
     if (error.name === "ValidationError") {
       return NextResponse.json(
         { success: false, errors: error.errors },
@@ -181,7 +160,6 @@ export async function PUT(req: Request) {
       );
     }
 
-    // Handle duplicate subject name
     if (error.code === "P2002") {
       return NextResponse.json(
         { success: false, message: "Subject name already exists" },
@@ -196,7 +174,9 @@ export async function PUT(req: Request) {
   }
 }
 
-// DELETE - Delete subject and its topics
+// ----------------------
+// DELETE - Delete subject + topics
+// ----------------------
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -209,16 +189,8 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Delete all topics first (cascade will handle this, but being explicit)
-      await tx.topics.deleteMany({
-        where: { subject_id: Number(subjectId) },
-      });
-
-      // Delete the subject
-      await tx.subjects.delete({
-        where: { subject_id: Number(subjectId) },
-      });
+    await prisma.subjects.delete({
+      where: { subject_id: Number(subjectId) },
     });
 
     return NextResponse.json({
@@ -226,7 +198,7 @@ export async function DELETE(req: Request) {
       message: "Subject deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting subject:", error);
+    console.error("❌ DELETE /subjects error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to delete subject" },
       { status: 500 }
