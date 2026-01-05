@@ -673,6 +673,8 @@ export default function StudentDashboard() {
   const router = useRouter();
   const theme = useTheme();
   const [isMobile, setIsMobile] = useState(false);
+  const [availableExams, setAvailableExams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is logged in and is student
@@ -683,6 +685,26 @@ export default function StudentDashboard() {
       router.push("/");
       return;
     }
+
+    const fetchExams = async () => {
+      try {
+        const response = await fetch("/api/students/exams", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setAvailableExams(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch exams:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExams();
 
     const mediaQuery = globalThis.matchMedia(theme.breakpoints.down('md'));
     setIsMobile(mediaQuery.matches);
@@ -711,7 +733,7 @@ export default function StudentDashboard() {
           flexWrap: "wrap",
           gap: { xs: 1.5, sm: 2, md: 2.5 }
         }}>
-          <StatCard icon={<AssignmentIcon />} label="Available Exams" value="3" color={'#e6f4ea'} iconColor={'#137333'} />
+          <StatCard icon={<AssignmentIcon />} label="Available Exams" value={availableExams.length} color={'#e6f4ea'} iconColor={'#137333'} />
           <StatCard icon={<CheckCircleIcon />} label="Completed Exams" value="5" color={'#e8f0fe'} iconColor={'#1a73e8'} />
           <StatCard icon={<ScheduleIcon />} label="Pending Results" value="2" color={'#fef7e0'} iconColor={'#e37400'} />
           <StatCard icon={<StarRateIcon />} label="Average Score" value="82%" color={'#fce8e6'} iconColor={'#c5221f'} />
@@ -773,30 +795,27 @@ export default function StudentDashboard() {
               alignItems: 'start',
             }}
           >
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 280px', md: '1 1 300px' } }}>
-              <ExamCard
-                title="Mathematics Midterm"
-                subject="Mathematics"
-                meta={{ duration: "45", questions: "30", due: "Oct 30, 2023", points: "100" }}
-                onStart={() => router.push('/student-pages/take-exam')}
-              />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 280px', md: '1 1 300px' } }}>
-              <ExamCard
-                title="Science Quiz"
-                subject="Science"
-                meta={{ duration: "30", questions: "20", due: "Nov 5, 2023", points: "50" }}
-                onStart={() => router.push('/student-pages/take-exam')}
-              />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 280px', md: '1 1 300px' } }}>
-              <ExamCard
-                title="History Final"
-                subject="History"
-                meta={{ duration: "60", questions: "40", due: "Nov 15, 2023", points: "100" }}
-                onStart={() => router.push('/student-pages/take-exam')}
-              />
-            </Box>
+            {loading ? (
+              <Typography>Loading exams...</Typography>
+            ) : availableExams.length > 0 ? (
+              availableExams.map((exam) => (
+                <Box key={exam.id} sx={{ flex: { xs: '1 1 100%', sm: '1 1 280px', md: '1 1 300px' } }}>
+                  <ExamCard
+                    title={exam.title}
+                    subject={exam.subject}
+                    meta={{
+                      duration: exam.duration.toString(),
+                      questions: exam.questions.toString(),
+                      due: exam.due,
+                      points: exam.points
+                    }}
+                    onStart={() => router.push(`/student-pages/exam_taking?examId=${exam.id}`)}
+                  />
+                </Box>
+              ))
+            ) : (
+              <Typography>No available exams at the moment.</Typography>
+            )}
           </Box>
         </Card>
       </Box>

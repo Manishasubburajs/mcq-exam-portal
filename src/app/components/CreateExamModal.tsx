@@ -1,733 +1,405 @@
-"use client"
-import React from 'react';
+"use client";
+
 import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Radio,
+  Stepper,
+  Step,
+  StepLabel,
+  Button,
+  TextField,
+  Box,
+  Typography,
   RadioGroup,
   FormControlLabel,
-  FormLabel,
-  FormGroup,
+  Radio,
   Checkbox,
-  Card,
-  CardContent,
   Divider,
-  Switch,
-  Grid,
-} from '@mui/material';
-import {
-  PlayArrow,
-  Assessment,
-  LiveTv,
-} from '@mui/icons-material';
+  Select,
+  MenuItem,
+  CircularProgress
+} from "@mui/material";
+import { useState, useMemo, useEffect } from "react";
+import * as Yup from "yup";
 
-interface PracticeExamForm {
-  examName: string;
-  subjects: { subjectId: number, questionCount: number }[];
-  totalMarks: number;
-  randomizeQuestions: boolean;
-  showResults: boolean;
-  allowReview: boolean;
+type ExamType = "practice" | "mock" | "live";
+type QuestionMode = "same" | "shuffle" | "random";
+
+interface Topic {
+  topic_id: number;
+  topic_name: string;
+  question_count: number;
 }
 
-interface MockExamForm {
-  examName: string;
-  selectedSubjectId: number;
-  topics: { topicId: number, questionCount: number }[];
-  totalDuration: number;
-  totalMarks: number;
-  negativeMarking: boolean;
-  passPercentage: number;
-  startDate: string;
-  endDate: string;
-  proctoring: boolean;
-  randomizeQuestions: boolean;
+interface Subject {
+  subject_id: number;
+  subject_name: string;
+  topics: Topic[];
 }
 
-interface LiveExamForm {
-  examName: string;
-  selectedSubjectId: number;
-  topics: { topicId: number, questionCount: number }[];
-  totalDuration: number;
-  totalMarks: number;
-  startDateTime: string;
-  participantCapacity: number;
-  registrationDeadline: string;
-  proctoringEnabled: boolean;
-  autoSubmit: boolean;
-  allowCamera: boolean;
-  requireID: boolean;
+interface Subject {
+  subject_id: number;
+  subject_name: string;
+  topics: Topic[];
 }
 
-interface CreateExamModalProps {
+interface Topic {
+  topic_id: number;
+  topic_name: string;
+}
+
+interface Props {
   open: boolean;
   onClose: () => void;
-  examTypeSelection: 'select' | 'practice' | 'mock' | 'live' | '';
-  setExamTypeSelection: (type: 'select' | 'practice' | 'mock' | 'live' | '') => void;
-  practiceExamForm: PracticeExamForm;
-  setPracticeExamForm: (form: PracticeExamForm) => void;
-  mockExamForm: MockExamForm;
-  setMockExamForm: (form: MockExamForm) => void;
-  liveExamForm: LiveExamForm;
-  setLiveExamForm: (form: LiveExamForm) => void;
-  subjects: any[];
-  topics: any[];
-  questionCounts: {[key: string]: number};
-  onSubmitPractice: () => void;
-  onSubmitMock: () => void;
-  onSubmitLive: () => void;
-  fetchTopicsForSubject: (subjectId: number) => void;
+  onSuccess?: () => void;
 }
 
-const CreateExamModal: React.FC<CreateExamModalProps> = ({
-  open,
-  onClose,
-  examTypeSelection,
-  setExamTypeSelection,
-  practiceExamForm,
-  setPracticeExamForm,
-  mockExamForm,
-  setMockExamForm,
-  liveExamForm,
-  setLiveExamForm,
-  subjects,
-  topics,
-  questionCounts,
-  onSubmitPractice,
-  onSubmitMock,
-  onSubmitLive,
-  fetchTopicsForSubject,
-}) => {
-  const handleExamTypeSelect = (type: 'practice' | 'mock' | 'live') => {
-    setExamTypeSelection(type);
+export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
+  const [activeStep, setActiveStep] = useState(0);
+
+  // STEP 1: General Info
+  const [examTitle, setExamTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [examType, setExamType] = useState<ExamType>("practice");
+
+  // STEP 2: Rules
+  const [duration, setDuration] = useState(60);
+  const [questionMode, setQuestionMode] = useState<QuestionMode>("random");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+
+  // STEP 3: Questions
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
+  const [topicCounts, setTopicCounts] = useState<Record<number, number>>({});
+  const [topicErrors, setTopicErrors] = useState<Record<number, string>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+  const steps = useMemo(() => {
+    return examType === "practice"
+      ? ["General Info", "Questions", "Review"]
+      : ["General Info", "Rules", "Questions", "Review"];
+  }, [examType]);
+
+  const isPractice = examType === "practice";
+
+  const totalQuestions = Object.values(topicCounts).reduce(
+    (sum, v) => sum + (Number(v) || 0),
+    0
+  );
+
+  // Fetch subjects + topics + counts when modal opens
+  useEffect(() => {
+    if (!open) return;
+    setLoadingSubjects(true);
+    fetch("/api/questions/question-counts")
+      .then((res) => res.json())
+      .then((data) => setSubjects(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoadingSubjects(false));
+  }, [open]);
+
+
+  // Toggle Subject
+  const toggleSubject = (id: number) => {
+    if (isPractice) {
+      setSelectedSubjects([id]);
+      setTopicCounts({});
+      setTopicErrors({});
+    } else {
+      setSelectedSubjects((prev) =>
+        prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+      );
+    }
+  };
+
+  // Handle topic input change
+  const handleTopicChange = (topicId: number, value: number, max: number) => {
+    let error = "";
+    if (value < 1) error = "Must be at least 1";
+    else if (value > max) error = `Max available ${max}`;
+    setTopicErrors((prev) => ({ ...prev, [topicId]: error }));
+    setTopicCounts((prev) => ({ ...prev, [topicId]: value }));
+  };
+
+  // Yup validation schema
+  const getValidationSchema = () =>
+    Yup.object({
+      examTitle: Yup.string().required("Exam title is required"),
+      description: Yup.string(),
+      topicCounts: Yup.object(
+        selectedSubjects.reduce((acc, subjectId) => {
+          const subj = subjects.find((s) => s.subject_id === subjectId);
+          subj?.topics.forEach((topic) => {
+            if (topic.question_count > 0) {
+              acc[topic.topic_id] = Yup.number()
+                .required("Required")
+                .min(1, "Must be at least 1")
+                .max(topic.question_count, `Cannot exceed ${topic.question_count}`);
+            }
+          });
+          return acc;
+        }, {} as Record<number, Yup.NumberSchema>)
+      ),
+    });
+
+  const handleNext = async () => {
+    if (activeStep === steps.length - 1) {
+      await handleSubmit();
+    } else {
+      const schema = getValidationSchema();
+      try {
+        await schema.validate(
+          { examTitle, description, topicCounts },
+          { abortEarly: false }
+        );
+        setTopicErrors({});
+        setFormErrors({});
+        setActiveStep((s) => s + 1);
+      } catch (err: any) {
+        const topicErrors: Record<number, string> = {};
+        const formErrors: Record<string, string> = {};
+        err.inner?.forEach((e: any) => {
+          if (e.path === "examTitle") formErrors.examTitle = e.message;
+          else if (e.path === "description") formErrors.description = e.message;
+          else if (e.path.startsWith("topicCounts.")) {
+            const topicId = Number(e.path.replace("topicCounts.", ""));
+            topicErrors[topicId] = e.message;
+          }
+        });
+        setTopicErrors(topicErrors);
+        setFormErrors(formErrors);
+      }
+    }
+  };
+
+  const handleBack = () => setActiveStep((s) => s - 1);
+
+  const handleSubmit = async () => {
+    const payload = {
+      examTitle,
+      description,
+      examType,
+      duration,
+      questionMode,
+      startTime,
+      endTime,
+      topicCounts,
+    };
+
+    try {
+      const res = await fetch("/api/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Exam created successfully!");
+        onSuccess?.();
+        onClose();
+      } else {
+        alert(data.message || "Failed to create exam");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error creating exam");
+    }
+  };
+
+  const renderStepContent = () => {
+
+    switch (steps[activeStep]) {
+      case "General Info":
+        return (
+          <Box display="flex" flexDirection="column" gap={2}>
+            <TextField
+              label="Exam Title"
+              required
+              value={examTitle}
+              onChange={(e) => setExamTitle(e.target.value)}
+              error={!!formErrors.examTitle}
+              helperText={formErrors.examTitle}
+            />
+            <TextField
+              label="Description"
+              multiline
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              error={!!formErrors.description}
+              helperText={formErrors.description}
+            />
+            <Typography fontWeight={600}>Exam Type</Typography>
+            <RadioGroup
+              row
+              value={examType}
+              onChange={(e) => {
+                const type = e.target.value as ExamType;
+                setExamType(type);
+                setActiveStep(0);
+                if (type === "practice") setQuestionMode("random");
+                if (type === "live") setQuestionMode("same");
+              }}
+            >
+              <FormControlLabel value="practice" control={<Radio />} label="Practice" />
+              <FormControlLabel value="mock" control={<Radio />} label="Mock" />
+              <FormControlLabel value="live" control={<Radio />} label="Live" />
+            </RadioGroup>
+          </Box>
+        );
+
+      case "Rules":
+        return (
+          <Box display="flex" flexDirection="column" gap={2}>
+            <TextField
+              label="Duration (minutes)"
+              type="number"
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+            />
+            {examType === "mock" && (
+              <>
+                <Typography fontWeight={600}>Question Pattern</Typography>
+                <Select
+                  value={questionMode}
+                  onChange={(e) => setQuestionMode(e.target.value as QuestionMode)}
+                >
+                  <MenuItem value="same">Same</MenuItem>
+                  <MenuItem value="shuffle">Shuffle</MenuItem>
+                  <MenuItem value="random">Random</MenuItem>
+                </Select>
+              </>
+            )}
+            {examType === "live" && (
+              <>
+                <Typography fontWeight={600}>Question Pattern: SAME (Locked)</Typography>
+                <TextField
+                  label="Start Time"
+                  type="datetime-local"
+                  InputLabelProps={{ shrink: true }}
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+                <TextField
+                  label="End Time"
+                  type="datetime-local"
+                  InputLabelProps={{ shrink: true }}
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </>
+            )}
+          </Box>
+        );
+
+      case "Questions":
+        return (
+          <Box>
+            {subjects.map((subj) => {
+              const selected = selectedSubjects.includes(subj.subject_id);
+              return (
+                <Box key={subj.subject_id} mb={3}>
+                  <FormControlLabel
+                    control={
+                      isPractice ? (
+                        <Radio
+                          checked={selected}
+                          onChange={() => toggleSubject(subj.subject_id)}
+                        />
+                      ) : (
+                        <Checkbox
+                          checked={selected}
+                          onChange={() => toggleSubject(subj.subject_id)}
+                        />
+                      )
+                    }
+                    label={subj.subject_name}
+                  />
+                  {selected && (
+                    <Box ml={4} mt={1}>
+                      {subj.topics.map((topic) => {
+                        const disabled = topic.question_count === 0;
+                        return (
+                          <Box
+                            key={topic.topic_id}
+                            display="grid"
+                            gridTemplateColumns="200px 120px 120px"
+                            alignItems="center"
+                            gap={2}
+                            mb={1}
+                          >
+                            <Typography>{topic.topic_name}</Typography>
+                            <Typography color={disabled ? "text.disabled" : "text.primary"}>
+                              Available: {topic.question_count}
+                            </Typography>
+                            <TextField
+                              size="small"
+                              type="number"
+                              disabled={disabled}
+                              value={topicCounts[topic.topic_id] ?? ""}
+                              error={!!topicErrors[topic.topic_id]}
+                              helperText={topicErrors[topic.topic_id] || " "}
+                              onChange={(e) =>
+                                handleTopicChange(
+                                  topic.topic_id,
+                                  Number(e.target.value),
+                                  topic.question_count
+                                )
+                              }
+                              inputProps={{ min: 0, max: topic.question_count }}
+                            />
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  )}
+                  <Divider sx={{ mt: 2 }} />
+                </Box>
+              );
+            })}
+            <Typography fontWeight={700} mt={2}>
+              Total Questions: {totalQuestions}
+            </Typography>
+          </Box>
+        );
+
+      case "Review":
+        return (
+          <Box>
+            <Typography><b>Title:</b> {examTitle}</Typography>
+            <Typography><b>Type:</b> {examType}</Typography>
+            <Typography><b>Pattern:</b> {questionMode}</Typography>
+            <Typography><b>Total Questions:</b> {totalQuestions}</Typography>
+          </Box>
+        );
+    }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Create New Exam</DialogTitle>
-      <DialogContent dividers sx={{ minHeight: '500px' }}>
-        {examTypeSelection === 'select' && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="body1" sx={{ mb: 3 }}>
-              What kind of exam do you want to create?
-            </Typography>
-            <FormControl component="fieldset" fullWidth>
-              <RadioGroup
-                value={examTypeSelection || ''}
-                onChange={(e) => handleExamTypeSelect(e.target.value as 'practice' | 'mock' | 'live')}
-              >
-                <FormControlLabel
-                  value="practice"
-                  control={<Radio />}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <PlayArrow color="primary" />
-                      <Box>
-                        <Typography variant="subtitle1">Practice Exam</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Self-paced learning with instant feedback and explanations
-                        </Typography>
-                      </Box>
-                    </Box>
-                  }
-                />
-                <FormControlLabel
-                  value="mock"
-                  control={<Radio />}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Assessment color="secondary" />
-                      <Box>
-                        <Typography variant="subtitle1">Mock Exam</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Simulated exam environment with time limits and scoring
-                        </Typography>
-                      </Box>
-                    </Box>
-                  }
-                />
-                <FormControlLabel
-                  value="live"
-                  control={<Radio />}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <LiveTv color="error" />
-                      <Box>
-                        <Typography variant="subtitle1">Live Exam</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Real-time proctored examination with scheduled sessions
-                        </Typography>
-                      </Box>
-                    </Box>
-                  }
-                />
-              </RadioGroup>
-            </FormControl>
-          </Box>
-        )}
-
-        {/* Practice Exam Form */}
-        {examTypeSelection === 'practice' && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 3 }}>Practice Exam Setup</Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{xs:12}}>
-                <TextField
-                  fullWidth
-                  label="Exam Name *"
-                  value={practiceExamForm.examName}
-                  onChange={(e) => setPracticeExamForm({...practiceExamForm, examName: e.target.value})}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12}}>
-                <Typography variant="subtitle1" sx={{ mb: 2 }}>Select Subjects and Question Counts</Typography>
-                {subjects.map((subject) => (
-                  <Card key={subject.subject_id} sx={{ mb: 2, p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Checkbox
-                        checked={practiceExamForm.subjects.some(s => s.subjectId === subject.subject_id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setPracticeExamForm({
-                              ...practiceExamForm,
-                              subjects: [...practiceExamForm.subjects, { subjectId: subject.subject_id, questionCount: 1 }]
-                            });
-                          } else {
-                            setPracticeExamForm({
-                              ...practiceExamForm,
-                              subjects: practiceExamForm.subjects.filter(s => s.subjectId !== subject.subject_id)
-                            });
-                          }
-                        }}
-                      />
-                      <Typography sx={{ flex: 1 }}>{subject.subject_name}</Typography>
-                      {practiceExamForm.subjects.find(s => s.subjectId === subject.subject_id) && (
-                        <TextField
-                          type="number"
-                          label="Questions"
-                          size="small"
-                          value={practiceExamForm.subjects.find(s => s.subjectId === subject.subject_id)?.questionCount || 1}
-                          onChange={(e) => {
-                            const count = Math.max(1, Number(e.target.value));
-                            setPracticeExamForm({
-                              ...practiceExamForm,
-                              subjects: practiceExamForm.subjects.map(s =>
-                                s.subjectId === subject.subject_id ? { ...s, questionCount: count } : s
-                              )
-                            });
-                          }}
-                          inputProps={{ min: 1 }}
-                          sx={{ width: 100 }}
-                        />
-                      )}
-                      <Typography variant="caption" color="text.secondary">
-                        Available: {questionCounts[`subject_${subject.subject_id}`] || 0}
-                      </Typography>
-                    </Box>
-                  </Card>
-                ))}
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Total Marks *"
-                  type="number"
-                  value={practiceExamForm.totalMarks}
-                  onChange={(e) => setPracticeExamForm({...practiceExamForm, totalMarks: Number(e.target.value)})}
-                  inputProps={{ min: 1 }}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12}}>
-                <FormGroup>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={practiceExamForm.randomizeQuestions}
-                        onChange={(e) => setPracticeExamForm({...practiceExamForm, randomizeQuestions: e.target.checked})}
-                      />
-                    }
-                    label="Randomize Question Order"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={practiceExamForm.showResults}
-                        onChange={(e) => setPracticeExamForm({...practiceExamForm, showResults: e.target.checked})}
-                      />
-                    }
-                    label="Show Results Immediately"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={practiceExamForm.allowReview}
-                        onChange={(e) => setPracticeExamForm({...practiceExamForm, allowReview: e.target.checked})}
-                      />
-                    }
-                    label="Allow Answer Review"
-                  />
-                </FormGroup>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
-
-        {/* Mock Exam Form */}
-        {examTypeSelection === 'mock' && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 3 }}>Mock Exam Setup</Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{xs:12}}>
-                <TextField
-                  fullWidth
-                  label="Exam Name *"
-                  value={mockExamForm.examName}
-                  onChange={(e) => setMockExamForm({...mockExamForm, examName: e.target.value})}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <FormControl fullWidth>
-                  <InputLabel>Select Subject *</InputLabel>
-                  <Select
-                    value={mockExamForm.selectedSubjectId}
-                    onChange={(e) => {
-                      const subjectId = Number(e.target.value);
-                      setMockExamForm({...mockExamForm, selectedSubjectId: subjectId, topics: []});
-                      fetchTopicsForSubject(subjectId);
-                    }}
-                    label="Select Subject *"
-                    required
-                  >
-                    <MenuItem value={0}>Select Subject</MenuItem>
-                    {subjects.map((subject) => (
-                      <MenuItem key={subject.subject_id} value={subject.subject_id}>
-                        {subject.subject_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Total Marks *"
-                  type="number"
-                  value={mockExamForm.totalMarks}
-                  onChange={(e) => setMockExamForm({...mockExamForm, totalMarks: Number(e.target.value)})}
-                  inputProps={{ min: 1 }}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Total Duration (minutes) *"
-                  type="number"
-                  value={mockExamForm.totalDuration}
-                  onChange={(e) => setMockExamForm({...mockExamForm, totalDuration: Number(e.target.value)})}
-                  inputProps={{ min: 1 }}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Pass Percentage"
-                  type="number"
-                  value={mockExamForm.passPercentage}
-                  onChange={(e) => setMockExamForm({...mockExamForm, passPercentage: Number(e.target.value)})}
-                  inputProps={{ min: 0, max: 100 }}
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Start Date & Time *"
-                  type="datetime-local"
-                  value={mockExamForm.startDate}
-                  onChange={(e) => setMockExamForm({...mockExamForm, startDate: e.target.value})}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="End Date & Time *"
-                  type="datetime-local"
-                  value={mockExamForm.endDate}
-                  onChange={(e) => setMockExamForm({...mockExamForm, endDate: e.target.value})}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-
-              {mockExamForm.selectedSubjectId > 0 && (
-                <Grid size={{xs:12}}>
-                  <Typography variant="subtitle1" sx={{ mb: 2 }}>Select Topics and Question Counts</Typography>
-                  {topics.map((topic) => (
-                    <Card key={topic.topic_id} sx={{ mb: 2, p: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Checkbox
-                          checked={mockExamForm.topics.some(t => t.topicId === topic.topic_id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setMockExamForm({
-                                ...mockExamForm,
-                                topics: [...mockExamForm.topics, { topicId: topic.topic_id, questionCount: 1 }]
-                              });
-                            } else {
-                              setMockExamForm({
-                                ...mockExamForm,
-                                topics: mockExamForm.topics.filter(t => t.topicId !== topic.topic_id)
-                              });
-                            }
-                          }}
-                        />
-                        <Typography sx={{ flex: 1 }}>{topic.topic_name}</Typography>
-                        {mockExamForm.topics.find(t => t.topicId === topic.topic_id) && (
-                          <TextField
-                            type="number"
-                            label="Questions"
-                            size="small"
-                            value={mockExamForm.topics.find(t => t.topicId === topic.topic_id)?.questionCount || 1}
-                            onChange={(e) => {
-                              const count = Math.max(1, Number(e.target.value));
-                              setMockExamForm({
-                                ...mockExamForm,
-                                topics: mockExamForm.topics.map(t =>
-                                  t.topicId === topic.topic_id ? { ...t, questionCount: count } : t
-                                )
-                              });
-                            }}
-                            inputProps={{ min: 1 }}
-                            sx={{ width: 100 }}
-                          />
-                        )}
-                        <Typography variant="caption" color="text.secondary">
-                          Available: {questionCounts[`topic_${topic.topic_id}`] || 0}
-                        </Typography>
-                      </Box>
-                    </Card>
-                  ))}
-                </Grid>
-              )}
-
-              <Grid size={{xs:12}}>
-                <FormGroup>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={mockExamForm.negativeMarking}
-                        onChange={(e) => setMockExamForm({...mockExamForm, negativeMarking: e.target.checked})}
-                      />
-                    }
-                    label="Enable Negative Marking"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={mockExamForm.proctoring}
-                        onChange={(e) => setMockExamForm({...mockExamForm, proctoring: e.target.checked})}
-                      />
-                    }
-                    label="Enable Proctoring"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={mockExamForm.randomizeQuestions}
-                        onChange={(e) => setMockExamForm({...mockExamForm, randomizeQuestions: e.target.checked})}
-                      />
-                    }
-                    label="Randomize Questions"
-                  />
-                </FormGroup>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
-
-        {/* Live Exam Form */}
-        {examTypeSelection === 'live' && (
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 3 }}>Live Exam Setup</Typography>
-
-            <Grid container spacing={2}>
-              <Grid size={{xs:12}}>
-                <TextField
-                  fullWidth
-                  label="Exam Name *"
-                  value={liveExamForm.examName}
-                  onChange={(e) => setLiveExamForm({...liveExamForm, examName: e.target.value})}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <FormControl fullWidth>
-                  <InputLabel>Select Subject *</InputLabel>
-                  <Select
-                    value={liveExamForm.selectedSubjectId}
-                    onChange={(e) => {
-                      const subjectId = Number(e.target.value);
-                      setLiveExamForm({...liveExamForm, selectedSubjectId: subjectId, topics: []});
-                      fetchTopicsForSubject(subjectId);
-                    }}
-                    label="Select Subject *"
-                    required
-                  >
-                    <MenuItem value={0}>Select Subject</MenuItem>
-                    {subjects.map((subject) => (
-                      <MenuItem key={subject.subject_id} value={subject.subject_id}>
-                        {subject.subject_name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Total Marks *"
-                  type="number"
-                  value={liveExamForm.totalMarks}
-                  onChange={(e) => setLiveExamForm({...liveExamForm, totalMarks: Number(e.target.value)})}
-                  inputProps={{ min: 1 }}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Total Duration (minutes) *"
-                  type="number"
-                  value={liveExamForm.totalDuration}
-                  onChange={(e) => setLiveExamForm({...liveExamForm, totalDuration: Number(e.target.value)})}
-                  inputProps={{ min: 1 }}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Participant Capacity"
-                  type="number"
-                  value={liveExamForm.participantCapacity}
-                  onChange={(e) => setLiveExamForm({...liveExamForm, participantCapacity: Number(e.target.value)})}
-                  inputProps={{ min: 1 }}
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Start Date & Time *"
-                  type="datetime-local"
-                  value={liveExamForm.startDateTime}
-                  onChange={(e) => setLiveExamForm({...liveExamForm, startDateTime: e.target.value})}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
-              </Grid>
-
-              <Grid size={{xs:12, md:6}}>
-                <TextField
-                  fullWidth
-                  label="Registration Deadline"
-                  type="datetime-local"
-                  value={liveExamForm.registrationDeadline}
-                  onChange={(e) => setLiveExamForm({...liveExamForm, registrationDeadline: e.target.value})}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-
-              {liveExamForm.selectedSubjectId > 0 && (
-                <Grid size={{xs:12}}>
-                  <Typography variant="subtitle1" sx={{ mb: 2 }}>Select Topics and Question Counts</Typography>
-                  {topics.map((topic) => (
-                    <Card key={topic.topic_id} sx={{ mb: 2, p: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Checkbox
-                          checked={liveExamForm.topics.some(t => t.topicId === topic.topic_id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setLiveExamForm({
-                                ...liveExamForm,
-                                topics: [...liveExamForm.topics, { topicId: topic.topic_id, questionCount: 1 }]
-                              });
-                            } else {
-                              setLiveExamForm({
-                                ...liveExamForm,
-                                topics: liveExamForm.topics.filter(t => t.topicId !== topic.topic_id)
-                              });
-                            }
-                          }}
-                        />
-                        <Typography sx={{ flex: 1 }}>{topic.topic_name}</Typography>
-                        {liveExamForm.topics.find(t => t.topicId === topic.topic_id) && (
-                          <TextField
-                            type="number"
-                            label="Questions"
-                            size="small"
-                            value={liveExamForm.topics.find(t => t.topicId === topic.topic_id)?.questionCount || 1}
-                            onChange={(e) => {
-                              const count = Math.max(1, Number(e.target.value));
-                              setLiveExamForm({
-                                ...liveExamForm,
-                                topics: liveExamForm.topics.map(t =>
-                                  t.topicId === topic.topic_id ? { ...t, questionCount: count } : t
-                                )
-                              });
-                            }}
-                            inputProps={{ min: 1 }}
-                            sx={{ width: 100 }}
-                          />
-                        )}
-                        <Typography variant="caption" color="text.secondary">
-                          Available: {questionCounts[`topic_${topic.topic_id}`] || 0}
-                        </Typography>
-                      </Box>
-                    </Card>
-                  ))}
-                </Grid>
-              )}
-
-              <Grid size={{xs:12}}>
-                <FormGroup>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={liveExamForm.proctoringEnabled}
-                        onChange={(e) => setLiveExamForm({...liveExamForm, proctoringEnabled: e.target.checked})}
-                      />
-                    }
-                    label="Enable Proctoring"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={liveExamForm.autoSubmit}
-                        onChange={(e) => setLiveExamForm({...liveExamForm, autoSubmit: e.target.checked})}
-                      />
-                    }
-                    label="Auto-submit on Time End"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={liveExamForm.allowCamera}
-                        onChange={(e) => setLiveExamForm({...liveExamForm, allowCamera: e.target.checked})}
-                      />
-                    }
-                    label="Require Camera Access"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={liveExamForm.requireID}
-                        onChange={(e) => setLiveExamForm({...liveExamForm, requireID: e.target.checked})}
-                      />
-                    }
-                    label="Require ID Verification"
-                  />
-                </FormGroup>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
+      <DialogContent>
+        <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        {renderStepContent()}
       </DialogContent>
-
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-
-        {examTypeSelection === 'select' && (
-          <Button
-            variant="contained"
-            disabled={!examTypeSelection || examTypeSelection === 'select'}
-          >
-            Continue
-          </Button>
-        )}
-
-        {examTypeSelection === 'practice' && (
-          <Button
-            variant="contained"
-            onClick={onSubmitPractice}
-            sx={{
-              background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-              '&:hover': { opacity: 0.9 }
-            }}
-          >
-            Create Practice Exam
-          </Button>
-        )}
-
-        {examTypeSelection === 'mock' && (
-          <Button
-            variant="contained"
-            onClick={onSubmitMock}
-            sx={{
-              background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-              '&:hover': { opacity: 0.9 }
-            }}
-          >
-            Create Mock Exam
-          </Button>
-        )}
-
-        {examTypeSelection === 'live' && (
-          <Button
-            variant="contained"
-            onClick={onSubmitLive}
-            sx={{
-              background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-              '&:hover': { opacity: 0.9 }
-            }}
-          >
-            Create Live Exam
-          </Button>
-        )}
-
-        {examTypeSelection !== 'select' && examTypeSelection !== '' && (
-          <Button
-            variant="outlined"
-            onClick={() => setExamTypeSelection('select')}
-          >
-            Back
-          </Button>
-        )}
+        <Button disabled={activeStep === 0} onClick={handleBack}>
+          Back
+        </Button>
+        <Button variant="contained" onClick={handleNext}>
+          {activeStep === steps.length - 1 ? "Create Exam" : "Next"}
+        </Button>
       </DialogActions>
     </Dialog>
   );
-};
-
-export default CreateExamModal;
+}

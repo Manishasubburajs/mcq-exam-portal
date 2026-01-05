@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useMediaQuery } from '@mui/material';
+import { useSearchParams } from 'next/navigation';
 import { useSidebar } from '@/app/components/student_layout';
 import styles from './exam_taking.module.css';
 
@@ -18,84 +19,70 @@ interface ExamData {
   totalQuestions: number;
   questions: Question[];
   examType: 'practice' | 'mock' | 'live';
+  points?: number;
   proctoringEnabled?: boolean;
   autoSubmit?: boolean;
 }
 
 const ExamContent: React.FC = () => {
-  // Mock exam data
-  const examData: ExamData = {
-    title: "Mathematics Midterm Exam",
-    duration: 45,
-    totalQuestions: 30,
-    questions: [
-      {
-        id: 1,
-        text: "What is the value of π (pi) to two decimal places?",
-        options: [
-          { id: 'A', text: "3.14" },
-          { id: 'B', text: "3.15" },
-          { id: 'C', text: "3.16" },
-          { id: 'D', text: "3.18" }
-        ],
-        correctAnswer: 'A'
-      },
-      {
-        id: 2,
-        text: "Solve for x: 2x + 5 = 15",
-        options: [
-          { id: 'A', text: "5" },
-          { id: 'B', text: "10" },
-          { id: 'C', text: "7.5" },
-          { id: 'D', text: "5.5" }
-        ],
-        correctAnswer: 'A'
-      },
-      {
-        id: 3,
-        text: "What is the derivative of x²?",
-        options: [
-          { id: 'A', text: "x" },
-          { id: 'B', text: "2x" },
-          { id: 'C', text: "2" },
-          { id: 'D', text: "x²" }
-        ],
-        correctAnswer: 'B'
-      },
-      {
-        id: 4,
-        text: "What is the integral of 2x dx?",
-        options: [
-          { id: 'A', text: "x²" },
-          { id: 'B', text: "x² + C" },
-          { id: 'C', text: "2x²" },
-          { id: 'D', text: "2x² + C" }
-        ],
-        correctAnswer: 'B'
-      },
-      {
-        id: 5,
-        text: "Which of the following is a prime number?",
-        options: [
-          { id: 'A', text: "1" },
-          { id: 'B', text: "9" },
-          { id: 'C', text: "15" },
-          { id: 'D', text: "17" }
-        ],
-        correctAnswer: 'D'
-      }
-    ]
-  };
+  const searchParams = useSearchParams();
+  const examId = searchParams.get('examId');
+
+  const [examData, setExamData] = useState<ExamData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(new Set());
-  const [timeLeft, setTimeLeft] = useState(examData.duration * 60);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showNavigator, setShowNavigator] = useState(true);
 
+  useEffect(() => {
+    if (!examId) {
+      setError("No exam ID provided");
+      setLoading(false);
+      return;
+    }
+
+    const fetchExam = async () => {
+      try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        if (!token) {
+          setError("Not authenticated");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch(`/api/students/exams?id=${examId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setExamData(data.data);
+          setTimeLeft(data.data.duration * 60);
+        } else {
+          setError(data.message || "Failed to load exam");
+        }
+      } catch (err) {
+        console.error("Failed to fetch exam:", err);
+        setError("Failed to load exam");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExam();
+  }, [examId]);
+
   // Timer effect
   useEffect(() => {
+    if (!examData || timeLeft <= 0) return;
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -108,7 +95,7 @@ const ExamContent: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [examData, timeLeft]);
 
   // Prevent right-click and leaving the page
   useEffect(() => {
@@ -143,6 +130,7 @@ const ExamContent: React.FC = () => {
   };
 
   const getCurrentQuestion = () => {
+    if (!examData) return null;
     const questionIndex = (currentQuestion - 1) % examData.questions.length;
     return examData.questions[questionIndex];
   };
@@ -187,7 +175,7 @@ const ExamContent: React.FC = () => {
   };
 
   const goToNext = () => {
-    if (currentQuestion < examData.totalQuestions) {
+    if (examData && currentQuestion < examData.totalQuestions) {
       setCurrentQuestion(prev => prev + 1);
     }
   };
@@ -201,7 +189,7 @@ const ExamContent: React.FC = () => {
 
   const handleSubmitExam = () => {
     const answered = Object.keys(userAnswers).length;
-    alert(`Exam submitted! You answered ${answered} out of ${examData.totalQuestions} questions.`);
+    alert(`Exam submitted! You answered ${answered} out of ${examData!.totalQuestions} questions.`);
     // In a real app, this would redirect to results page
   };
 
@@ -228,7 +216,7 @@ const ExamContent: React.FC = () => {
       </div>
 
       <div className={styles.questionGrid}>
-        {Array.from({ length: 30 }, (_, i) => i + 1).map(num => {
+        {Array.from({ length: examData?.totalQuestions || 0 }, (_, i) => i + 1).map(num => {
           const status = getQuestionStatus(num);
           return (
             <button
@@ -285,7 +273,7 @@ const ExamContent: React.FC = () => {
     <div className={styles.questionMain}>
       <div className={styles.questionContainer}>
         <div className={styles.questionHeader}>
-          <h2 className={styles.questionTitle}>Question {currentQuestion} of {examData.totalQuestions}</h2>
+          <h2 className={styles.questionTitle}>Question {currentQuestion} of {examData!.totalQuestions}</h2>
           <div className={styles.questionActions}>
             {!isDesktop && (
               <button
@@ -313,11 +301,11 @@ const ExamContent: React.FC = () => {
 
         <div className={styles.questionContent}>
           <div className={styles.questionText}>
-            {currentQ.text}
+            {currentQ!.text}
           </div>
 
           <ul className={styles.optionsList} aria-label="Multiple choice options">
-            {currentQ.options.map(option => {
+            {currentQ!.options.map(option => {
               const isSelected = userAnswers[currentQuestion] === option.id;
               return (
                 <li key={option.id}>
@@ -354,14 +342,14 @@ const ExamContent: React.FC = () => {
             <button
               className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLarge}`}
               onClick={goToNext}
-              disabled={currentQuestion === examData.totalQuestions}
+              disabled={currentQuestion === examData!.totalQuestions}
             >
               Next <i className="fas fa-chevron-right"></i>
             </button>
           </div>
 
           <div className={styles.progressText}>
-            <span>{answeredCount}</span> of {examData.totalQuestions} questions answered
+            <span>{answeredCount}</span> of {examData!.totalQuestions} questions answered
           </div>
 
           <button
@@ -375,13 +363,33 @@ const ExamContent: React.FC = () => {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div className={`${styles.examContainer} ${leftPosition === '220px' ? styles.containerShifted : styles.containerFull}`}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading exam...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !examData) {
+    return (
+      <div className={`${styles.examContainer} ${leftPosition === '220px' ? styles.containerShifted : styles.containerFull}`}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>{error || "Exam not found"}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`${styles.examContainer} ${leftPosition === '220px' ? styles.containerShifted : styles.containerFull}`}>
       {/* Exam Header */}
       <div className={`${styles.examHeader} ${leftPosition === '220px' ? styles.left220 : styles.left0}`}>
         <div className={styles.examInfo}>
-          <h1>{examData.title}</h1>
-          <p>{examData.duration} minutes • {examData.totalQuestions} questions • 100 points</p>
+          <h1>{examData!.title}</h1>
+          <p>{examData!.duration} minutes • {examData!.totalQuestions} questions • {examData!.points} points</p>
         </div>
         <div className={`${styles.timer} ${getTimerClass()}`}>
           <i className="fas fa-clock"></i> <span>{formatTime(timeLeft)}</span>
