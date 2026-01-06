@@ -6,7 +6,6 @@ import {
   Box,
   Paper,
   Typography,
-  TextField,
   Select,
   MenuItem,
   FormControl,
@@ -21,11 +20,9 @@ import {
   Chip,
   IconButton,
   Pagination,
-  Stack,
   LinearProgress,
   Card,
   CardContent,
-  Avatar,
   useMediaQuery,
 } from '@mui/material';
 import {
@@ -40,12 +37,11 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Bar, Doughnut, Line } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2'; // eslint-disable-line no-unused-vars // cspell:ignore chartjs
 import { Download, Visibility, TrendingUp, TrendingDown } from '@mui/icons-material';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import ChartContainer from '../../components/ChartContainer';
-import styles from './ChartLayout.module.css';
 
 ChartJS.register(
   CategoryScale,
@@ -77,7 +73,6 @@ interface StudentResult {
 }
 
 const ResultsAnalytics = () => {
-  const isMobile = useMediaQuery('(max-width:600px)');
   const isDesktop = useMediaQuery('(min-width:900px)');
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
@@ -285,7 +280,11 @@ const ResultsAnalytics = () => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
+        ml: sidebarOpen && isDesktop ? '220px' : 0,
+        transition: 'margin-left 0.3s ease',
+        paddingTop: { xs: '50px', md: '80px' }
+      }}>
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Results Analytics" sidebarOpen={sidebarOpen} />
 
         {/* Filters Section */}
@@ -348,7 +347,7 @@ const ResultsAnalytics = () => {
             </FormControl>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
-            <Button variant="outlined" onClick={handleResetFilters}>
+            <Button variant="outlined" color="secondary" onClick={handleResetFilters}>
               Reset Filters
             </Button>
             <Button
@@ -378,7 +377,7 @@ const ResultsAnalytics = () => {
         {/* Summary Stats */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, marginBottom: '30px' }}>
           {summaryStats.map((stat, index) => (
-            <Card elevation={1} sx={{ borderRadius: '10px' }} key={index}>
+            <Card elevation={1} sx={{ borderRadius: '10px' }} key={`stat-${stat.label.toLowerCase().replaceAll(' ', '-')}`}>
               <CardContent sx={{ textAlign: 'center', padding: '20px' }}>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', marginBottom: '5px' }}>
                   {stat.value}
@@ -472,7 +471,7 @@ const ResultsAnalytics = () => {
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2 }}>
             {performanceData.map((item, index) => (
-              <Box sx={{ padding: '15px', backgroundColor: 'grey.50', borderRadius: '8px' }} key={index}>
+              <Box sx={{ padding: '15px', backgroundColor: 'grey.50', borderRadius: '8px' }} key={`performance-${item.subject.toLowerCase().replaceAll(' ', '-')}`}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
                     {item.subject}
@@ -502,7 +501,7 @@ const ResultsAnalytics = () => {
               <Typography variant="h6" sx={{ color: 'text.primary' }}>
                 Detailed Results
               </Typography>
-              <Button variant="outlined" onClick={handleViewAllResults}>
+              <Button variant="outlined" color="secondary" onClick={handleViewAllResults}>
                 View All Results
               </Button>
             </Box>

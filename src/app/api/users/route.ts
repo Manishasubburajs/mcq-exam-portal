@@ -1,198 +1,318 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { NextResponse } from "next/server";
+import * as Yup from "yup";
+import bcrypt from "bcryptjs";
 
-// ============================
-// GET ALL USERS
-// ============================
-export async function GET() {
+// ------------------------------------------
+// YUP VALIDATION SCHEMAS
+// ------------------------------------------
+const studentSchema = Yup.object({
+  dob: Yup.string().nullable(),
+  gender: Yup.string().nullable(),
+  school: Yup.string().nullable(),
+  grade: Yup.string().nullable(),
+  section: Yup.string().nullable(),
+});
+
+// Separate schemas for create and update operations
+const createUserSchema = Yup.object({
+  username: Yup.string().required("Username is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+  password_hash: Yup.string().required("Password is required"),
+  role: Yup.string().oneOf(["student", "teacher", "admin"]).required(),
+  first_name: Yup.string().required("First name is required"),
+  last_name: Yup.string().required("Last name is required"),
+  department: Yup.string().nullable(),
+  dob: Yup.string().nullable(),
+  gender: Yup.string().nullable(),
+  school: Yup.string().nullable(),
+  grade: Yup.string().nullable(),
+  section: Yup.string().nullable(),
+});
+
+const updateUserSchema = Yup.object({
+  user_id: Yup.number().required("User ID is required"),
+  username: Yup.string().required("Username is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+  role: Yup.string().oneOf(["student", "teacher", "admin"]).required(),
+  status: Yup.string().oneOf(["active", "inactive", "pending"]).required(),
+  first_name: Yup.string().required("First name is required"),
+  last_name: Yup.string().required("Last name is required"),
+  department: Yup.string().nullable(),
+  dob: Yup.string().nullable(),
+  gender: Yup.string().nullable(),
+  school: Yup.string().nullable(),
+  grade: Yup.string().nullable(),
+  section: Yup.string().nullable(),
+});
+
+// ------------------------------------------
+// GET USERS
+// ------------------------------------------
+export async function GET(req: Request) {
+  console.log("🔥 /api/users GET called");
+
   try {
-    const [rows] = await db.query(`
-      SELECT 
-        u.user_id,
-        u.username,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.role,
-        u.status,
-        s.grade,
-        s.section
-      FROM users u
-      LEFT JOIN student_details s ON u.user_id = s.user_id
-    `);
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("id");
 
-    console.log("User Details:", rows);
-    return NextResponse.json({ success: true, data: rows });
-  } catch (error) {
-    console.error("DB Connection Error:", (error as Error).message);
-    return NextResponse.json(
-      { success: false, error: (error as Error).message },
-      { status: 500 }
-    );
-  }
-}
+    if (userId) {
+      const user = await prisma.users.findUnique({
+        where: { user_id: Number(userId) },
+        include: { student_details: true },
+      });
 
-// ============================
-// DELETE USER
-// ============================
-export async function DELETE(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { user_id } = body;
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: "User not found" },
+          { status: 404 }
+        );
+      }
 
-    // Delete from student_details first
-    await db.query("DELETE FROM student_details WHERE user_id = ?", [user_id]);
-
-    // Delete from users
-    const [result] = await db.query("DELETE FROM users WHERE user_id = ?", [user_id]);
-
-    if ((result as any).affectedRows > 0) {
-      return NextResponse.json({ success: true });
-    } else {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: true, data: user }, { status: 200 });
     }
+
+    const users = await prisma.users.findMany({
+      include: { student_details: true },
+      orderBy: { user_id: "desc" },
+    });
+
+    console.log("🔥 Users fetched:", users.length);
+
+    return NextResponse.json({ success: true, data: users }, { status: 200 });
   } catch (error) {
-    console.error("Error deleting user:", (error as Error).message);
+    console.error("❌ GET /api/users error:", error);
     return NextResponse.json(
-      { success: false, error: (error as Error).message },
+      { success: false, error: "Error fetching users" },
       { status: 500 }
     );
   }
 }
 
-// ============================
-// ADD NEW USER
-// ============================
-export async function POST(request: NextRequest) {
+// ------------------------------------------
+// CREATE USER
+// ------------------------------------------
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { username, first_name, last_name, email, role, grade, section, status } = body;
+    const body = await req.json();
 
-    if (!username || !first_name || !email) {
+    // Validate base user fields
+    await createUserSchema.validate(body, { abortEarly: false });
+
+    // Student validation already handled in updateUserSchema
+
+    const {
+      username,
+      email,
+      password_hash,
+      role,
+      first_name,
+      last_name,
+      department,
+      dob,
+      gender,
+      school,
+      grade,
+      section,
+    } = body;
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password_hash, 10);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.users.create({
+        data: {
+          username,
+          email,
+          password_hash: hashedPassword,
+          role,
+          first_name,
+          last_name,
+         
+        },
+      });
+
+      if (role === "student") {
+        // Ensure dob is always valid (required field)
+        if (!dob || dob.trim() === "") {
+          throw new Error("Date of birth is required for students");
+        }
+        
+        // Convert YYYY-MM-DD to Date object for Prisma DateTime field
+        const formattedDob = new Date(dob);
+        
+        // Validate that the date conversion worked
+        if (isNaN(formattedDob.getTime())) {
+          throw new Error("Invalid date format for date of birth");
+        }
+        
+        await tx.student_details.create({
+          data: {
+            user_id: user.user_id,
+            dob: formattedDob,
+            gender: gender as any, // Type assertion for enum
+            school: school || "",
+            grade: grade || "",
+            section: section || null,
+          },
+        });
+      }
+
+      // Return complete user data with student_details to match GET response structure
+      const userWithDetails = await tx.users.findUnique({
+        where: { user_id: user.user_id },
+        include: { student_details: true },
+      });
+
+      return userWithDetails;
+    });
+
+    return NextResponse.json(
+      { success: true, data: result },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("❌ POST /api/users error:", error);
+
+    if (error.name === "ValidationError") {
       return NextResponse.json(
-        { success: false, error: "Username, First name, and Email are required." },
+        { success: false, validationErrors: error.errors },
         { status: 400 }
       );
     }
 
-    // Insert into users table (added username field)
-    const [userResult] = await db.query(
-      "INSERT INTO users (username, first_name, last_name, email, role, status) VALUES (?, ?, ?, ?, ?, ?)",
-      [username, first_name, last_name, email, role, status]
-    );
-
-    const userId = (userResult as any).insertId;
-
-    // If student, insert into student_details
-    if (role === "student" && (grade || section)) {
-      await db.query(
-        "INSERT INTO student_details (user_id, grade, section) VALUES (?, ?, ?)",
-        [userId, grade || null, section || null]
-      );
-    }
-
-    // Fetch newly created user
-    const [newUserRows] = await db.query(
-      `
-      SELECT
-        u.user_id,
-        u.username,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.role,
-        u.status,
-        s.grade,
-        s.section
-      FROM users u
-      LEFT JOIN student_details s ON u.user_id = s.user_id
-      WHERE u.user_id = ?
-    `,
-      [userId]
-    );
-
-    return NextResponse.json({ success: true, user: (newUserRows as any)[0] });
-  } catch (error) {
-    console.error("Error adding user:", (error as Error).message);
     return NextResponse.json(
-      { success: false, error: (error as Error).message },
+      { success: false, error: "Error creating user" },
       { status: 500 }
     );
   }
 }
 
-// ============================
+// ------------------------------------------
 // UPDATE USER
-// ============================
-export async function PUT(request: NextRequest) {
+// ------------------------------------------
+export async function PUT(req: Request) {
   try {
-    const body = await request.json();
-    const { user_id, username, first_name, last_name, email, role, grade, section, status } = body;
+    const body = await req.json();
+
+    // Validate base fields for update
+    await updateUserSchema.validate(body, { abortEarly: false });
+
+    // Student validation already handled in updateUserSchema
+
+    const {
+      user_id,
+      username,
+      email,
+      role,
+      status,
+      first_name,
+      last_name,
+      department,
+      dob,
+      gender,
+      school,
+      grade,
+      section,
+    } = body;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedUser = await tx.users.update({
+        where: { user_id },
+        data: {
+          username,
+          email,
+          role,
+          first_name,
+          last_name,
+          status,
+        },
+      });
+
+      if (role === "student") {
+        const exists = await tx.student_details.findUnique({
+          where: { user_id },
+        });
+
+        if (exists) {
+          await tx.student_details.update({
+            where: { user_id },
+            data: { dob, gender, school, grade, section },
+          });
+        } else {
+          await tx.student_details.create({
+            data: { user_id, dob, gender, school, grade, section },
+          });
+        }
+      }
+
+      // Return complete user data with student_details
+      const userWithDetails = await tx.users.findUnique({
+        where: { user_id },
+        include: { student_details: true },
+      });
+
+      return userWithDetails;
+    });
+
+    return NextResponse.json(
+      { success: true, data: result },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("❌ PUT /api/users error:", error);
+
+    if (error.name === "ValidationError") {
+      return NextResponse.json(
+        { success: false, validationErrors: error.errors },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Error updating user" },
+      { status: 500 }
+    );
+  }
+}
+
+// ------------------------------------------
+// DELETE USER
+// ------------------------------------------
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json();
+    const { user_id } = body;
 
     if (!user_id) {
       return NextResponse.json(
-        { success: false, error: "User ID is required for update." },
+        { success: false, error: "User ID is required" },
         { status: 400 }
       );
     }
 
-    // 1️⃣ Update users table
-    await db.query(
-      `UPDATE users 
-       SET username = ?, first_name = ?, last_name = ?, email = ?, role = ?, status = ? 
-       WHERE user_id = ?`,
-      [username, first_name, last_name, email, role, status, user_id]
-    );
+    await prisma.$transaction(async (tx) => {
+      // First delete associated student_details if they exist
+      await tx.student_details.deleteMany({
+        where: { user_id: Number(user_id) },
+      });
 
-    // 2️⃣ Handle student details
-    if (role === "student") {
-      const [existing] = await db.query(
-        "SELECT * FROM student_details WHERE user_id = ?",
-        [user_id]
-      );
+      // Then delete the user
+      await tx.users.delete({
+        where: { user_id: Number(user_id) },
+      });
+    });
 
-      if ((existing as any[]).length > 0) {
-        await db.query(
-          "UPDATE student_details SET grade = ?, section = ? WHERE user_id = ?",
-          [grade || null, section || null, user_id]
-        );
-      } else {
-        await db.query(
-          "INSERT INTO student_details (user_id, grade, section) VALUES (?, ?, ?)",
-          [user_id, grade || null, section || null]
-        );
-      }
-    } else {
-      // If not a student, remove any old student_details record
-      await db.query("DELETE FROM student_details WHERE user_id = ?", [user_id]);
-    }
-
-    // 3️⃣ Fetch updated user
-    const [updatedRows] = await db.query(
-      `
-      SELECT
-        u.user_id,
-        u.username,
-        u.first_name,
-        u.last_name,
-        u.email,
-        u.role,
-        u.status,
-        s.grade,
-        s.section
-      FROM users u
-      LEFT JOIN student_details s ON u.user_id = s.user_id
-      WHERE u.user_id = ?
-    `,
-      [user_id]
-    );
-
-    return NextResponse.json({ success: true, user: (updatedRows as any)[0] });
-  } catch (error) {
-    console.error("Error updating user:", (error as Error).message);
     return NextResponse.json(
-      { success: false, error: (error as Error).message },
+      { success: true, message: "User deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("❌ DELETE /api/users error:", error);
+    return NextResponse.json(
+      { success: false, error: "Error deleting user" },
       { status: 500 }
     );
   }
 }
+

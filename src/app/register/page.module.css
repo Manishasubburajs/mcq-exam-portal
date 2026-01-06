@@ -1,0 +1,47 @@
+/* Register page styles */
+.bannerGradient {
+  background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='500' height='500' viewBox='0 0 500 500'><rect fill='%236a11cb' width='500' height='500'/><path fill='%232575fc' d='M250,0 L500,250 L250,500 L0,250 Z'/></svg>");
+  background-size: cover;
+}
+
+.featureList {
+  margin-left: 1rem;
+  list-style: none;
+  padding: 0;
+}
+
+.featureListItem {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.featureIcon {
+  background-color: hsl(57, 98%, 77%);
+  color: #2db806;
+  font-weight: bold;
+  border-radius: 50%;
+  width: 1.2rem;
+  height: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.gradientButton {
+  background: linear-gradient(to right, #6a11cb, #2575fc);
+}
+
+.gradientButton:hover {
+  opacity: 0.9;
+}
+
+.loginLink {
+  color: #2575fc;
+}
+
+.portalTitle {
+  color: #6a11cb;
+}

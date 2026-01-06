@@ -1,128 +1,78 @@
-"use client";
-import React, { useState, useEffect } from "react";
+"use client"
+
+import React from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
-  Drawer,
   List,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Typography,
-  IconButton,
-} from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import PersonIcon from "@mui/icons-material/Person";
-import HistoryIcon from "@mui/icons-material/History";
-import SettingsIcon from "@mui/icons-material/Settings";
-import LogoutIcon from "@mui/icons-material/Logout";
-import MenuIcon from "@mui/icons-material/Menu";
-import { usePathname, useRouter } from "next/navigation";
+} from '@mui/material';
+import {
+  Assignment,
+  BarChart,
+  History,
+  Person,
+} from '@mui/icons-material';
+import { FaTachometerAlt, FaSignOutAlt } from 'react-icons/fa';
+import styles from '../components/Sidebar.module.css';
+import { logout } from '@/utils/auth';
 
-const navItems = [
-  { label: "Dashboard", icon: <DashboardIcon />, path: "/student-pages" },
-  { label: "Take Exam", icon: <AssignmentIcon />, path: "/student-pages/exam_taking" },
-  { label: "Exam History", icon: <HistoryIcon />, path: "/student-pages/exam_res_rev" },
-  { label: "Progress", icon: <BarChartIcon />, path: "/student-pages/progress" },
-  { label: "My Profile", icon: <PersonIcon />, path: "/student-pages/profile_settings" },
-  { label: "Settings", icon: <SettingsIcon />, path: "/student-pages/settings" },
-  { label: "Logout", icon: <LogoutIcon />, path: "/logout" },
-];
+interface Props {
+  isOpen?: boolean;
+}
 
-const gradientBg = "linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)";
-
-export default function Sidebar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const pathname = usePathname();
+const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
   const router = useRouter();
+  const pathname = usePathname();
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width:900px)");
-    setIsMobile(mediaQuery.matches);
+  const menuItems = [
+    { text: 'Dashboard', icon: <FaTachometerAlt />, route: '/student-pages' },
+    // { text: 'Take Exam', icon: <Assignment />, route: '/student-pages/exam_taking' },
+    { text: 'My Exams', icon: <Assignment />, route: '/student-pages/my_exams' },
+    { text: 'Exam History', icon: <History />, route: '/student-pages/exam_res_rev' },
+    { text: 'Progress', icon: <BarChart />, route: '/student-pages/student_progress' },
+    { text: 'My Profile', icon: <Person />, route: '/student-pages/profile_settings' },
+    { text: 'Logout', icon: <FaSignOutAlt /> },
+  ];
 
-    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mediaQuery.addEventListener("change", handleChange);
+  const activeItem = menuItems.find(item => item.route === pathname)?.text || 'Dashboard';
 
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  const handleMenuClick = (item: { text: string; route?: string }) => {
+    if (item.text === 'Logout') {
+      logout();
+    } else if (item.route) {
+      router.push(item.route);
+    }
+  };
 
-  const drawerContent = (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ p: 3, pb: 2 }}>
-        <Typography sx={{ fontSize: 24, fontWeight: 700, color: "#fff", letterSpacing: 1, textAlign: "center" }}>
-          MCQ <Box component="span" sx={{ color: "#ffb300" }}>Portal</Box>
+  return (
+    <Box className={`${styles.sidebar} ${isOpen ? '' : styles.closed}`}>
+      <Box className={styles.logo}>
+        <Typography variant="h4" component="h1" sx={{ fontSize: '24px', fontWeight: 700 }}>
+          MCQ <span className={styles.highlight}>Portal</span>
         </Typography>
       </Box>
-      <List sx={{ flex: 1, mt: 2 }}>
-        {navItems.map((item, idx) => (
-          <ListItem key={item.label} disablePadding>
+      <List className={styles.menu}>
+        {menuItems.map((item) => (
+          <ListItem key={item.text} disablePadding className={styles.menuItem}>
             <ListItemButton
-              selected={pathname === item.path || (item.label === "My Profile" && pathname?.includes("profile_settings"))}
-              onClick={() => router.push(item.path)}
-              sx={{
-                color: "#fff",
-                borderRadius: 2,
-                mx: 2,
-                my: 0.5,
-                background: pathname === item.path || (item.label === "My Profile" && pathname?.includes("profile_settings")) ? "rgba(255,255,255,0.2)" : "none",
-                '&:hover': { background: "rgba(255,255,255,0.08)" },
-                minHeight: 48,
-              }}
+              className={`${styles.menuLink} ${item.text === activeItem ? styles.active : ''}`}
+              onClick={() => handleMenuClick(item)}
             >
-              <ListItemIcon sx={{ color: "#fff", minWidth: 40 }}>{item.icon}</ListItemIcon>
-              <ListItemText
-                primary={<Typography sx={{ fontWeight: 600, fontSize: 16 }}>{item.label}</Typography>}
-              />
+              <ListItemIcon sx={{ color: 'white', minWidth: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.text} />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-      <Box sx={{ flexGrow: 0, p: 3, pt: 0 }} />
     </Box>
   );
+};
 
-  return (
-    <>
-      {isMobile ? (
-        <>
-          <IconButton
-            onClick={() => setMobileOpen(true)}
-            sx={{ position: "fixed", top: 18, left: 18, zIndex: 1301, color: "#fff", bgcolor: "#673ab7", '&:hover': { bgcolor: "#5e35b1" } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Drawer
-            anchor="left"
-            open={mobileOpen}
-            onClose={() => setMobileOpen(false)}
-            PaperProps={{ sx: { width: 250, background: gradientBg, border: "none" } }}
-            ModalProps={{ keepMounted: true }}
-          >
-            {drawerContent}
-          </Drawer>
-        </>
-      ) : (
-        <Box
-          sx={{
-            width: 250,
-            height: "100vh",
-            position: "fixed",
-            top: 0,
-            left: 0,
-            bgcolor: "transparent",
-            background: gradientBg,
-            boxShadow: "2px 0 16px 0 rgba(103,58,183,0.10)",
-            zIndex: 1200,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {drawerContent}
-        </Box>
-      )}
-    </>
-  );
-}
+export default Sidebar;

@@ -1,10 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Grid,
-  Paper,
   Card,
   CardContent,
   Typography,
@@ -17,18 +15,8 @@ import {
   TableRow,
   Button,
   LinearProgress,
-  Stack,
-  useTheme,
 } from '@mui/material';
 import {
-  Dashboard,
-  MenuBook,
-  Assessment,
-  Person,
-  History,
-  Settings,
-  Logout,
-  Home,
   TrendingUp,
   Schedule,
   EmojiEvents,
@@ -45,7 +33,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2'; // cSpell:ignore chartjs
 
 ChartJS.register(
   CategoryScale,
@@ -58,8 +46,10 @@ ChartJS.register(
   Filler
 );
 
+
 const StudentProgressPage = () => {
-  const theme = useTheme();
+  const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const chartData = {
     labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
@@ -162,238 +152,291 @@ const StudentProgressPage = () => {
     return '#dc3545';
   };
 
-  const Sidebar = () => (
-    <Paper
-      elevation={0}
-      sx={{
-        width: { xs: '100%', md: 280 },
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-        color: 'white',
-        position: { xs: 'static', md: 'fixed' },
-        left: 0,
-        top: 0,
-        zIndex: 1000,
-      }}
-    >
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-          MCQ <Box component="span" sx={{ color: '#ffcc00' }}>Portal</Box>
-        </Typography>
-      </Box>
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+          console.error('No authentication token found');
+          setLoading(false);
+          return;
+        }
 
-      <Stack spacing={1} sx={{ px: 2 }}>
-        {[
-          { icon: <Dashboard />, text: 'Dashboard', active: false },
-          { icon: <MenuBook />, text: 'Take Exam', active: false },
-          { icon: <Assessment />, text: 'Results', active: false },
-          { icon: <Person />, text: 'Profile', active: true },
-          { icon: <History />, text: 'Exam History', active: false },
-          { icon: <Settings />, text: 'Settings', active: false },
-          { icon: <Logout />, text: 'Logout', active: false },
-        ].map((item) => (
-          <Button
-            key={item.text}
-            startIcon={item.icon}
-            sx={{
-              justifyContent: 'flex-start',
-              color: 'white',
-              backgroundColor: item.active ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              },
-              py: 1.5,
-              px: 2,
-              borderRadius: 1,
-            }}
-          >
-            {item.text}
-          </Button>
-        ))}
-      </Stack>
-    </Paper>
-  );
+        const response = await fetch('/api/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setUserData(data.user);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const displayName = userData ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || 'User' : 'Loading...';
+  const avatarUrl = userData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6a11cb&color=fff` : '';
+  const studentId = userData ? `S${userData.user_id || '00000'}` : 'Loading...';
+  const grade = userData?.grade ? `${userData.grade}th Grade` : 'Grade not set';
+  const section = userData?.section || 'Section not set';
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar />
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          ml: { xs: 0, md: '280px' },
-          p: 4,
-          backgroundColor: '#f5f7fa',
-        }}
-      >
-        {/* Header */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 4,
-            pb: 2,
-            borderBottom: '1px solid #e0e0e0',
-          }}
-        >
-          <Typography variant="h4" sx={{ fontWeight: 600, color: '#2c3e50' }}>
-            Student Profile & Progress
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
-              sx={{ width: 40, height: 40, mr: 2, border: '2px solid #6a11cb' }}
-            />
-            <Typography>John Doe</Typography>
-          </Box>
-        </Box>
+    <Box
+      component="main"
+      sx={{
+        p: {
+          xs: 1.5,
+          sm: 2.5,
+          md: 3.75
+        },
+        width: '100%',
+        minHeight: '100vh',
+        backgroundColor: '#f5f7fa',
+        transition: 'all 0.3s ease',
+      }}
+    >
 
         {/* Profile Card */}
-        <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Card sx={{
+          mb: { xs: 2, sm: 3, md: 4 },
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              flexDirection: { xs: 'column', sm: 'row' },
+              textAlign: { xs: 'center', sm: 'left' }
+            }}>
               <Avatar
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=400&q=80"
+                src={avatarUrl}
                 sx={{
-                  width: 120,
-                  height: 120,
-                  mr: 4,
+                  width: { xs: 100, sm: 110, md: 120 },
+                  height: { xs: 100, sm: 110, md: 120 },
+                  mr: { xs: 0, sm: 4 },
+                  mb: { xs: 2, sm: 0 },
                   border: '5px solid #6a11cb',
                 }}
               />
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#2c3e50', mb: 1 }}>
-                  John Doe
+                <Typography variant="h4" sx={{
+                  fontWeight: 700,
+                  color: '#2c3e50',
+                  mb: { xs: 0.75, sm: 1 },
+                  fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem' }
+                }}>
+                  {loading ? 'Loading...' : displayName}
                 </Typography>
-                <Typography sx={{ color: '#7f8c8d', mb: 2 }}>
-                  Student ID: S12345 • Class: 10th Grade • Section: A
+                <Typography sx={{
+                  color: '#7f8c8d',
+                  mb: { xs: 1.5, sm: 2 },
+                  fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' }
+                }}>
+                  {loading ? 'Loading student details...' : `Student ID: ${studentId} • Class: ${grade} • Section: ${section}`}
                 </Typography>
-                <Grid container spacing={4}>
+                <Box sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: { xs: 2, sm: 3, md: 4 },
+                  justifyContent: { xs: 'center', sm: 'flex-start' },
+                  '& > *': {
+                    flex: { xs: '1 1 45%', sm: '1 1 22%' },
+                    minWidth: { xs: '100px', sm: '120px', md: '140px' }
+                  }
+                }}>
                   {[
                     { value: '82%', label: 'Average Score' },
                     { value: '15', label: 'Exams Taken' },
                     { value: '12', label: 'Certificates' },
                     { value: '#5', label: 'Class Rank' },
                   ].map((stat) => (
-                    <Grid item xs={6} sm={3} key={stat.label}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#6a11cb' }}>
-                          {stat.value}
-                        </Typography>
-                        <Typography sx={{ fontSize: '14px', color: '#7f8c8d' }}>
-                          {stat.label}
-                        </Typography>
-                      </Box>
-                    </Grid>
+                    <Box key={stat.label} sx={{ textAlign: 'center' }}>
+                      <Typography sx={{ fontSize: '24px', fontWeight: 700, color: '#6a11cb' }}>
+                        {stat.value}
+                      </Typography>
+                      <Typography sx={{ fontSize: '14px', color: '#7f8c8d' }}>
+                        {stat.label}
+                      </Typography>
+                    </Box>
                   ))}
-                </Grid>
+                </Box>
               </Box>
             </Box>
           </CardContent>
         </Card>
 
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Box sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: { xs: 1.5, sm: 2, md: 3 },
+          mb: { xs: 2, sm: 3, md: 4 },
+          '& > *': {
+            flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 18px)' },
+            minWidth: { xs: '150px', sm: '180px', md: '150px' }
+          }
+        }}>
           {[
             { icon: <Schedule />, value: '3', label: 'Upcoming Exams', color: '#28a745' },
             { icon: <TrendingUp />, value: '+7%', label: 'Progress This Month', color: '#1a73e8' },
             { icon: <School />, value: '24h', label: 'Total Study Time', color: '#e37400' },
             { icon: <EmojiEvents />, value: 'Top 10%', label: 'School Ranking', color: '#dc3545' },
           ].map((stat) => (
-            <Grid item xs={12} sm={6} md={3} key={stat.label}>
-              <Card sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: `${stat.color}20`,
-                        color: stat.color,
-                        width: 60,
-                        height: 60,
-                        mr: 2,
-                      }}
-                    >
-                      {stat.icon}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                        {stat.value}
-                      </Typography>
-                      <Typography sx={{ color: '#7f8c8d', fontSize: '14px' }}>
-                        {stat.label}
-                      </Typography>
-                    </Box>
+            <Card key={stat.label} sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)', transition: "all 0.3s ease" }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: `${stat.color}20`,
+                      color: stat.color,
+                      width: 60,
+                      height: 60,
+                      mr: 2,
+                    }}
+                  >
+                    {stat.icon}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                      {stat.value}
+                    </Typography>
+                    <Typography sx={{ color: '#7f8c8d', fontSize: '14px' }}>
+                      {stat.label}
+                    </Typography>
                   </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                </Box>
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
+        </Box>
 
         {/* Performance Chart */}
-        <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 3 }}>
+        <Card sx={{
+          mb: { xs: 2, sm: 3, md: 4 },
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Typography variant="h6" sx={{
+              fontWeight: 600,
+              color: '#2c3e50',
+              mb: { xs: 2, sm: 3 },
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}>
               Performance Trend
             </Typography>
-            <Box sx={{ height: 300 }}>
+            <Box sx={{ height: { xs: 250, sm: 280, md: 300 } }}>
               <Line data={chartData} options={chartOptions} />
             </Box>
           </CardContent>
         </Card>
 
         {/* Subject Performance */}
-        <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50', mb: 3 }}>
+        <Card sx={{
+          mb: { xs: 2, sm: 3, md: 4 },
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Typography variant="h6" sx={{
+              fontWeight: 600,
+              color: '#2c3e50',
+              mb: { xs: 2, sm: 3 },
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}>
               Subject Performance
             </Typography>
-            <Grid container spacing={3}>
+            <Box sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: { xs: 2, sm: 2.5, md: 3 },
+              '& > *': {
+                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 10px)', md: '1 1 calc(33.333% - 20px)' },
+                minWidth: { xs: '150px', sm: '200px', md: '150px' }
+              }
+            }}>
               {[
                 { name: 'Mathematics', score: 88, exams: 7, certificates: 5 },
                 { name: 'Science', score: 79, exams: 5, certificates: 3 },
                 { name: 'History', score: 72, exams: 3, certificates: 2 },
               ].map((subject) => (
-                <Grid item xs={12} md={4} key={subject.name}>
-                  <Box sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography sx={{ fontWeight: 600 }}>{subject.name}</Typography>
-                      <Typography sx={{ fontWeight: 700 }}>{subject.score}%</Typography>
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={subject.score}
-                      sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        mb: 1,
-                        bgcolor: '#e9ecef',
-                        '& .MuiLinearProgress-bar': {
-                          bgcolor: getProgressColor(subject.score),
-                          borderRadius: 4,
-                        },
-                      }}
-                    />
-                    <Typography sx={{ fontSize: '12px', color: '#7f8c8d' }}>
-                      {subject.exams} exams • {subject.certificates} certificates
-                    </Typography>
+                <Box key={subject.name} sx={{ p: 2, bgcolor: '#f8f9fa', borderRadius: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography sx={{ fontWeight: 600 }}>{subject.name}</Typography>
+                    <Typography sx={{ fontWeight: 700 }}>{subject.score}%</Typography>
                   </Box>
-                </Grid>
+                  <LinearProgress
+                    variant="determinate"
+                    value={subject.score}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      mb: 1,
+                      bgcolor: '#e9ecef',
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: getProgressColor(subject.score),
+                        borderRadius: 4,
+                      },
+                    }}
+                  />
+                  <Typography sx={{ fontSize: '12px', color: '#7f8c8d' }}>
+                    {subject.exams} exams • {subject.certificates} certificates
+                  </Typography>
+                </Box>
               ))}
-            </Grid>
+            </Box>
           </CardContent>
         </Card>
 
         {/* Exam History */}
-        <Card sx={{ borderRadius: 2, boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+        <Card sx={{
+          borderRadius: { xs: 1.5, sm: 2 },
+          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
+          transition: "all 0.3s ease"
+        }}>
+          <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: { xs: 2, sm: 3 },
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: { xs: 1, sm: 0 }
+            }}>
+              <Typography variant="h6" sx={{
+                fontWeight: 600,
+                color: '#2c3e50',
+                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
+                textAlign: { xs: 'center', sm: 'left' }
+              }}>
                 Recent Exam History
               </Typography>
-              <Button variant="outlined">View Full History</Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{
+                  fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
+                  padding: { xs: '6px 12px', sm: '8px 16px' }
+                }}
+              >
+                View Full History
+              </Button>
             </Box>
 
             <TableContainer>
@@ -410,8 +453,8 @@ const StudentProgressPage = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {examHistoryData.map((exam, index) => (
-                    <TableRow key={index} sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
+                  {examHistoryData.map((exam) => (
+                    <TableRow key={`${exam.examName}-${exam.date}`} sx={{ '&:hover': { bgcolor: '#f8f9fa' } }}>
                       <TableCell>
                         <Typography sx={{ fontWeight: 500 }}>{exam.examName}</Typography>
                         <Typography sx={{ fontSize: '12px', color: '#7f8c8d' }}>
@@ -443,7 +486,7 @@ const StudentProgressPage = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Button variant="outlined" size="small">
+                        <Button variant="outlined" color="secondary" size="small">
                           Review
                         </Button>
                       </TableCell>
@@ -469,7 +512,6 @@ const StudentProgressPage = () => {
             </Box>
           </CardContent>
         </Card>
-      </Box>
     </Box>
   );
 };

@@ -14,6 +14,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
+// cSpell:ignore chartjs
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 
 import dynamic from 'next/dynamic';
@@ -43,14 +44,9 @@ export default function Home() {
   const isMobile = useMediaQuery('(max-width:767px)');
   const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
-
-  useEffect(() => {
-    setSidebarOpen(isDesktop);
-  }, [isDesktop, isTablet]);
-
-  const stats = [
+  const [stats, setStats] = useState([
     {
-      title: '1,247',
+      title: 'Loading...',
       subtitle: 'Total Students',
       trend: '12% increase this month',
       trendUp: true,
@@ -85,7 +81,63 @@ export default function Home() {
       color: 'white',
       bgColor: 'linear-gradient(135deg, #f44336, #ef5350)',
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    // Check if user is logged in and is admin
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const role = localStorage.getItem("role") || sessionStorage.getItem("role");
+
+    if (!token || role !== "admin") {
+      router.push("/");
+      return;
+    }
+
+    setSidebarOpen(isDesktop);
+    fetchStats();
+  }, [isDesktop, isTablet, router]);
+
+  const fetchStats = async () => {
+    try {
+      // Fetch students count
+      const studentsRes = await fetch('/api/students');
+      const studentsData = await studentsRes.json();
+      let studentCount = 0;
+      if (studentsData.success) {
+        studentCount = studentsData.data.length;
+      }
+
+      // Fetch exams count
+      const examsRes = await fetch('/api/exams');
+      const examsData = await examsRes.json();
+      let activeExamsCount = 0;
+      if (Array.isArray(examsData)) {
+        activeExamsCount = examsData.filter((exam: any) => exam.status === 'active').length;
+      }
+
+      // Fetch questions count
+      const questionsRes = await fetch('/api/questions');
+      const questionsData = await questionsRes.json();
+      let totalQuestions = 0;
+      if (Array.isArray(questionsData)) {
+        totalQuestions = questionsData.length;
+      }
+
+      setStats(prevStats => prevStats.map(stat => {
+        if (stat.subtitle === 'Total Students') {
+          return { ...stat, title: studentCount.toString() };
+        } else if (stat.subtitle === 'Active Exams') {
+          return { ...stat, title: activeExamsCount.toString() };
+        } else if (stat.subtitle === 'Questions in Bank') {
+          return { ...stat, title: totalQuestions.toString() };
+        }
+        return stat;
+      }));
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
 
   const examActivityData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -297,8 +349,12 @@ export default function Home() {
   ];
 
   const handleActionClick = (title: string) => {
-    alert(`Navigating to: ${title}`);
-    // In a real application, this would redirect to the appropriate page
+    if (title === 'System Settings') {
+      router.push('/admin-pages/Settings');
+    } else {
+      alert(`Navigating to: ${title}`);
+      // In a real application, this would redirect to the appropriate page
+    }
   };
 
   return (
@@ -318,7 +374,11 @@ export default function Home() {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
+        ml: sidebarOpen && !isMobile && !isTablet ? '220px' : 0,
+        transition: 'margin-left 0.3s ease',
+        paddingTop: { xs: '50px', md: '80px' }
+      }}>
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
 
         {/* Stats Cards */}
@@ -349,7 +409,7 @@ export default function Home() {
         </Box>
 
         {/* Recent Activity */}
-        <Paper
+        {/* <Paper
           elevation={1}
           sx={{
             padding: '25px',
@@ -370,10 +430,10 @@ export default function Home() {
             Recent System Activity
           </Typography>
           <ActivityList activities={activities} />
-        </Paper>
+        </Paper> */}
 
         {/* Quick Actions */}
-        <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
+        {/* <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
           <Typography
             variant="h6"
             sx={{
@@ -391,7 +451,7 @@ export default function Home() {
               <QuickActionCard key={action.title} action={action} onClick={handleActionClick} />
             ))}
           </div>
-        </Paper>
+        </Paper> */}
       </Box>
     </Box>
   );

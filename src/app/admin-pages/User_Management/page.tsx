@@ -25,17 +25,16 @@ import {
   Select,
   MenuItem,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
-import { Add, Edit, Delete, VpnKey, Download, Menu, PersonAdd } from "@mui/icons-material";
-import { useMediaQuery } from "@mui/material";
-import dynamic from 'next/dynamic';
+import { Edit, Delete, VpnKey, Download, PersonAdd } from "@mui/icons-material";
+import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
 import AddUserModal from "../../components/AddUserModal";
 import EditUserModal from "../../components/EditUserModal";
 import ConfirmDeleteDialog from "@/app/components/ConfirmDeleteModal";
 
-const Header = dynamic(() => import('../../components/Header'), { ssr: false });
-
+const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
 interface User {
   user_id: number;
@@ -81,8 +80,16 @@ const UserManagement: React.FC = () => {
       try {
         const res = await fetch("/api/users", { signal: controller.signal });
         const data = await res.json();
+
         if (data.success) {
-          setUsers(data.data);
+          const normalized = data.data.map((u: any) => ({
+            ...u,
+            grade: u.student_details?.grade || "",
+            section: u.student_details?.section || "",
+            department: u.department || "",
+          }));
+
+          setUsers(normalized);
         } else {
           console.error("Failed to fetch users:", data.error);
         }
@@ -94,13 +101,25 @@ const UserManagement: React.FC = () => {
     };
 
     fetchUsers();
-
     return () => controller.abort();
   }, []);
 
   // Filter users by tab + search + filters
   useEffect(() => {
-    const role = tabIndex === 0 ? "student" : tabIndex === 1 ? "teacher" : "admin";
+    const getRoleByTabIndex = (index: number): string => {
+      switch (index) {
+        case 0:
+          return "student";
+        case 1:
+          return "teacher";
+        case 2:
+          return "admin";
+        default:
+          return "student";
+      }
+    };
+
+    const role = getRoleByTabIndex(tabIndex);
     const filtered = users.filter((user) => {
       const fullName = `${user.first_name} ${user.last_name}`;
       const matchesSearch =
@@ -109,10 +128,12 @@ const UserManagement: React.FC = () => {
 
       const matchesStatus = !statusFilter || user.status === statusFilter;
 
-      const userClass =
-        user.grade || user.section
-          ? `${user.grade || ""}${user.section ? ` - ${user.section}` : ""}`
-          : "";
+      const getUserClass = (user: User): string => {
+        if (!user.grade && !user.section) return "";
+        return `${user.grade || ""}${user.section ? " - " + user.section : ""}`;
+      };
+
+      const userClass = getUserClass(user);
       const matchesClass = !classFilter || userClass === classFilter;
 
       const matchesTab = user.role === role;
@@ -124,16 +145,20 @@ const UserManagement: React.FC = () => {
 
   // Paginate
   const startIndex = (currentPage - 1) * usersPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    startIndex,
+    startIndex + usersPerPage
+  );
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
   // Unique class/group list
+  const getUserClass = (user: User): string => {
+    if (!user.grade && !user.section) return "";
+    return `${user.grade || ""}${user.section ? " - " + user.section : ""}`;
+  };
+
   const classGroups = Array.from(
-    new Set(
-      users
-        .filter((u) => u.grade || u.section)
-        .map((u) => `${u.grade || ""}${u.section ? ` - ${u.section}` : ""}`)
-    )
+    new Set(users.filter((u) => u.grade || u.section).map(getUserClass))
   );
 
   // Color helpers
@@ -171,43 +196,84 @@ const UserManagement: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.user_id }),
       });
+      
       const data = await res.json();
+      
       if (data.success) {
+        // Update the users list immediately
         setUsers((prev) => prev.filter((u) => u.user_id !== user.user_id));
+        
+        // Show success message
+        alert(`✅ User "${user.first_name} ${user.last_name}" has been deleted successfully.`);
       } else {
+        // Show error message
+        alert(`❌ Failed to delete user: ${data.error || "Unknown error"}`);
         console.error("Delete failed:", data.error);
       }
     } catch (err) {
+      const errorMessage = "Network error or server unavailable";
+      alert(`❌ ${errorMessage}`);
       console.error("Error deleting user:", err);
+    } finally {
+      // Always close the confirm dialog
+      setConfirmDeleteOpen(false);
+      setSelectedUser(null);
     }
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "grey.50" }}
+    >
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
             zIndex: 999,
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="User Management" sidebarOpen={sidebarOpen} />
+      <Box
+        className={`main-content ${
+          sidebarOpen ? "sidebar-open" : "sidebar-closed"
+        }`}
+        sx={{
+          ml: sidebarOpen && isDesktop ? "220px" : 0,
+          transition: "margin-left 0.3s ease",
+          paddingTop: { xs: "50px", md: "80px" },
+        }}
+      >
+        <Header
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          title="User Management"
+          sidebarOpen={sidebarOpen}
+        />
 
         {/* Filters Section */}
-        <Paper elevation={1} sx={{ padding: '20px', marginBottom: '25px', borderRadius: '10px' }}>
-          <Typography variant="h6" sx={{ marginBottom: '15px', color: 'text.primary' }}>
+        <Paper
+          elevation={1}
+          sx={{ padding: "20px", marginBottom: "25px", borderRadius: "10px" }}
+        >
+          <Typography
+            variant="h6"
+            sx={{ marginBottom: "15px", color: "text.primary" }}
+          >
             Filter Users
           </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 2,
+            }}
+          >
             <TextField
               label="Search"
               variant="outlined"
@@ -246,15 +312,33 @@ const UserManagement: React.FC = () => {
               </Select>
             </FormControl>
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
-            <Button variant="outlined" onClick={() => {
-              setSearch("");
-              setStatusFilter("");
-              setClassFilter("");
-            }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 2,
+              marginTop: "15px",
+            }}
+          >
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("");
+                setClassFilter("");
+              }}
+            >
               Reset Filters
             </Button>
-            <Button variant="contained" onClick={() => {}}>
+            <Button
+              variant="contained"
+              onClick={() => {}}
+              sx={{
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
+              }}
+            >
               Apply Filters
             </Button>
             <Button
@@ -302,17 +386,40 @@ const UserManagement: React.FC = () => {
         </Paper>
 
         {/* Users Table */}
-        <Paper elevation={1} sx={{ borderRadius: '10px', overflow: 'hidden' }}>
-          <Box sx={{ padding: '20px', borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6" sx={{ color: 'text.primary' }}>
-                {tabIndex === 0
-                  ? "All Students"
-                  : tabIndex === 1
-                  ? "All Teachers"
-                  : "All Administrators"}
+        <Paper elevation={1} sx={{ borderRadius: "10px", overflow: "hidden" }}>
+          <Box
+            sx={{
+              padding: "20px",
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="h6" sx={{ color: "text.primary" }}>
+                {(() => {
+                  switch (tabIndex) {
+                    case 0:
+                      return "All Students";
+                    case 1:
+                      return "All Teachers";
+                    case 2:
+                      return "All Administrators";
+                    default:
+                      return "All Users";
+                  }
+                })()}
               </Typography>
-              <Button variant="outlined" startIcon={<Download />}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<Download />}
+              >
                 Export Users
               </Button>
             </Box>
@@ -325,26 +432,32 @@ const UserManagement: React.FC = () => {
           ) : (
             <TableContainer>
               <Table>
-                <TableHead sx={{ backgroundColor: 'grey.50' }}>
+                <TableHead sx={{ backgroundColor: "grey.50" }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>User</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Class/Group</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Last Login</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>User</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Role</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Class/Group
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Last Login
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
 
                 <TableBody>
                   {paginatedUsers.map((user) => {
                     const fullName = `${user.first_name} ${user.last_name}`;
-                    const classGroup =
-                      user.grade || user.section
-                        ? `${user.grade || ""}${
-                            user.section ? ` - ${user.section}` : ""
-                          }`
-                        : "-";
+                    const getDisplayClass = (user: User): string => {
+                      if (!user.grade && !user.section) return "-";
+                      return `${user.grade || ""}${
+                        user.section ? " - " + user.section : ""
+                      }`;
+                    };
+
+                    const classGroup = getDisplayClass(user);
 
                     return (
                       <TableRow key={user.user_id} hover>
@@ -373,7 +486,7 @@ const UserManagement: React.FC = () => {
                               user.role.charAt(0).toUpperCase() +
                               user.role.slice(1)
                             }
-                            color={getRoleColor(user.role) as any}
+                            color={getRoleColor(user.role)}
                             size="small"
                           />
                         </TableCell>
@@ -386,7 +499,7 @@ const UserManagement: React.FC = () => {
                               user.status.charAt(0).toUpperCase() +
                               user.status.slice(1)
                             }
-                            color={getStatusColor(user.status) as any}
+                            color={getStatusColor(user.status)}
                             size="small"
                           />
                         </TableCell>
@@ -413,7 +526,9 @@ const UserManagement: React.FC = () => {
                                 size="small"
                                 color="warning"
                                 onClick={() => {
-                                  alert(`Password reset email sent to ${fullName}`);
+                                  alert(
+                                    `Password reset email sent to ${fullName}`
+                                  );
                                 }}
                               >
                                 <VpnKey />
@@ -443,7 +558,9 @@ const UserManagement: React.FC = () => {
           )}
 
           {/* Pagination */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "center", padding: "20px" }}
+          >
             <Pagination
               count={totalPages}
               page={currentPage}
@@ -459,18 +576,37 @@ const UserManagement: React.FC = () => {
         open={addUserOpen}
         onClose={() => setAddUserOpen(false)}
         onUserAdded={(newUser) => setUsers((prev) => [...prev, newUser])}
-        defaultRole={tabIndex === 0 ? "student" : tabIndex === 1 ? "teacher" : "admin"}
+        defaultRole={(() => {
+          switch (tabIndex) {
+            case 0:
+              return "student";
+            case 1:
+              return "teacher";
+            case 2:
+              return "admin";
+            default:
+              return "student";
+          }
+        })()}
       />
 
       <EditUserModal
         open={editUserOpen}
         onClose={() => setEditUserOpen(false)}
         user={selectedUser}
-        onUserUpdated={(updated) =>
+        onUserUpdated={(updated) => {
+          // Normalize the updated user data to match the expected format
+          const normalizedUser = {
+            ...updated,
+            grade: updated.student_details?.grade || "",
+            section: updated.student_details?.section || "",
+            department: updated.department || "",
+          };
+          
           setUsers((prev) =>
-            prev.map((u) => (u.user_id === updated.user_id ? updated : u))
-          )
-        }
+            prev.map((u) => (u.user_id === updated.user_id ? normalizedUser : u))
+          );
+        }}
       />
 
       <ConfirmDeleteDialog

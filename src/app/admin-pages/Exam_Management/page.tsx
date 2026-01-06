@@ -1,5 +1,5 @@
-"use client"
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -24,126 +24,331 @@ import {
   DialogActions,
   Pagination,
   Stack,
-  Avatar,
-} from '@mui/material';
+  useMediaQuery,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import { Grid } from "@mui/material";
 import {
   Edit,
   Visibility,
   Delete,
   BarChart,
-  Add,
   Search,
-  FilterList,
-  Menu,
-} from '@mui/icons-material';
-import { useMediaQuery } from '@mui/material';
+  Add,
+  Timer,
+  Assignment,
+  Group,
+  Settings,
+  CalendarToday,
+  People,
+  AccessTime,
+  Assessment,
+  PlayArrow,
+  LiveTv,
+} from "@mui/icons-material";
 
-import dynamic from 'next/dynamic';
-import Sidebar from '../../components/Sidebar';
+import dynamic from "next/dynamic";
+import Sidebar from "../../components/Sidebar";
+import CreateExamModal from "../../components/CreateExamModal";
+import EditExamModal from "../../components/EditExamModal";
+import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
+import AssignExamModal from "../../components/AssignExamModal";
 
-const Header = dynamic(() => import('../../components/Header'), { ssr: false });
+const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
 interface Exam {
   id: number;
-  name: string;
-  subject: string;
-  status: 'active' | 'draft' | 'completed' | 'inactive';
-  questions: number;
-  duration: string;
-  created: string;
-  participants: number | string;
-  section?: string;
+  exam_name: string;
+  subject_name: string;
+  topic_name: string;
+  subject_id: number;
+  topic_id: number;
+  exam_type: "practice" | "mock" | "live";
+  status: "active" | "draft" | "completed" | "inactive";
+  questions_count: number;
+  duration_minutes: number;
+  created_at: string;
+  total_participants: number;
 }
 
 const ExamManagement: React.FC = () => {
-  const isDesktop = useMediaQuery('(min-width:769px)');
+  const isDesktop = useMediaQuery("(min-width:769px)");
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [subjectFilter, setSubjectFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+
+  // Filter states
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number>(0);
+  const [selectedTopicId, setSelectedTopicId] = useState<number>(0);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [topics, setTopics] = useState<any[]>([]);
+  const [allExams, setAllExams] = useState<Exam[]>([]);
+  const [filteredExams, setFilteredExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Modal states
+  const [createExamModalOpen, setCreateExamModalOpen] = useState(false);
+  const [examTypeSelection, setExamTypeSelection] = useState<
+    "select" | "practice" | "mock" | "live" | ""
+  >("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignExamId, setAssignExamId] = useState<number | null>(null);
+
+  // Question availability states
+  const [questionCounts, setQuestionCounts] = useState<{
+    [key: string]: number;
+  }>({});
+  const [loadingCounts, setLoadingCounts] = useState(false);
+
+  // Form states for different exam types
+  const [practiceExamForm, setPracticeExamForm] = useState({
+    examName: "",
+    subjects: [] as { subjectId: number; questionCount: number }[],
+    totalMarks: 0,
+    randomizeQuestions: true,
+    showResults: true,
+    allowReview: true,
+  });
+
+  const [mockExamForm, setMockExamForm] = useState({
+    examName: "",
+    selectedSubjectId: 0,
+    topics: [] as { topicId: number; questionCount: number }[],
+    totalDuration: 60,
+    totalMarks: 0,
+    negativeMarking: false,
+    passPercentage: 50,
+    startDate: "",
+    endDate: "",
+    proctoring: false,
+    randomizeQuestions: false,
+  });
+
+  const [liveExamForm, setLiveExamForm] = useState({
+    examName: "",
+    selectedSubjectId: 0,
+    topics: [] as { topicId: number; questionCount: number }[],
+    totalDuration: 60,
+    totalMarks: 0,
+    startDateTime: "",
+    participantCapacity: 100,
+    registrationDeadline: "",
+    proctoringEnabled: true,
+    autoSubmit: true,
+    allowCamera: true,
+    requireID: true,
+  });
 
   useEffect(() => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
 
-  const [exams, setExams] = useState<Exam[]>([
-    {
-      id: 1,
-      name: 'Mathematics Midterm',
-      subject: 'Mathematics',
-      status: 'active',
-      questions: 30,
-      duration: '45 min',
-      created: 'Oct 10, 2023',
-      participants: 125,
-      section: 'Grade 10 - Section A',
-    },
-    {
-      id: 2,
-      name: 'Science Quiz',
-      subject: 'Science',
-      status: 'active',
-      questions: 20,
-      duration: '30 min',
-      created: 'Oct 15, 2023',
-      participants: 89,
-      section: 'Grade 9 - All Sections',
-    },
-    {
-      id: 3,
-      name: 'History Final Exam',
-      subject: 'History',
-      status: 'draft',
-      questions: 40,
-      duration: '60 min',
-      created: 'Oct 18, 2023',
-      participants: '-',
-      section: 'Grade 11 - Section B',
-    },
-    {
-      id: 4,
-      name: 'Algebra Basics',
-      subject: 'Mathematics',
-      status: 'completed',
-      questions: 25,
-      duration: '35 min',
-      created: 'Sep 28, 2023',
-      participants: 142,
-      section: 'Grade 8 - Section C',
-    },
-    {
-      id: 5,
-      name: 'Physics Test',
-      subject: 'Science',
-      status: 'inactive',
-      questions: 35,
-      duration: '50 min',
-      created: 'Sep 15, 2023',
-      participants: 78,
-      section: 'Grade 12 - All Sections',
-    },
-  ]);
+  // Fetch subjects and topics
+  const fetchSubjects = async () => {
+    try {
+      const res = await fetch("/api/subjects");
+      const data = await res.json();
+      if (Array.isArray(data)) setSubjects(data);
+      else if (Array.isArray(data.data)) setSubjects(data.data);
+      else setSubjects([]);
+    } catch (err) {
+      console.error("Error fetching subjects:", err);
+      setSubjects([]);
+    }
+  };
 
-  const subjects = ['Mathematics', 'Science', 'History', 'English', 'Geography'];
-  const statuses = ['active', 'draft', 'completed', 'inactive'];
+  const fetchTopicsForSubject = async (subjectId: number) => {
+    if (!subjectId) {
+      setTopics([]);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/subjects");
+      const data = await res.json();
+      const subjectsData = Array.isArray(data)
+        ? data
+        : Array.isArray(data.data)
+        ? data.data
+        : [];
+      const subject = subjectsData.find((s: any) => s.subject_id === subjectId);
+
+      if (subject && subject.topics) {
+        setTopics(subject.topics);
+      } else {
+        setTopics([]);
+      }
+    } catch (err) {
+      console.error("Error fetching topics:", err);
+      setTopics([]);
+    }
+  };
+
+  const fetchExams = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/exams");
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setAllExams(data);
+        setFilteredExams(data);
+      } else {
+        setAllExams([]);
+        setFilteredExams([]);
+      }
+    } catch (err) {
+      console.error("Error fetching exams:", err);
+      setAllExams([]);
+      setFilteredExams([]);
+    }
+    setLoading(false);
+  };
+
+  const fetchQuestionCounts = async () => {
+    setLoadingCounts(true);
+    try {
+      const res = await fetch("/api/questions/counts");
+      const data = await res.json();
+      setQuestionCounts(data);
+    } catch (err) {
+      console.error("Error fetching question counts:", err);
+      setQuestionCounts({});
+    }
+    setLoadingCounts(false);
+  };
+
+  useEffect(() => {
+    fetchSubjects();
+    fetchExams();
+    fetchQuestionCounts();
+  }, []);
+
+  // Filter exams based on subject and topic
+  useEffect(() => {
+    let filtered = allExams;
+
+    // Filter by subject
+    if (selectedSubjectId) {
+      filtered = filtered.filter(
+        (exam) => exam.subject_id === selectedSubjectId
+      );
+    }
+
+    // Filter by topic
+    if (selectedTopicId) {
+      filtered = filtered.filter((exam) => exam.topic_id === selectedTopicId);
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (exam) =>
+          exam.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          exam.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          exam.topic_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredExams(filtered);
+    setCurrentPage(1);
+  }, [allExams, selectedSubjectId, selectedTopicId, searchTerm]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'success';
-      case 'draft':
-        return 'warning';
-      case 'completed':
-        return 'info';
-      case 'inactive':
-        return 'error';
+      case "active":
+        return "success";
+      case "draft":
+        return "warning";
+      case "completed":
+        return "info";
+      case "inactive":
+        return "error";
       default:
-        return 'default';
+        return "default";
     }
+  };
+
+  const getExamTypeColor = (type: string) => {
+    switch (type) {
+      case "practice":
+        return "primary";
+      case "mock":
+        return "secondary";
+      case "live":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  const handleSearch = () => {
+    // Search is automatically handled by useEffect
+  };
+
+  const handleReset = () => {
+    setSelectedSubjectId(0);
+    setSelectedTopicId(0);
+    setSearchTerm("");
+    setTopics([]);
+  };
+
+  const handleSubjectChange = (subjectId: number) => {
+    setSelectedSubjectId(subjectId);
+    setSelectedTopicId(0);
+    fetchTopicsForSubject(subjectId);
+  };
+
+  const handleCreateExam = () => {
+    setExamTypeSelection("select");
+    setCreateExamModalOpen(true);
+    fetchQuestionCounts();
+  };
+
+  const handleCloseCreateModal = () => {
+    setCreateExamModalOpen(false);
+    setExamTypeSelection("");
+    // Reset all forms
+    setPracticeExamForm({
+      examName: "",
+      subjects: [],
+      totalMarks: 0,
+      randomizeQuestions: true,
+      showResults: true,
+      allowReview: true,
+    });
+    setMockExamForm({
+      examName: "",
+      selectedSubjectId: 0,
+      topics: [],
+      totalDuration: 60,
+      totalMarks: 0,
+      negativeMarking: false,
+      passPercentage: 50,
+      startDate: "",
+      endDate: "",
+      proctoring: false,
+      randomizeQuestions: false,
+    });
+    setLiveExamForm({
+      examName: "",
+      selectedSubjectId: 0,
+      topics: [],
+      totalDuration: 60,
+      totalMarks: 0,
+      startDateTime: "",
+      participantCapacity: 100,
+      registrationDeadline: "",
+      proctoringEnabled: true,
+      autoSubmit: true,
+      allowCamera: true,
+      requireID: true,
+    });
   };
 
   const handleEditClick = (exam: Exam) => {
@@ -157,307 +362,644 @@ const ExamManagement: React.FC = () => {
   };
 
   const handleViewClick = (exam: Exam) => {
-    alert(`Viewing exam: ${exam.name}`);
+    alert(`Viewing exam: ${exam.exam_name}`);
   };
 
   const handleResultsClick = (exam: Exam) => {
-    alert(`Viewing results for: ${exam.name}`);
-  };
-
-  const handleCreateExam = () => {
-    alert('Redirecting to create exam page...');
-  };
-
-  const handleApplyFilters = () => {
-    alert(`Applying filters: Search="${searchTerm}", Subject="${subjectFilter}", Status="${statusFilter}"`);
-  };
-
-  const handleResetFilters = () => {
-    setSearchTerm('');
-    setSubjectFilter('');
-    setStatusFilter('');
+    alert(`Viewing results for: ${exam.exam_name}`);
   };
 
   const handleEditSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    alert('Exam details updated successfully');
+    alert("Exam details updated successfully");
     setEditModalOpen(false);
   };
 
-  const handleDeleteConfirm = () => {
-    alert('Exam deleted successfully');
-    setDeleteModalOpen(false);
+  const handleDeleteConfirm = async () => {
+    if (!selectedExam) return;
+
+    try {
+      const res = await fetch("/api/exams", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examId: selectedExam.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Exam deleted successfully");
+        fetchExams(); // Refresh the list
+        setDeleteModalOpen(false);
+        setSelectedExam(null);
+      } else {
+        alert(data.message || "Error deleting exam");
+      }
+    } catch (err) {
+      console.error("Error deleting exam:", err);
+      alert("Error deleting exam");
+    }
   };
 
-  const filteredExams = exams.filter((exam) => {
-    const matchesSearch = exam.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSubject = subjectFilter === '' || exam.subject === subjectFilter;
-    const matchesStatus = statusFilter === '' || exam.status === statusFilter;
-    return matchesSearch && matchesSubject && matchesStatus;
-  });
+  const handleSubmitPracticeExam = async () => {
+    if (
+      !practiceExamForm.examName ||
+      practiceExamForm.subjects.length === 0 ||
+      practiceExamForm.totalMarks <= 0
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // Validate question counts
+    for (const subj of practiceExamForm.subjects) {
+      const available = questionCounts[`subject_${subj.subjectId}`] || 0;
+      if (subj.questionCount > available) {
+        alert(
+          `Not enough questions for subject ${
+            subjects.find((s) => s.subject_id === subj.subjectId)?.subject_name
+          }. Available: ${available}`
+        );
+        return;
+      }
+    }
+
+    const payload = {
+      exam_title: practiceExamForm.examName,
+      exam_type: "practice",
+      total_marks: practiceExamForm.totalMarks,
+      subject_configs: practiceExamForm.subjects.map((s) => ({
+        subject_id: s.subjectId,
+        question_count: s.questionCount,
+      })),
+      randomize_questions: practiceExamForm.randomizeQuestions,
+      show_results: practiceExamForm.showResults,
+      allow_review: practiceExamForm.allowReview,
+    };
+
+    try {
+      const res = await fetch("/api/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Practice exam created successfully!");
+        fetchExams();
+        handleCloseCreateModal();
+      } else {
+        alert(data.error || "Error creating exam");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error creating exam");
+    }
+  };
+
+  const handleSubmitMockExam = async () => {
+    if (
+      !mockExamForm.examName ||
+      mockExamForm.topics.length === 0 ||
+      !mockExamForm.startDate ||
+      !mockExamForm.endDate ||
+      mockExamForm.totalMarks <= 0 ||
+      mockExamForm.totalDuration <= 0
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // Validate question counts
+    for (const topic of mockExamForm.topics) {
+      const available = questionCounts[`topic_${topic.topicId}`] || 0;
+      if (topic.questionCount > available) {
+        alert(
+          `Not enough questions for topic ${
+            topics.find((t) => t.topic_id === topic.topicId)?.topic_name
+          }. Available: ${available}`
+        );
+        return;
+      }
+    }
+
+    const payload = {
+      exam_title: mockExamForm.examName,
+      exam_type: "mock",
+      total_marks: mockExamForm.totalMarks,
+      time_limit_minutes: mockExamForm.totalDuration,
+      scheduled_start: mockExamForm.startDate,
+      scheduled_end: mockExamForm.endDate,
+      topic_configs: mockExamForm.topics.map((t) => ({
+        topic_id: t.topicId,
+        question_count: t.questionCount,
+      })),
+      negative_marking: mockExamForm.negativeMarking,
+      pass_percentage: mockExamForm.passPercentage,
+      proctoring: mockExamForm.proctoring,
+      randomize_questions: mockExamForm.randomizeQuestions,
+    };
+
+    try {
+      const res = await fetch("/api/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Mock exam created successfully!");
+        fetchExams();
+        handleCloseCreateModal();
+      } else {
+        alert(data.error || "Error creating exam");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error creating exam");
+    }
+  };
+
+  const handleSubmitLiveExam = async () => {
+    if (
+      !liveExamForm.examName ||
+      liveExamForm.topics.length === 0 ||
+      !liveExamForm.startDateTime ||
+      liveExamForm.totalMarks <= 0 ||
+      liveExamForm.totalDuration <= 0
+    ) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    // Validate question counts
+    for (const topic of liveExamForm.topics) {
+      const available = questionCounts[`topic_${topic.topicId}`] || 0;
+      if (topic.questionCount > available) {
+        alert(
+          `Not enough questions for topic ${
+            topics.find((t) => t.topic_id === topic.topicId)?.topic_name
+          }. Available: ${available}`
+        );
+        return;
+      }
+    }
+
+    const payload = {
+      exam_title: liveExamForm.examName,
+      exam_type: "live",
+      total_marks: liveExamForm.totalMarks,
+      time_limit_minutes: liveExamForm.totalDuration,
+      scheduled_start: liveExamForm.startDateTime,
+      topic_configs: liveExamForm.topics.map((t) => ({
+        topic_id: t.topicId,
+        question_count: t.questionCount,
+      })),
+      participant_capacity: liveExamForm.participantCapacity,
+      registration_deadline: liveExamForm.registrationDeadline,
+      proctoring_enabled: liveExamForm.proctoringEnabled,
+      auto_submit: liveExamForm.autoSubmit,
+      allow_camera: liveExamForm.allowCamera,
+      require_id: liveExamForm.requireID,
+    };
+
+    try {
+      const res = await fetch("/api/exams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Live exam created successfully!");
+        fetchExams();
+        handleCloseCreateModal();
+      } else {
+        alert(data.error || "Error creating exam");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error creating exam");
+    }
+  };
+
+  const paginatedExams = filteredExams.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "grey.50" }}
+    >
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && !isDesktop && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
             zIndex: 999,
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{ paddingTop: { xs: '50px', md: '80px' } }}>
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} title="Exam Management" sidebarOpen={sidebarOpen} />
+      <Box
+        className={`main-content ${
+          sidebarOpen ? "sidebar-open" : "sidebar-closed"
+        }`}
+        sx={{
+          ml: sidebarOpen && isDesktop ? "220px" : 0,
+          transition: "margin-left 0.3s ease",
+          paddingTop: { xs: "50px", md: "80px" },
+        }}
+      >
+        <Header
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          title="Exam Management"
+          sidebarOpen={sidebarOpen}
+        />
 
-        {/* Filters Section */}
-        <Paper elevation={1} sx={{ padding: '20px', marginBottom: '25px', borderRadius: '10px' }}>
-          <Typography variant="h6" sx={{ marginBottom: '15px', color: 'text.primary' }}>
-            Filter Exams
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2 }}>
-            <TextField
-              fullWidth
-              label="Search"
-              placeholder="Search exams by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <Search sx={{ color: 'action.active', mr: 1 }} />,
+        {/* Search and Filter Section */}
+        <Paper
+          elevation={1}
+          sx={{ padding: "20px", marginBottom: "25px", borderRadius: "10px" }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 3,
+            }}
+          >
+            <Typography variant="h6" sx={{ color: "text.primary" }}>
+              Search & Filter Exams
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleCreateExam}
+              sx={{
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
               }}
-            />
-            <FormControl fullWidth>
-              <InputLabel>Subject</InputLabel>
-              <Select
-                value={subjectFilter}
-                label="Subject"
-                onChange={(e) => setSubjectFilter(e.target.value)}
-              >
-                <MenuItem value="">All Subjects</MenuItem>
-                {subjects.map((subject) => (
-                  <MenuItem key={subject} value={subject}>
-                    {subject}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="">All Statuses</MenuItem>
-                {statuses.map((status) => (
-                  <MenuItem key={status} value={status}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            >
+              Create New Exam
+            </Button>
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, marginTop: '15px' }}>
-            <Button variant="outlined" onClick={handleResetFilters}>
+
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <TextField
+                fullWidth
+                label="Search Exams"
+                placeholder="Search by exam name, subject, or topic..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <Search sx={{ color: "action.active", mr: 1 }} />
+                  ),
+                }}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <FormControl fullWidth>
+                <InputLabel>Select Subject</InputLabel>
+                <Select
+                  value={selectedSubjectId}
+                  onChange={(e) => handleSubjectChange(Number(e.target.value))}
+                  label="Select Subject"
+                >
+                  <MenuItem value={0}>All Subjects</MenuItem>
+                  {subjects.map((subject) => (
+                    <MenuItem
+                      key={subject.subject_id}
+                      value={subject.subject_id}
+                    >
+                      {subject.subject_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <FormControl fullWidth>
+                <InputLabel>Select Topic</InputLabel>
+                <Select
+                  value={selectedTopicId}
+                  onChange={(e) => setSelectedTopicId(Number(e.target.value))}
+                  label="Select Topic"
+                  disabled={!selectedSubjectId}
+                >
+                  <MenuItem value={0}>All Topics</MenuItem>
+                  {topics.map((topic) => (
+                    <MenuItem key={topic.topic_id} value={topic.topic_id}>
+                      {topic.topic_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          <Box
+            sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 2 }}
+          >
+            <Button variant="outlined" color="secondary" onClick={handleReset}>
               Reset Filters
             </Button>
             <Button
               variant="contained"
+              onClick={handleSearch}
               sx={{
-                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-                '&:hover': { opacity: 0.9 }
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
               }}
-              onClick={handleApplyFilters}
             >
-              Apply Filters
+              Search
             </Button>
           </Box>
         </Paper>
 
         {/* Exams Table */}
-        <Paper elevation={1} sx={{ borderRadius: '10px', overflow: 'hidden' }}>
-          <Box sx={{ padding: '20px', borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="h6" sx={{ color: 'text.primary' }}>
-              All Exams
+        <Paper elevation={1} sx={{ borderRadius: "10px", overflow: "hidden" }}>
+          <Box
+            sx={{
+              padding: "20px",
+              borderBottom: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Typography variant="h6" sx={{ color: "text.primary" }}>
+              Exams ({filteredExams.length})
             </Typography>
           </Box>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Exam Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Subject</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Questions</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Duration</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Created</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Participants</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredExams.map((exam) => (
-                  <TableRow key={exam.id} hover>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                          {exam.name}
-                        </Typography>
-                        {exam.section && (
-                          <Typography variant="body2" color="text.secondary">
-                            {exam.section}
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>{exam.subject}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={exam.status.charAt(0).toUpperCase() + exam.status.slice(1)}
-                        color={getStatusColor(exam.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{exam.questions}</TableCell>
-                    <TableCell>{exam.duration}</TableCell>
-                    <TableCell>{exam.created}</TableCell>
-                    <TableCell>{exam.participants}</TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1}>
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => handleEditClick(exam)}
-                        >
-                          <Edit />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => handleViewClick(exam)}
-                        >
-                          <Visibility />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteClick(exam)}
-                        >
-                          <Delete />
-                        </IconButton>
-                        {(exam.status === 'completed' || exam.status === 'inactive') && (
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            onClick={() => handleResultsClick(exam)}
-                          >
-                            <BarChart />
-                          </IconButton>
-                        )}
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
 
-          {/* Pagination */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
-            <Pagination
-              count={5}
-              page={currentPage}
-              onChange={(event, page) => setCurrentPage(page)}
-              color="primary"
-            />
-          </Box>
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: "grey.50" }}>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Exam Title
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Type</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>
+                        Duration (mins)
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedExams.length > 0 ? (
+                      paginatedExams.map((exam) => (
+                        <TableRow key={exam.id} hover>
+                          <TableCell>
+                            <Typography
+                              variant="body1"
+                              sx={{ fontWeight: "medium" }}
+                            >
+                              {exam.exam_name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                exam.exam_type.charAt(0).toUpperCase() +
+                                exam.exam_type.slice(1)
+                              }
+                              color={getExamTypeColor(exam.exam_type)}
+                              size="small"
+                              icon={
+                                exam.exam_type === "practice" ? (
+                                  <PlayArrow />
+                                ) : exam.exam_type === "mock" ? (
+                                  <Assessment />
+                                ) : (
+                                  <LiveTv />
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                exam.status.charAt(0).toUpperCase() +
+                                exam.status.slice(1)
+                              }
+                              color={getStatusColor(exam.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <Timer sx={{ fontSize: 16 }} />
+                              <Typography variant="body2">
+                                {exam.duration_minutes} min
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Stack direction="row" spacing={1}>
+                              <IconButton
+                                size="small"
+                                color="info"
+                                onClick={() => {
+                                  setAssignExamId(exam.id);
+                                  setAssignModalOpen(true);
+                                }}
+                              >
+                                <PersonAddAlt1Icon />
+                              </IconButton>
+
+                              {/* <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleEditClick(exam)}
+                              >
+                                <Edit />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="success"
+                                onClick={() => handleViewClick(exam)}
+                              >
+                                <Visibility />
+                              </IconButton> */}
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteClick(exam)}
+                              >
+                                <Delete />
+                              </IconButton>
+                              {(exam.status === "completed" ||
+                                exam.status === "inactive") && (
+                                <IconButton
+                                  size="small"
+                                  color="warning"
+                                  onClick={() => handleResultsClick(exam)}
+                                >
+                                  <BarChart />
+                                </IconButton>
+                              )}
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                          <Typography variant="body1" color="text.secondary">
+                            No exams found
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {filteredExams.length > itemsPerPage && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    padding: "20px",
+                  }}
+                >
+                  <Pagination
+                    count={Math.ceil(filteredExams.length / itemsPerPage)}
+                    page={currentPage}
+                    onChange={(event, page) => setCurrentPage(page)}
+                    color="primary"
+                  />
+                </Box>
+              )}
+            </>
+          )}
         </Paper>
 
+        <CreateExamModal
+          open={createExamModalOpen}
+          onClose={handleCloseCreateModal}
+          onSuccess={fetchExams}
+        />
+
         {/* Edit Exam Modal */}
-        <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)} maxWidth="md" fullWidth>
+        <Dialog
+          open={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
           <DialogTitle>Edit Exam</DialogTitle>
           <DialogContent>
             <Box component="form" onSubmit={handleEditSubmit} sx={{ mt: 2 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Exam Title"
-                  defaultValue={selectedExam?.name}
-                  required
-                />
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Subject</InputLabel>
-                    <Select defaultValue={selectedExam?.subject} label="Subject" required>
-                      {subjects.map((subject) => (
-                        <MenuItem key={subject} value={subject}>
-                          {subject}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl fullWidth>
-                    <InputLabel>Status</InputLabel>
-                    <Select defaultValue={selectedExam?.status} label="Status" required>
-                      {statuses.map((status) => (
-                        <MenuItem key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12 }}>
                   <TextField
                     fullWidth
-                    label="Time Limit (minutes)"
-                    type="number"
-                    defaultValue={selectedExam?.duration.replace(' min', '')}
-                    inputProps={{ min: 5 }}
+                    label="Exam Name"
+                    defaultValue={selectedExam?.exam_name}
                     required
                   />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Subject</InputLabel>
+                    <Select
+                      defaultValue={selectedExam?.subject_name}
+                      label="Subject"
+                      required
+                    >
+                      {subjects.map((subject) => (
+                        <MenuItem
+                          key={subject.subject_id}
+                          value={subject.subject_name}
+                        >
+                          {subject.subject_name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
-                    label="Total Questions"
+                    label="Duration (minutes)"
                     type="number"
-                    defaultValue={selectedExam?.questions}
+                    defaultValue={selectedExam?.duration_minutes}
                     inputProps={{ min: 1 }}
                     required
                   />
-                </Box>
-              </Box>
+                </Grid>
+              </Grid>
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditSubmit} variant="contained">
+            <Button
+              onClick={handleEditSubmit}
+              variant="contained"
+              sx={{
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
+              }}
+            >
               Save Changes
             </Button>
           </DialogActions>
         </Dialog>
 
         {/* Delete Confirmation Modal */}
-        <Dialog open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
+        <Dialog
+          open={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+        >
           <DialogTitle>Confirm Deletion</DialogTitle>
           <DialogContent>
             <Typography>
-              Are you sure you want to delete the exam "{selectedExam?.name}"? This action cannot be undone.
+              Are you sure you want to delete the exam "
+              {selectedExam?.exam_name}"? This action cannot be undone.
             </Typography>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            <Button
+              onClick={handleDeleteConfirm}
+              color="error"
+              variant="contained"
+            >
               Delete Exam
             </Button>
           </DialogActions>
         </Dialog>
+        {assignExamId && (
+          <AssignExamModal
+            open={assignModalOpen}
+            onClose={() => setAssignModalOpen(false)}
+            examId={assignExamId}
+          />
+        )}
       </Box>
     </Box>
-  );
+ );
 };
 
 export default ExamManagement;

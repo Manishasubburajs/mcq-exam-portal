@@ -64,17 +64,42 @@
 }
 
 @media (max-width: 767px) {
-  .sidebar {
-    position: fixed;
-    width: 180px;
-    left: -180px;
-    top: 0;
-    z-index: 1000;
-    transition: left 0.3s ease;
-    height: 100vh;
-  }
+   .sidebar {
+     position: fixed;
+     width: 280px;
+     left: -280px;
+     top: 0;
+     z-index: 1000;
+     transition: left 0.3s ease;
+     height: 100vh;
+     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+   }
 
-  .sidebar.open {
-    left: 0;
-  }
+   .sidebar:not(.closed) {
+     left: 0;
+   }
+
+   .sidebar.closed {
+     left: -280px;
+   }
+}
+
+
+@media (max-width: 480px) {
+   .sidebar {
+     width: 260px;
+     left: -260px;
+   }
+
+   .sidebar.closed {
+     left: -260px;
+   }
+}
+
+/* Tablet styles for iPad Mini, iPad Air, etc. */
+@media (min-width: 768px) and (max-width: 1023px) {
+   .sidebar {
+     top: 70px; /* Push down to avoid header overlap */
+     height: calc(100vh - 70px);
+   }
 }

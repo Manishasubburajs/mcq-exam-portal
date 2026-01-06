@@ -1,125 +1,178 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db"; // MySQL connection
+import { prisma } from "@/lib/db";
 
-// ========================
-// ✅ CREATE EXAM (POST)
-// ========================
-export async function POST(request: Request) {
+/* ===========================
+   GET: Fetch exams list
+=========================== */
+export async function GET() {
   try {
-    const data = await request.json();
-    const {
-      exam_title,
-      description,
-      subject_id,
-      time_limit_minutes,
-      total_marks,
-      scheduled_start,
-      scheduled_end,
-      created_by,
-      status,
-      questions,
-    } = data;
-
-    // 🧩 0️⃣ Check duplicate exam title within same subject
-    const [existing] = await db.query(
-      `SELECT exam_id FROM exams WHERE subject_id = ? AND exam_title = ?`,
-      [subject_id, exam_title]
-    );
-
-    if ((existing as any).length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Exam title already exists for this subject!",
+    const exams = await prisma.exams.findMany({
+      orderBy: { created_at: "desc" },
+      include: {
+        exam_subject_configs: {
+          include: {
+            subject: true,
+            topic: true,
+          },
         },
+      },
+    });
+
+    const transformedExams = exams.map(exam => ({
+      id: exam.exam_id,
+      exam_name: exam.exam_title,
+      exam_type: exam.exam_type,
+      status: exam.is_active ? "active" : "inactive",
+      questions_count: exam.question_count,
+      duration_minutes: exam.time_limit_minutes,
+      created_at: exam.created_at.toISOString(),
+
+      // OPTIONAL: first subject/topic only (safe)
+      subject_name: exam.exam_subject_configs[0]?.subject?.subject_name ?? "",
+      topic_name: exam.exam_subject_configs[0]?.topic?.topic_name ?? "",
+      subject_id: exam.exam_subject_configs[0]?.subject_id ?? null,
+      topic_id: exam.exam_subject_configs[0]?.topic_id ?? null,
+    }));
+
+    return NextResponse.json(transformedExams);
+  } catch (error) {
+    console.error("Error fetching exams:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch exams" },
+      { status: 500 }
+    );
+  }
+}
+
+/* ===========================
+   POST: Create exam
+=========================== */
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    const {
+      examTitle,
+      description,
+      examType,
+      duration,
+      startTime,
+      endTime,
+      topicCounts,
+    }: {
+      examTitle: string;
+      description: string;
+      examType: "practice" | "mock" | "live";
+      duration: number;
+      startTime?: string;
+      endTime?: string;
+      topicCounts: Record<number, number>;
+    } = body;
+
+    if (!examTitle || !examType || !duration || !topicCounts) {
+      return NextResponse.json(
+        { success: false, message: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // 🧩 1️⃣ Insert exam record
-    const [examResult] = await db.query(
-      `INSERT INTO exams 
-        (exam_title, description, subject_id, time_limit_minutes, total_marks, scheduled_start, scheduled_end, created_by, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        exam_title,
-        description,
-        subject_id,
-        time_limit_minutes,
-        total_marks,
-        scheduled_start,
-        scheduled_end,
-        created_by,
-        status,
-      ]
+    const totalQuestions = Object.values(topicCounts).reduce(
+      (sum, count) => sum + count,
+      0
     );
 
-    const exam_id = (examResult as any).insertId;
+    /* ---- Create Exam ---- */
+    const exam = await prisma.exams.create({
+      data: {
+        exam_title: examTitle,
+        description,
+        exam_type: examType,
+        time_limit_minutes: duration,
+        scheduled_start: startTime ? new Date(startTime) : null,
+        scheduled_end: endTime ? new Date(endTime) : null,
+        question_count: totalQuestions,
+      },
+    });
 
-    // 🧩 2️⃣ Insert related questions
-    if (questions && questions.length > 0) {
-      const questionValues = questions.map((q: any) => {
-        // Ensure correct_answer is one of A/B/C/D
-        const validAnswers = ["A", "B", "C", "D"];
-        if (!validAnswers.includes(q.correct_answer)) {
-          throw new Error(
-            `Invalid correct answer: ${q.correct_answer}. Must be A/B/C/D.`
-          );
+    /* ---- Prepare subject/topic configs ---- */
+    const configs = await Promise.all(
+      Object.entries(topicCounts).map(async ([topicId, count]) => {
+        const topic = await prisma.topics.findUnique({
+          where: { topic_id: Number(topicId) },
+        });
+
+        if (!topic) {
+          throw new Error(`Topic not found: ${topicId}`);
         }
 
-        return [
-          exam_id,
-          q.question_text,
-          q.option_a,
-          q.option_b,
-          q.option_c,
-          q.option_d,
-          q.correct_answer, // store letter only
-          q.points || 1,
-          q.difficulty || "Medium",
-          subject_id,
-          created_by,
-          status === "draft" ? 1 : 0,
-        ];
-      });
+        return {
+          exam_id: exam.exam_id,
+          subject_id: topic.subject_id,
+          topic_id: Number(topicId),
+          question_count: count,
+        };
+      })
+    );
 
-      await db.query(
-        `INSERT INTO questions
-          (exam_id, question_text, option_a, option_b, option_c, option_d, correct_answer, points, difficulty, subject_id, created_by, is_draft)
-         VALUES ?`,
-        [questionValues]
-      );
-    }
-
-    return NextResponse.json({ success: true, exam_id });
-  } catch (err) {
-    console.error("❌ Error saving exam:", err);
-    return NextResponse.json({
-      success: false,
-      error: (err as Error).message,
+    await prisma.exam_subject_configs.createMany({
+      data: configs,
     });
+
+    return NextResponse.json({
+      success: true,
+      message: "Exam created successfully",
+      examId: exam.exam_id,
+    });
+  } catch (error) {
+    console.error("Error creating exam:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to create exam" },
+      { status: 500 }
+    );
   }
 }
 
-// ========================
-// ✅ GET DRAFT EXAMS (GET)
-// ========================
-export async function GET() {
-  try {
-    const [drafts]: any = await db.query(
-      `SELECT e.exam_id, e.exam_title, e.subject_id,
-              (SELECT COUNT(*) FROM questions q WHERE q.exam_id = e.exam_id) AS question_count
-       FROM exams e
-       WHERE e.status='draft'
-       ORDER BY e.created_at DESC`
-    );
+/* ===========================
+  DELETE: Delete exam
+=========================== */
+export async function DELETE(req: Request) {
+ try {
+   const body = await req.json();
+   const { examId }: { examId: number } = body;
 
-    return NextResponse.json(drafts);
-  } catch (err) {
-    console.error("❌ Error fetching drafts:", err);
-    return NextResponse.json({
-      success: false,
-      error: "Error fetching drafts",
-    });
-  }
+   if (!examId) {
+     return NextResponse.json(
+       { success: false, message: "Exam ID is required" },
+       { status: 400 }
+     );
+   }
+
+   // Check if exam exists
+   const exam = await prisma.exams.findUnique({
+     where: { exam_id: examId },
+   });
+
+   if (!exam) {
+     return NextResponse.json(
+       { success: false, message: "Exam not found" },
+       { status: 404 }
+     );
+   }
+
+   // Delete the exam (cascade will handle related records)
+   await prisma.exams.delete({
+     where: { exam_id: examId },
+   });
+
+   return NextResponse.json({
+     success: true,
+     message: "Exam deleted successfully",
+   });
+ } catch (error) {
+   console.error("Error deleting exam:", error);
+   return NextResponse.json(
+     { success: false, message: "Failed to delete exam" },
+     { status: 500 }
+   );
+ }
 }

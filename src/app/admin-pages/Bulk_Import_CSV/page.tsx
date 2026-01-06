@@ -33,7 +33,6 @@ import {
   Publish as PublishIcon,
   Person as PersonIcon,
   CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
   Download as DownloadIcon,
   FolderOpen as FolderOpenIcon,
   Cancel as CancelIcon,
@@ -67,7 +66,7 @@ const BulkImportCSV: React.FC = () => {
 
   const handleFileSelect = useCallback(() => {
     // Check if we're in a browser environment
-    if (typeof window === 'undefined' || !fileInputRef.current) return;
+    if (globalThis.window === undefined || !fileInputRef.current) return;
 
     fileInputRef.current.click();
   }, []);
@@ -81,7 +80,7 @@ const BulkImportCSV: React.FC = () => {
 
   const handleDragOver = useCallback((event: React.DragEvent) => {
     // Check if we're in a browser environment
-    if (typeof window === 'undefined') return;
+    if (globalThis.window === undefined) return;
 
     event.preventDefault();
     setIsDragOver(true);
@@ -89,7 +88,7 @@ const BulkImportCSV: React.FC = () => {
 
   const handleDragLeave = useCallback((event: React.DragEvent) => {
     // Check if we're in a browser environment
-    if (typeof window === 'undefined') return;
+    if (globalThis.window === undefined) return;
 
     event.preventDefault();
     setIsDragOver(false);
@@ -97,7 +96,7 @@ const BulkImportCSV: React.FC = () => {
 
   const handleDrop = useCallback((event: React.DragEvent) => {
     // Check if we're in a browser environment
-    if (typeof window === 'undefined') return;
+    if (globalThis.window === undefined) return;
 
     event.preventDefault();
     setIsDragOver(false);
@@ -157,18 +156,13 @@ const BulkImportCSV: React.FC = () => {
     }
   }, []);
 
-  const readFileAsText = (file: File): Promise<string> => {
+  const readFileAsText = async (file: File): Promise<string> => {
     // Check if we're in a browser environment
-    if (typeof window === 'undefined' || typeof FileReader === 'undefined') {
-      return Promise.reject(new Error('File reading is not supported in this environment.'));
+    if (globalThis.window === undefined) {
+      throw new TypeError('File reading is not supported in this environment.');
     }
 
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = () => reject(new Error('Error reading the file.'));
-      reader.readAsText(file);
-    });
+    return await file.text();
   };
 
   const parseCSV = (csvData: string): CSVQuestion[] => {
@@ -183,9 +177,9 @@ const BulkImportCSV: React.FC = () => {
       if (values.length !== headers.length) continue;
 
       const question: any = {};
-      headers.forEach((header, index) => {
-        question[header] = values[index]?.trim() || '';
-      });
+      for (let i = 0; i < headers.length; i++) {
+        question[headers[i]] = values[i]?.trim() || '';
+      }
 
       questions.push(question as CSVQuestion);
     }
@@ -198,9 +192,7 @@ const BulkImportCSV: React.FC = () => {
     let current = '';
     let inQuotes = false;
 
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
+    for (const char of line) {
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
@@ -218,7 +210,7 @@ const BulkImportCSV: React.FC = () => {
   const validateQuestions = (questions: CSVQuestion[]): string[] => {
     const errors: string[] = [];
 
-    questions.forEach((q, index) => {
+    for (const [index, q] of questions.entries()) {
       const row = index + 2;
 
       if (!q.question || q.question.trim() === '') {
@@ -241,10 +233,10 @@ const BulkImportCSV: React.FC = () => {
         errors.push(`Row ${row}: Difficulty must be Easy, Medium, or Hard`);
       }
 
-      if (q.points && (isNaN(Number(q.points)) || Number(q.points) < 1)) {
+      if (q.points && (Number.isNaN(Number(q.points)) || Number(q.points) < 1)) {
         errors.push(`Row ${row}: Points must be a positive number`);
       }
-    });
+    }
 
     return errors;
   };
@@ -260,11 +252,11 @@ const BulkImportCSV: React.FC = () => {
         if (newProgress >= 100) {
           clearInterval(interval);
           setSuccessMessage(
-            `Successfully imported ${questions.length} questions${selectedCategory ? ` into the ${selectedCategory} category` : ''}.`
+            `Successfully imported ${questions.length} questions${selectedCategory ? ' into the ' + selectedCategory + ' category' : ''}.`
           );
           setUploadStatus('success');
           setQuestions([]);
-          if (typeof window !== 'undefined' && fileInputRef.current) {
+          if (globalThis.window !== undefined && fileInputRef.current) {
             fileInputRef.current.value = '';
           }
           return 100;
@@ -280,14 +272,14 @@ const BulkImportCSV: React.FC = () => {
     setSuccessMessage('');
     setUploadStatus('ready');
     setProgress(0);
-    if (typeof window !== 'undefined' && fileInputRef.current) {
+    if (globalThis.window !== undefined && fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   }, []);
 
   const downloadTemplate = useCallback(() => {
     // Check if we're in a browser environment
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
+    if (globalThis.window === undefined || typeof document === 'undefined') {
       return;
     }
 
@@ -303,7 +295,7 @@ const BulkImportCSV: React.FC = () => {
     a.download = 'question_template.csv';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
     URL.revokeObjectURL(url);
   }, []);
 
@@ -445,12 +437,12 @@ const BulkImportCSV: React.FC = () => {
               >
                 Select File
               </Button>
-              <input
+              <Box component="input"
                 ref={fileInputRef}
                 type="file"
                 accept=".csv"
                 onChange={handleFileChange}
-                style={{ display: 'none' }}
+                sx={{ display: 'none' }}
                 aria-label="Select CSV file for upload"
                 title="Select CSV file for upload"
               />
@@ -478,8 +470,8 @@ const BulkImportCSV: React.FC = () => {
             {errors.length > 0 && (
               <Alert severity="error" sx={{ mb: 3 }}>
                 <AlertTitle>Errors Found in Your CSV File</AlertTitle>
-                {errors.map((error, index) => (
-                  <Typography key={index} variant="body2" sx={{ mt: 1 }}>
+                {errors.map((error) => (
+                  <Typography key={`error-${error.slice(0, 20).replaceAll(/\s+/g, '-')}`} variant="body2" sx={{ mt: 1 }}>
                     {error}
                   </Typography>
                 ))}
@@ -517,8 +509,8 @@ const BulkImportCSV: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {questions.slice(0, 5).map((question, index) => (
-                        <TableRow key={index}>
+                      {questions.slice(0, 5).map((question) => (
+                        <TableRow key={`question-${question.question.slice(0, 30).replaceAll(/\s+/g, '-')}`}>
                           <TableCell sx={{ maxWidth: 200 }}>
                             <Typography variant="body2" sx={{
                               overflow: 'hidden',
@@ -560,6 +552,7 @@ const BulkImportCSV: React.FC = () => {
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                   <Button
                     variant="outlined"
+                    color="secondary"
                     startIcon={<CancelIcon />}
                     onClick={handleCancel}
                   >
