@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start"
   },
   "dependencies": {
@@ -34,9 +34,9 @@
     "@types/chart.js": "^2.9.41",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
-    "@types/react": "^19",
+    "@types/react": "^18.2.79",
     "@types/react-chartjs-2": "^2.0.2",
-    "@types/react-dom": "^19",
+    "@types/react-dom": "^18.2.25",
     "@types/yup": "^0.29.14",
     "typescript": "^5"
   }
