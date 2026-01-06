@@ -18,9 +18,9 @@
   width: calc(100vw - 220px);
 }
 
-body {
+/* body {
   overflow: auto;
-}
+} */
 
 .examHeader {
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
