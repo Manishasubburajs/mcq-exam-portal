@@ -187,19 +187,19 @@ body {
 .questionGrid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 9px;
+  margin-bottom: 18px;
 }
 
 .questionSidebar.compact .questionGrid {
   grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 9px;
+  margin-bottom: 18px;
 }
 
 .questionNumber {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -217,9 +217,9 @@ body {
   width: 38px;
   height: 38px;
   font-size: 13px;
-  border-radius: 8px;
+  border-radius: 5px;
   background: white;
-  border: 1px solid #ddd;
+  border: 2px solid #ddd;
   color: #333;
 }
 
@@ -308,7 +308,7 @@ body {
 .questionSidebar.compact .examNotes {
   font-size: 14px;
   color: #7f8c8d;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .examNotes p {
@@ -341,11 +341,8 @@ body {
 
 
 .questionContainer {
-  width: 100%;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .questionHeader {
@@ -470,40 +467,41 @@ body {
 }
 
 .optionItem {
-  padding: 16px 20px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-bottom: 12px;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 15px;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  background: #fff;
-  width: 100%;
-  font-size: 18px;
 }
 
 .optionItem:hover {
-  background-color: #f0f0f0;
+  border-color: #6a11cb;
+  background: #f8f7ff;
 }
 
 .optionItem.selected {
-  background-color: #e8f0fe;
   border-color: #2575fc;
+  background: #e8f0fe;
 }
 
 .optionMarker {
-  font-weight: bold;
-  margin-right: 12px;
-  color: #333;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
 .optionText {
   flex: 1;
-  color: #000;
-  text-align: left;
 }
 
 /* Navigation Footer */
@@ -513,8 +511,7 @@ body {
   align-items: center;
   padding: 20px 0;
   border-top: 1px solid #e0e0e0;
-  margin-top: auto;
-  margin-bottom: 0;
+  margin-top: 30px;
 }
 
 .navButtons {
@@ -536,12 +533,12 @@ body {
 @media (max-width: 1200px) {
     .questionGrid {
       grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
+      gap: 9px;
     }
 
     .questionNumber {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       font-size: 13px;
       background: white;
       border: 2px solid #ddd;

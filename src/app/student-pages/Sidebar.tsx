@@ -31,7 +31,7 @@ const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <FaTachometerAlt />, route: '/student-pages' },
-    { text: 'Take Exam', icon: <Assignment />, route: '/student-pages/exam_taking' },
+    // { text: 'Take Exam', icon: <Assignment />, route: '/student-pages/exam_taking' },
     { text: 'My Exams', icon: <Assignment />, route: '/student-pages/my_exams' },
     { text: 'Exam History', icon: <History />, route: '/student-pages/exam_res_rev' },
     { text: 'Progress', icon: <BarChart />, route: '/student-pages/student_progress' },

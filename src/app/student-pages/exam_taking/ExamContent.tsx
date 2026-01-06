@@ -130,7 +130,7 @@ const ExamContent: React.FC = () => {
   };
 
   const getCurrentQuestion = () => {
-    if (!examData) return null;
+    if (!examData || !examData.questions || examData.questions.length === 0) return null;
     const questionIndex = (currentQuestion - 1) % examData.questions.length;
     return examData.questions[questionIndex];
   };
@@ -287,47 +287,53 @@ const ExamContent: React.FC = () => {
               className={`${styles.btn} ${styles.btnFlag} ${flaggedQuestions.has(currentQuestion) ? styles.flagged : ''}`}
               onClick={toggleFlag}
             >
-              <i className="fas fa-flag"></i> {flaggedQuestions.has(currentQuestion) ? 'Unflag' : 'Flag'}
+              <i className="fas fa-flag"></i> {flaggedQuestions.has(currentQuestion) ? 'Remove Flag' : 'Flag for Review'}
             </button>
             <button
               className={`${styles.btn} ${styles.btnClear}`}
               onClick={clearAnswer}
               disabled={!userAnswers[currentQuestion]}
             >
-              <i className="fas fa-eraser"></i> Clear
+              <i className="fas fa-trash-alt"></i> Clear Answer
             </button>
           </div>
         </div>
 
         <div className={styles.questionContent}>
-          <div className={styles.questionText}>
-            {currentQ!.text}
-          </div>
+          {currentQ ? (
+            <>
+              <div className={styles.questionText}>
+                {currentQ.text}
+              </div>
 
-          <ul className={styles.optionsList} aria-label="Multiple choice options">
-            {currentQ!.options.map(option => {
-              const isSelected = userAnswers[currentQuestion] === option.id;
-              return (
-                <li key={option.id}>
-                  <button
-                    className={`${styles.optionItem} ${isSelected ? styles.selected : ''}`}
-                    onClick={() => selectOption(option.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        selectOption(option.id);
-                      }
-                    }}
-                    aria-label={`Select option ${option.id}: ${option.text}`}
-                    type="button"
-                  >
-                    <div className={styles.optionMarker}>{option.id}</div>
-                    <div className={styles.optionText}>{option.text}</div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+              <ul className={styles.optionsList} aria-label="Multiple choice options">
+                {currentQ.options.map(option => {
+                  const isSelected = userAnswers[currentQuestion] === option.id;
+                  return (
+                    <li key={option.id}>
+                      <button
+                        className={`${styles.optionItem} ${isSelected ? styles.selected : ''}`}
+                        onClick={() => selectOption(option.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            selectOption(option.id);
+                          }
+                        }}
+                        aria-label={`Select option ${option.id}: ${option.text}`}
+                        type="button"
+                      >
+                        <div className={styles.optionMarker}>{option.id}</div>
+                        <div className={styles.optionText}>{option.text}</div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          ) : (
+            <div>No question available</div>
+          )}
         </div>
 
         <div className={styles.examFooter}>
@@ -389,7 +395,7 @@ const ExamContent: React.FC = () => {
       <div className={`${styles.examHeader} ${leftPosition === '220px' ? styles.left220 : styles.left0}`}>
         <div className={styles.examInfo}>
           <h1>{examData!.title}</h1>
-          <p>{examData!.duration} minutes • {examData!.totalQuestions} questions • {examData!.points} points</p>
+          <p>{examData!.totalQuestions} questions • {examData!.duration} minutes • {examData!.points || 200} points</p>
         </div>
         <div className={`${styles.timer} ${getTimerClass()}`}>
           <i className="fas fa-clock"></i> <span>{formatTime(timeLeft)}</span>

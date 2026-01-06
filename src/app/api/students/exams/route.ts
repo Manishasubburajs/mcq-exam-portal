@@ -42,17 +42,10 @@ export async function GET(req: Request) {
             include: {
               exam: {
                 include: {
-                  exam_questions: {
-                    include: {
-                      question: true,
-                    },
-                    orderBy: {
-                      question_order: "asc",
-                    },
-                  },
                   exam_subject_configs: {
                     include: {
                       subject: true,
+                      topic: true, // Include topic to ensure topic_id is accessible
                     },
                   },
                 },
@@ -72,17 +65,38 @@ export async function GET(req: Request) {
       const exam = assignment.assignment.exam;
       const subject = exam.exam_subject_configs[0]?.subject?.subject_name || "";
 
-      const questions = exam.exam_questions.map(eq => ({
-        id: eq.question.question_id,
-        text: eq.question.question_text,
-        options: [
-          { id: 'A', text: eq.question.option_a || '' },
-          { id: 'B', text: eq.question.option_b || '' },
-          { id: 'C', text: eq.question.option_c || '' },
-          { id: 'D', text: eq.question.option_d || '' },
-        ].filter(opt => opt.text), // Remove empty options
-        correctAnswer: eq.question.correct_answer || '',
-      }));
+      // Collect questions based on subject configs
+      let allQuestions: any[] = [];
+      for (const config of exam.exam_subject_configs) {
+        if (config.topic_id !== null) {
+          const topicQuestions = await prisma.questions.findMany({
+            where: {
+              topic_id: config.topic_id,
+            },
+          });
+
+          // Shuffle and take question_count
+          const shuffled = topicQuestions.sort(() => 0.5 - Math.random());
+          const selected = shuffled.slice(0, config.question_count);
+
+          const formatted = selected.map(q => ({
+            id: q.question_id,
+            text: q.question_text,
+            options: [
+              { id: 'A', text: q.option_a || '' },
+              { id: 'B', text: q.option_b || '' },
+              { id: 'C', text: q.option_c || '' },
+              { id: 'D', text: q.option_d || '' },
+            ].filter(opt => opt.text), // Remove empty options
+            correctAnswer: q.correct_answer || '',
+          }));
+
+          allQuestions = allQuestions.concat(formatted);
+        }
+      }
+
+      // Shuffle the combined questions
+      const questions = allQuestions.sort(() => 0.5 - Math.random());
 
       const examData = {
         id: exam.exam_id,
