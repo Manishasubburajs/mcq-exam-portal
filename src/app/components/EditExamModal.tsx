@@ -115,7 +115,7 @@ const EditExamModal: React.FC<EditExamModalProps> = ({
         )}
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid size = {{xs:12}} >
               <TextField
                 fullWidth
                 label="Exam Name"
@@ -124,7 +124,7 @@ const EditExamModal: React.FC<EditExamModalProps> = ({
                 required
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>Subject</InputLabel>
                 <Select
@@ -141,7 +141,7 @@ const EditExamModal: React.FC<EditExamModalProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="Duration (minutes)"
