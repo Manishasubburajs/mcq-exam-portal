@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Providers from './providers';
+import SessionManager from '../components/SessionManager';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,16 +19,23 @@ export const metadata: Metadata = {
   description: "Login and Registration App",
 };
 
+export const viewport = 'width=device-width, initial-scale=1';
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Providers>
-          {children}
+          <SessionManager>
+            {children}
+          </SessionManager>
         </Providers>
       </body>
     </html>

@@ -9,6 +9,18 @@ import {
   ReportProblem,
 } from '@mui/icons-material';
 
+interface Activity {
+  title: string;
+  time: string;
+  icon: string;
+  bgColor: string;
+  color: string;
+}
+
+interface Props {
+  activities: Activity[];
+}
+
 const ActivityItem = styled(ListItem)(({ theme }) => ({
   padding: '15px 0',
   borderBottom: `1px solid ${theme.palette.divider}`,
@@ -18,8 +30,8 @@ const ActivityItem = styled(ListItem)(({ theme }) => ({
   alignItems: 'flex-start',
 }));
 
-const ActivityList = ({ activities }) => {
-  const getIcon = (iconName) => {
+const ActivityList: React.FC<Props> = ({ activities }) => {
+  const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Assignment': return <Assignment />;
       case 'PersonAdd': return <PersonAdd />;
@@ -36,16 +48,18 @@ const ActivityList = ({ activities }) => {
         <ActivityItem key={index}>
           <Avatar
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
+              width: 48,
+              height: 48,
+              borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginRight: '15px',
-              fontSize: '16px',
+              fontSize: '24px',
               backgroundColor: activity.bgColor,
               color: activity.color,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              border: '2px solid rgba(255,255,255,0.2)',
             }}
           >
             {getIcon(activity.icon)}

@@ -2,14 +2,21 @@
 
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { NoSsr } from '@mui/material';
 
 const theme = createTheme();
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+interface ProvidersProps {
+  children: React.ReactNode;
+}
+
+export default function Providers({ children }: ProvidersProps) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {children}
+      <NoSsr>
+        {children}
+      </NoSsr>
     </ThemeProvider>
   );
 }

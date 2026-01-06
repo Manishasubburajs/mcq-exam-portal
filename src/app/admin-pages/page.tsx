@@ -1,6 +1,7 @@
 "use client"
-import React from 'react';
-import { Box, Grid, Paper, Typography } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Box, Paper, Typography, useMediaQuery } from '@mui/material';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,14 +14,17 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
+// cSpell:ignore chartjs
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
 
+import dynamic from 'next/dynamic';
 import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
 import StatsCard from '../components/StatsCard';
-import ChartCard from '../components/ChartCard';
+import ChartContainer from '../components/ChartContainer';
 import ActivityList from '../components/ActivityList';
 import QuickActionCard from '../components/QuickActionCard';
+
+const Header = dynamic(() => import('../components/Header'), { ssr: false });
 
 ChartJS.register(
   CategoryScale,
@@ -35,9 +39,14 @@ ChartJS.register(
 );
 
 export default function Home() {
-  const stats = [
+  const router = useRouter();
+  const isDesktop = useMediaQuery('(min-width:1024px)');
+  const isMobile = useMediaQuery('(max-width:767px)');
+  const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
+  const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
+  const [stats, setStats] = useState([
     {
-      title: '1,247',
+      title: 'Loading...',
       subtitle: 'Total Students',
       trend: '12% increase this month',
       trendUp: true,
@@ -72,7 +81,63 @@ export default function Home() {
       color: 'white',
       bgColor: 'linear-gradient(135deg, #f44336, #ef5350)',
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    // Check if user is logged in and is admin
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const role = localStorage.getItem("role") || sessionStorage.getItem("role");
+
+    if (!token || role !== "admin") {
+      router.push("/");
+      return;
+    }
+
+    setSidebarOpen(isDesktop);
+    fetchStats();
+  }, [isDesktop, isTablet, router]);
+
+  const fetchStats = async () => {
+    try {
+      // Fetch students count
+      const studentsRes = await fetch('/api/students');
+      const studentsData = await studentsRes.json();
+      let studentCount = 0;
+      if (studentsData.success) {
+        studentCount = studentsData.data.length;
+      }
+
+      // Fetch exams count
+      const examsRes = await fetch('/api/exams');
+      const examsData = await examsRes.json();
+      let activeExamsCount = 0;
+      if (Array.isArray(examsData)) {
+        activeExamsCount = examsData.filter((exam: any) => exam.status === 'active').length;
+      }
+
+      // Fetch questions count
+      const questionsRes = await fetch('/api/questions');
+      const questionsData = await questionsRes.json();
+      let totalQuestions = 0;
+      if (Array.isArray(questionsData)) {
+        totalQuestions = questionsData.length;
+      }
+
+      setStats(prevStats => prevStats.map(stat => {
+        if (stat.subtitle === 'Total Students') {
+          return { ...stat, title: studentCount.toString() };
+        } else if (stat.subtitle === 'Active Exams') {
+          return { ...stat, title: activeExamsCount.toString() };
+        } else if (stat.subtitle === 'Questions in Bank') {
+          return { ...stat, title: totalQuestions.toString() };
+        }
+        return stat;
+      }));
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
 
   const examActivityData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -100,8 +165,16 @@ export default function Home() {
     scales: {
       y: {
         beginAtZero: true,
+        ticks: { font: { size: 9 } }
+      },
+      x: { ticks: { font: { size: 9 } } }
+    },
+    plugins: {
+      legend: {
+        display: false,
       },
     },
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
   };
 
   const subjectPerformanceData = {
@@ -134,8 +207,15 @@ export default function Home() {
     plugins: {
       legend: {
         position: "bottom" as const,
+        labels: {
+          font: {
+            size: 10,
+          },
+          padding: 8,
+        },
       },
     },
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
   };
 
   const performanceTrendData = {
@@ -167,15 +247,34 @@ export default function Home() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: "top" as const,
+        position: "bottom" as const,
+        labels: {
+          font: {
+            size: 10,
+          },
+          padding: 8,
+        },
       },
     },
     scales: {
       y: {
         beginAtZero: true,
         max: 100,
+        ticks: {
+          font: {
+            size: 9,
+          },
+        },
+      },
+      x: {
+        ticks: {
+          font: {
+            size: 9,
+          },
+        },
       },
     },
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
   };
 
   const activities = [
@@ -183,36 +282,36 @@ export default function Home() {
       icon: 'Assignment',
       title: 'New exam "Advanced Calculus" created',
       time: '10 minutes ago • By Dr. Smith',
-      color: 'success.main',
-      bgColor: 'success.light',
+      color: 'white',
+      bgColor: 'primary.main',
     },
     {
       icon: 'PersonAdd',
       title: '15 new students registered',
       time: '1 hour ago • System',
-      color: 'success.main',
-      bgColor: 'success.light',
+      color: 'white',
+      bgColor: 'success.main',
     },
     {
       icon: 'Backup',
       title: 'System backup completed successfully',
       time: '3 hours ago • Automated',
-      color: 'primary.main',
-      bgColor: 'primary.light',
+      color: 'white',
+      bgColor: 'info.main',
     },
     {
       icon: 'Publish',
       title: 'Chemistry Midterm results published',
       time: '5 hours ago • By Dr. Johnson',
-      color: 'success.main',
-      bgColor: 'success.light',
+      color: 'white',
+      bgColor: 'secondary.main',
     },
     {
       icon: 'ReportProblem',
       title: '3 exam attempts flagged for review',
       time: 'Yesterday • System',
-      color: 'error.main',
-      bgColor: 'error.light',
+      color: 'white',
+      bgColor: 'warning.main',
     },
   ];
 
@@ -250,46 +349,67 @@ export default function Home() {
   ];
 
   const handleActionClick = (title: string) => {
-    alert(`Navigating to: ${title}`);
-    // In a real application, this would redirect to the appropriate page
+    if (title === 'System Settings') {
+      router.push('/admin-pages/Settings');
+    } else {
+      alert(`Navigating to: ${title}`);
+      // In a real application, this would redirect to the appropriate page
+    }
   };
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-      <Sidebar />
-      <Box sx={{ flex: 1, padding: '30px' }}>
-        <Header />
+      <Sidebar isOpen={sidebarOpen} />
+      {sidebarOpen && (isMobile || isTablet) && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 999,
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
+        ml: sidebarOpen && !isMobile && !isTablet ? '220px' : 0,
+        transition: 'margin-left 0.3s ease',
+        paddingTop: { xs: '50px', md: '80px' }
+      }}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
 
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ marginBottom: '30px' }}>
+        <div className="stats-grid">
           {stats.map((stat) => (
-            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.subtitle}>
-              <StatsCard stat={stat} />
-            </Grid>
+            <StatsCard key={stat.subtitle} stat={stat} />
           ))}
-        </Grid>
+        </div>
 
         {/* Charts */}
-        <Grid container spacing={3} sx={{ marginBottom: '30px' }}>
-          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-            <ChartCard title="Exam Activity Overview">
-              <Bar data={examActivityData} options={examActivityOptions} />
-            </ChartCard>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-            <ChartCard title="Subject Performance">
-              <Doughnut data={subjectPerformanceData} options={subjectPerformanceOptions} />
-            </ChartCard>
-          </Grid>
-          <Grid size={{ xs: 12, lg: 4 }}>
-            <ChartCard title="Performance Trend">
-              <Line data={performanceTrendData} options={performanceTrendOptions} />
-            </ChartCard>
-          </Grid>
-        </Grid>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+            gap: 2,
+            marginBottom: '30px',
+          }}
+        >
+          <ChartContainer title="Exam Activity Overview" minHeight={{ xs: 240, sm: 300, md: 380 }}>
+            <Bar data={examActivityData} options={examActivityOptions} />
+          </ChartContainer>
+          <ChartContainer title="Subject Performance" minHeight={{ xs: 240, sm: 300, md: 380 }}>
+            <Doughnut data={subjectPerformanceData} options={{ ...subjectPerformanceOptions, plugins: { ...subjectPerformanceOptions.plugins, legend: { ...subjectPerformanceOptions.plugins.legend, labels: { font: { size: 12 } } } } }} />
+          </ChartContainer>
+          <ChartContainer title="Performance Trend" minHeight={{ xs: 240, sm: 300, md: 380 }}>
+            <Line data={performanceTrendData} options={{ ...performanceTrendOptions, plugins: { ...performanceTrendOptions.plugins, legend: { ...performanceTrendOptions.plugins.legend, labels: { font: { size: 12 } } } } }} />
+          </ChartContainer>
+        </Box>
 
         {/* Recent Activity */}
-        <Paper
+        {/* <Paper
           elevation={1}
           sx={{
             padding: '25px',
@@ -300,40 +420,38 @@ export default function Home() {
           <Typography
             variant="h6"
             sx={{
-              fontSize: '20px',
-              marginBottom: '20px',
+              fontSize: '1.25rem',
+              marginBottom: '1.25rem',
               color: '#2c3e50',
-              paddingBottom: '10px',
+              paddingBottom: '0.625rem',
               borderBottom: '2px solid #f0f0f0',
             }}
           >
             Recent System Activity
           </Typography>
           <ActivityList activities={activities} />
-        </Paper>
+        </Paper> */}
 
         {/* Quick Actions */}
-        <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
+        {/* <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
           <Typography
             variant="h6"
             sx={{
-              fontSize: '20px',
-              marginBottom: '20px',
+              fontSize: '1.25rem',
+              marginBottom: '1.25rem',
               color: '#2c3e50',
-              paddingBottom: '10px',
+              paddingBottom: '0.625rem',
               borderBottom: '2px solid #f0f0f0',
             }}
           >
             Quick Actions
           </Typography>
-          <Grid container spacing={2}>
+          <div className="actions-grid">
             {actions.map((action) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={action.title}>
-                <QuickActionCard action={action} onClick={handleActionClick} />
-              </Grid>
+              <QuickActionCard key={action.title} action={action} onClick={handleActionClick} />
             ))}
-          </Grid>
-        </Paper>
+          </div>
+        </Paper> */}
       </Box>
     </Box>
   );

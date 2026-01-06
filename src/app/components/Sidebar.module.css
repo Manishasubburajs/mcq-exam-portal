@@ -1,10 +1,19 @@
 .sidebar {
-  width: 250px;
+  width: 220px;
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
   color: white;
   padding: 20px 0;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
   min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  transition: left 0.3s ease;
+}
+
+.closed {
+  left: -220px;
 }
 
 .logo {
@@ -31,11 +40,12 @@
 .menuItem {
   margin-bottom: 10px;
   border-radius: 5px;
-  transition: background 0.3s;
+  transition: background 0.3s, box-shadow 0.3s;
 }
 
 .menuItem:hover {
   background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
 }
 
 .menuLink {
@@ -48,5 +58,48 @@
 }
 
 .active {
-  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  font-weight: bold;
+  color: white;
+}
+
+@media (max-width: 767px) {
+   .sidebar {
+     position: fixed;
+     width: 280px;
+     left: -280px;
+     top: 0;
+     z-index: 1000;
+     transition: left 0.3s ease;
+     height: 100vh;
+     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+   }
+
+   .sidebar:not(.closed) {
+     left: 0;
+   }
+
+   .sidebar.closed {
+     left: -280px;
+   }
+}
+
+
+@media (max-width: 480px) {
+   .sidebar {
+     width: 260px;
+     left: -260px;
+   }
+
+   .sidebar.closed {
+     left: -260px;
+   }
+}
+
+/* Tablet styles for iPad Mini, iPad Air, etc. */
+@media (min-width: 768px) and (max-width: 1023px) {
+   .sidebar {
+     top: 70px; /* Push down to avoid header overlap */
+     height: calc(100vh - 70px);
+   }
 }
