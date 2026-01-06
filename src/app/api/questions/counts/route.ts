@@ -6,37 +6,23 @@ export async function GET() {
     // Get question counts for subjects
     const subjectCounts = await prisma.questions.groupBy({
       by: ['subject_id'],
-      _count: {
-        question_id: true,
-      },
-      where: {
-        subject_id: {
-          not: null,
-        },
-      },
+      _count: true,
     });
 
     // Get question counts for topics
     const topicCounts = await prisma.questions.groupBy({
       by: ['topic_id'],
-      _count: {
-        question_id: true,
-      },
-      where: {
-        topic_id: {
-          not: null,
-        },
-      },
+      _count: true,
     });
 
     const counts: { [key: string]: number } = {};
 
     subjectCounts.forEach(sc => {
-      counts[`subject_${sc.subject_id}`] = sc._count.question_id;
+      counts[`subject_${sc.subject_id}`] = sc._count;
     });
 
     topicCounts.forEach(tc => {
-      counts[`topic_${tc.topic_id}`] = tc._count.question_id;
+      counts[`topic_${tc.topic_id}`] = tc._count;
     });
 
     return NextResponse.json(counts);
