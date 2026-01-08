@@ -415,13 +415,13 @@ const UserManagement: React.FC = () => {
                   }
                 })()}
               </Typography>
-              <Button
+              {/* <Button
                 variant="outlined"
                 color="secondary"
                 startIcon={<Download />}
               >
                 Export Users
-              </Button>
+              </Button> */}
             </Box>
           </Box>
 
