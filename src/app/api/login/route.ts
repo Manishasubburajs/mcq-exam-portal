@@ -54,11 +54,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Generate JWT token (1 hour expiry)
+    // Generate JWT token (8 hour expiry)
     const token = jwt.sign(
       { userId: user.user_id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "8h" }
     );
 
     // Extract username from email
