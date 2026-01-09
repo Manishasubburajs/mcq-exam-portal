@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"; // ✅ add this
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import jwt from "jsonwebtoken";
