@@ -48,6 +48,8 @@ const StudentHeader: React.FC<Props> = ({ onMenuClick, title, sidebarOpen = true
         return 'Student Dashboard';
       case '/student-pages/exam_taking':
         return 'Take Exam';
+      case '/student-pages/my_exams':
+        return 'My Exams';
       case '/student-pages/exam_res_rev':
         return 'Exam Results Review';
       case '/student-pages/student_progress':
