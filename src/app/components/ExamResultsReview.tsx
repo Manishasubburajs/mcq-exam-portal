@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
@@ -31,6 +32,7 @@ import {
   ChevronRight as ChevronRightIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
+  AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
 
 const navItems = [
@@ -43,53 +45,9 @@ const navItems = [
   { label: 'Logout', icon: <LogoutIcon />, active: false },
 ];
 
-const categories = [
-  { name: 'Algebra', score: 95, correct: 19, total: 20 },
-  { name: 'Geometry', score: 88, correct: 14, total: 16 },
-  { name: 'Calculus', score: 86, correct: 12, total: 14 },
-];
+const categories: any[] = [];
 
-const questions = [
-  {
-    id: 1,
-    title: 'Question 1',
-    text: 'What is the value of π (pi) to two decimal places?',
-    status: 'correct',
-    options: [
-      { text: '3.14', correct: true, selected: false },
-      { text: '3.15', correct: false, selected: false },
-      { text: '3.16', correct: false, selected: true },
-      { text: '3.18', correct: false, selected: false },
-    ],
-    explanation: 'The value of π is approximately 3.14159. When rounded to two decimal places, it becomes 3.14.',
-  },
-  {
-    id: 2,
-    title: 'Question 2',
-    text: 'Solve for x: 2x + 5 = 15',
-    status: 'incorrect',
-    options: [
-      { text: '5', correct: true, selected: false },
-      { text: '10', correct: false, selected: false },
-      { text: '7.5', correct: false, selected: false },
-      { text: '5.5', correct: false, selected: true },
-    ],
-    explanation: 'To solve for x, first subtract 5 from both sides: 2x = 10. Then divide both sides by 2: x = 5.',
-  },
-  {
-    id: 3,
-    title: 'Question 3',
-    text: 'What is the derivative of x²?',
-    status: 'correct',
-    options: [
-      { text: 'x', correct: false, selected: false },
-      { text: '2x', correct: true, selected: true },
-      { text: '2', correct: false, selected: false },
-      { text: 'x²', correct: false, selected: false },
-    ],
-    explanation: 'The power rule states that the derivative of xⁿ is n*xⁿ⁻¹. So for x², the derivative is 2*x¹ = 2x.',
-  },
-];
+// Questions will be set from fetched data
 
 const ScoreCircle = ({ score }: { score: number }) => {
   const percentage = score;
@@ -135,9 +93,107 @@ const ScoreCircle = ({ score }: { score: number }) => {
 };
 
 export default function ExamResultsReview() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const attemptId = searchParams.get('attemptId');
+
+  const [resultData, setResultData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
 
-  const filteredQuestions = questions.filter(q => filter === 'all' || q.status === filter);
+  useEffect(() => {
+    if (!attemptId) {
+      setError('No attempt ID provided');
+      setLoading(false);
+      return;
+    }
+
+    const fetchResults = async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+          setError('Not authenticated');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch(`/api/students/result?attemptId=${attemptId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setResultData(data.data);
+        } else {
+          setError(data.message || 'Failed to load results');
+        }
+      } catch (err) {
+        console.error('Failed to fetch results:', err);
+        setError('Failed to load results');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, [attemptId]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !resultData) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography>{error || 'Results not found'}</Typography>
+      </Box>
+    );
+  }
+
+  // Transform data
+  const exam = resultData.exam;
+  const answers = resultData.student_answers;
+
+  const questions = answers.map((answer: any, index: number) => {
+    const q = answer.question;
+    const options = [
+      { id: 'A', text: q.option_a },
+      { id: 'B', text: q.option_b },
+      { id: 'C', text: q.option_c },
+      { id: 'D', text: q.option_d },
+    ].filter(opt => opt.text); // Filter out null options
+    const correctAnswer = q.correct_answer;
+    const selectedAnswer = answer.selected_answer;
+
+    return {
+      id: q.question_id,
+      title: `Question ${index + 1}`,
+      text: q.question_text,
+      status: selectedAnswer === correctAnswer ? 'correct' : 'incorrect',
+      timeTaken: answer.time_taken_seconds || 0,
+      options: options.map((opt: any) => ({
+        text: opt.text,
+        correct: opt.id === correctAnswer,
+        selected: opt.id === selectedAnswer,
+      })),
+      explanation: 'Explanation not available', // Placeholder
+    };
+  });
+
+  const score = resultData.score || 0;
+  const totalQuestions = exam.question_count || 0;
+  const correctCount = resultData.correct_answers || 0;
+  const wrongCount = resultData.wrong_answers || 0;
+  const unansweredCount = totalQuestions - correctCount - wrongCount;
+
+  const filteredQuestions = questions.filter((q: any) => filter === 'all' || q.status === filter);
 
   const handlePrint = () => {
     globalThis.window.print();
@@ -181,33 +237,20 @@ export default function ExamResultsReview() {
               lineHeight: 1.2
             }}
           >
-            Exam Results: Mathematics Midterm
+            Exam Results: {exam.exam_title}
           </Typography>
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: { xs: 'center', sm: 'flex-start' },
-            mt: { xs: 0, sm: 0 }
-          }}>
-            <Avatar
-              src="https://ui-avatars.com/api/?name=John+Doe&background=6a11cb&color=fff"
+           <Button
+              variant="contained"
+              onClick={() => router.push('/student-pages/exam_history')}
               sx={{
-                width: { xs: 32, sm: 35, md: 40 },
-                height: { xs: 32, sm: 35, md: 40 },
-                mr: { xs: 0.75, sm: 1 },
-                border: '2px solid #6a11cb'
-              }}
-            />
-            <Typography
-              sx={{
-                textAlign: { xs: 'center', sm: 'left' },
-                fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' },
-                lineHeight: 1.2
+                textTransform: 'none',
+                background: 'linear-gradient(to right, #6a11cb, #2575fc)',
+                width: { xs: '100%', sm: 'auto' },
+                mb: { xs: 0.5, sm: 0 }
               }}
             >
-              John Doe - Student ID: S12345
-            </Typography>
-          </Box>
+              Back to Exam History
+            </Button>
         </Box>
 
         {/* Results Summary */}
@@ -218,19 +261,19 @@ export default function ExamResultsReview() {
           boxShadow: '0 5px 15px rgba(0, 0, 0, 0.05)',
           textAlign: 'center'
         }}>
-          <ScoreCircle score={92} />
+          <ScoreCircle score={Math.round((score / (totalQuestions * 2)) * 100)} />
           <Typography variant="h5" sx={{
             mb: { xs: 0.75, sm: 1 },
             fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
           }}>
-            Mathematics Midterm Exam
+            {exam.exam_title}
           </Typography>
           <Typography sx={{
             color: '#6c757d',
             mb: { xs: 2, sm: 3 },
             fontSize: { xs: '0.8rem', sm: '0.875rem', md: '1rem' }
           }}>
-            Completed on October 15, 2023 • Time Spent: 28/30 minutes
+            Completed on {new Date(resultData.end_time).toLocaleDateString()} • Time Spent: {Math.floor(resultData.total_time_seconds / 60)} minutes {resultData.total_time_seconds % 60} seconds out of {exam.time_limit_minutes} minutes
           </Typography>
 
           <Box sx={{
@@ -262,7 +305,7 @@ export default function ExamResultsReview() {
                   fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
                 }}
               >
-                46/50
+                {correctCount}/{totalQuestions}
               </Typography>
               <Typography sx={{
                 color: '#6c757d',
@@ -286,10 +329,84 @@ export default function ExamResultsReview() {
                 sx={{
                   fontWeight: 700,
                   mb: 0.5,
+                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
+                  color: Math.round((score / (totalQuestions * 2)) * 100) >= 50 ? 'green' : 'red'
+                }}
+              >
+                {Math.round((score / (totalQuestions * 2)) * 100) >= 50 ? 'Pass' : 'Fail'}
+              </Typography>
+              <Typography sx={{
+                color: '#6c757d',
+                fontSize: { xs: 12, sm: 14 },
+                lineHeight: 1.2
+              }}>
+                Result
+              </Typography>
+            </Box>
+            <Box sx={{
+              textAlign: 'center',
+              padding: { xs: 1, sm: 1.5 },
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              minHeight: { xs: 80, sm: 'auto' },
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' }
+                }}
+              >
+                Correct: {correctCount}
+              </Typography>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' }
+                }}
+              >
+                Wrong: {wrongCount}
+              </Typography>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' }
+                }}
+              >
+                Unanswered: {unansweredCount}
+              </Typography>
+              <Typography sx={{
+                color: '#6c757d',
+                fontSize: { xs: 12, sm: 14 },
+                lineHeight: 1.2
+              }}>
+                Question Counts
+              </Typography>
+            </Box>
+            {/* <Box sx={{
+              textAlign: 'center',
+              padding: { xs: 1, sm: 1.5 },
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              minHeight: { xs: 80, sm: 'auto' },
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              marginLeft: 'auto'
+            }}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
                   fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
                 }}
               >
-                92%
+                {Math.round((score / (totalQuestions * 2)) * 100)}%
               </Typography>
               <Typography sx={{
                 color: '#6c757d',
@@ -298,61 +415,7 @@ export default function ExamResultsReview() {
               }}>
                 Overall Score
               </Typography>
-            </Box>
-            <Box sx={{
-              textAlign: 'center',
-              padding: { xs: 1, sm: 1.5 },
-              backgroundColor: '#f8f9fa',
-              borderRadius: 1,
-              minHeight: { xs: 80, sm: 'auto' },
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
-            }}>
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  mb: 0.5,
-                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-                }}
-              >
-                5th
-              </Typography>
-              <Typography sx={{
-                color: '#6c757d',
-                fontSize: { xs: 12, sm: 14 },
-                lineHeight: 1.2
-              }}>
-                Class Rank
-              </Typography>
-            </Box>
-            <Box sx={{
-              textAlign: 'center',
-              padding: { xs: 1, sm: 1.5 },
-              backgroundColor: '#f8f9fa',
-              borderRadius: 1,
-              minHeight: { xs: 80, sm: 'auto' },
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center'
-            }}>
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  mb: 0.5,
-                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-                }}
-              >
-                A
-              </Typography>
-              <Typography sx={{
-                color: '#6c757d',
-                fontSize: { xs: 12, sm: 14 },
-                lineHeight: 1.2
-              }}>
-                Grade
-              </Typography>
-            </Box>
+            </Box> */}
           </Box>
         </Paper>
 
@@ -524,7 +587,7 @@ export default function ExamResultsReview() {
             </Box>
           </Box>
 
-          {filteredQuestions.map((question) => (
+          {filteredQuestions.map((question: any) => (
             <Card key={question.id} sx={{
               mb: 2,
               borderRadius: 1,
@@ -549,11 +612,19 @@ export default function ExamResultsReview() {
                 >
                   {question.title}
                 </Typography>
-                <Chip
-                  label={question.status === 'correct' ? 'Correct' : 'Incorrect'}
-                  color={question.status === 'correct' ? 'success' : 'error'}
-                  size="small"
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <AccessTimeIcon sx={{ fontSize: 16, color: '#6a11cb' }} />
+                    <Typography sx={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                      {question.timeTaken}s
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={question.status === 'correct' ? 'Correct' : 'Incorrect'}
+                    color={question.status === 'correct' ? 'success' : 'error'}
+                    size="small"
+                  />
+                </Box>
               </Box>
               <CardContent sx={{ padding: { xs: 1.5, sm: 2 } }}>
                 <Typography sx={{
@@ -564,7 +635,7 @@ export default function ExamResultsReview() {
                   {question.text}
                 </Typography>
                 <List>
-                  {question.options.map((option, index) => (
+                  {question.options.map((option: any, index: number) => (
                     <ListItem
                       key={`option-${question.id}-${index}`}
                       sx={{
@@ -624,6 +695,7 @@ export default function ExamResultsReview() {
             </Button>
             <Button
               variant="contained"
+              onClick={() => router.push('/student-pages/exam_history')}
               sx={{
                 textTransform: 'none',
                 background: 'linear-gradient(to right, #6a11cb, #2575fc)',
@@ -631,7 +703,7 @@ export default function ExamResultsReview() {
                 mb: { xs: 0.5, sm: 0 }
               }}
             >
-              Back to Dashboard
+              Back to Exam History
             </Button>
             <Button
               variant="outlined"

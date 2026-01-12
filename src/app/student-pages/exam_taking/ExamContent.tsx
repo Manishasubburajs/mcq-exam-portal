@@ -54,8 +54,8 @@ const ExamContent: React.FC = () => {
   const submittingRef = useRef(false);
 
   useEffect(() => {
-    if (!examId) {
-      setError("No exam ID provided");
+    if (!examId || !attemptId) {
+      setError("No exam ID or attempt ID provided");
       setLoading(false);
       return;
     }
@@ -94,7 +94,7 @@ const ExamContent: React.FC = () => {
     };
 
     fetchExam();
-  }, [examId]);
+  }, [examId, attemptId]);
 
   // Timer effect
   useEffect(() => {
@@ -160,11 +160,14 @@ const ExamContent: React.FC = () => {
   }, [examData]);
 
   const saveQuestionTime = () => {
-    const now = Date.now();
-    const spent = Math.floor((now - questionStartRef.current) / 1000);
-    questionTimeMap.current[currentQuestion] =
-      (questionTimeMap.current[currentQuestion] || 0) + spent;
-    questionStartRef.current = now;
+    const currentQ = getCurrentQuestion();
+    if (currentQ) {
+      const now = Date.now();
+      const spent = Math.floor((now - questionStartRef.current) / 1000);
+      questionTimeMap.current[currentQ.id] =
+        (questionTimeMap.current[currentQ.id] || 0) + spent;
+      questionStartRef.current = now;
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -189,10 +192,13 @@ const ExamContent: React.FC = () => {
   };
 
   const selectOption = (optionId: string) => {
-    setUserAnswers((prev) => ({
-      ...prev,
-      [currentQuestion]: optionId,
-    }));
+    const currentQ = getCurrentQuestion();
+    if (currentQ) {
+      setUserAnswers((prev) => ({
+        ...prev,
+        [currentQ.id]: optionId,
+      }));
+    }
   };
 
   const toggleFlag = () => {
@@ -208,11 +214,14 @@ const ExamContent: React.FC = () => {
   };
 
   const clearAnswer = () => {
-    setUserAnswers((prev) => {
-      const newAnswers = { ...prev };
-      delete newAnswers[currentQuestion];
-      return newAnswers;
-    });
+    const currentQ = getCurrentQuestion();
+    if (currentQ) {
+      setUserAnswers((prev) => {
+        const newAnswers = { ...prev };
+        delete newAnswers[currentQ.id];
+        return newAnswers;
+      });
+    }
   };
 
   const goToQuestion = (questionNum: number) => {
@@ -235,8 +244,11 @@ const ExamContent: React.FC = () => {
   };
 
   const getQuestionStatus = (questionNum: number) => {
+    if (!examData || !examData.questions) return "unanswered";
+    const q = examData.questions[questionNum - 1];
+    if (!q) return "unanswered";
     if (questionNum === currentQuestion) return "current";
-    if (userAnswers[questionNum]) return "answered";
+    if (userAnswers[q.id]) return "answered";
     if (flaggedQuestions.has(questionNum)) return "flagged";
     return "unanswered";
   };
@@ -284,7 +296,7 @@ const ExamContent: React.FC = () => {
       }
 
       // ✅ Success → redirect
-      router.push("/student-pages/exam_res_rev");
+      router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
     } catch (err) {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;
@@ -489,7 +501,7 @@ const ExamContent: React.FC = () => {
                   <button
                     className={`${styles.btn} ${styles.btnClear}`}
                     onClick={clearAnswer}
-                    disabled={!userAnswers[currentQuestion]}
+                    disabled={currentQ ? !userAnswers[currentQ.id] : true}
                   >
                     <i className="fas fa-trash-alt"></i> Clear Answer
                   </button>
@@ -506,8 +518,8 @@ const ExamContent: React.FC = () => {
                       aria-label="Multiple choice options"
                     >
                       {currentQ.options.map((option) => {
-                        const isSelected =
-                          userAnswers[currentQuestion] === option.id;
+                      const isSelected =
+                        userAnswers[currentQ.id] === option.id;
                         return (
                           <li key={option.id}>
                             <button

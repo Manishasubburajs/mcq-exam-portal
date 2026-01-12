@@ -20,6 +20,19 @@ export async function GET(req: Request) {
 
     const attempt = await prisma.student_exam_attempts.findUnique({
       where: { attempt_id: attemptId },
+      include: {
+        exam: true,
+        student: {
+          include: {
+            student_details: true,
+          },
+        },
+        student_answers: {
+          include: {
+            question: true,
+          },
+        },
+      },
     });
 
     if (!attempt) {
