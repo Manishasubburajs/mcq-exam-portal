@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMediaQuery } from '@mui/material';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useSidebar } from '@/app/components/student_layout';
+import LiveExamWarningModal from '@/app/components/LiveExamWarningModal';
 import styles from './exam_taking.module.css';
 
 interface Question {
@@ -26,7 +27,13 @@ interface ExamData {
 
 const ExamContent: React.FC = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const examId = searchParams.get('examId');
+  const attemptId = searchParams.get('attemptId');
+
+  const { sidebarOpen } = useSidebar();
+  const isDesktop = useMediaQuery('(min-width:1024px)');
+  const leftPosition = isDesktop && sidebarOpen ? '220px' : '0px';
 
   const [examData, setExamData] = useState<ExamData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +45,10 @@ const ExamContent: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showNavigator, setShowNavigator] = useState(true);
+  const [showLiveWarning, setShowLiveWarning] = useState(false);
+
+  const questionStartRef = useRef<number>(Date.now());
+  const questionTimeMap = useRef<Record<number, number>>({});
 
   useEffect(() => {
     if (!examId) {
@@ -87,7 +98,7 @@ const ExamContent: React.FC = () => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmitExam();
+          submitExam(true);
           return 0;
         }
         return prev - 1;
@@ -117,6 +128,39 @@ const ExamContent: React.FC = () => {
     };
   }, []);
 
+  // Live tab switch detection
+  useEffect(() => {
+    if (examData?.examType !== 'live') return;
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        setShowLiveWarning(true);
+        setTimeout(() => submitExam(true), 1500);
+      }
+    };
+
+    const handleBlur = () => {
+      setShowLiveWarning(true);
+      setTimeout(() => submitExam(true), 1500);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [examData]);
+
+  const saveQuestionTime = () => {
+    const now = Date.now();
+    const spent = Math.floor((now - questionStartRef.current) / 1000);
+    questionTimeMap.current[currentQuestion] =
+      (questionTimeMap.current[currentQuestion] || 0) + spent;
+    questionStartRef.current = now;
+  };
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -134,7 +178,6 @@ const ExamContent: React.FC = () => {
     const questionIndex = (currentQuestion - 1) % examData.questions.length;
     return examData.questions[questionIndex];
   };
-
 
   const selectOption = (optionId: string) => {
     setUserAnswers(prev => ({
@@ -163,8 +206,8 @@ const ExamContent: React.FC = () => {
     });
   };
 
-
   const goToQuestion = (questionNum: number) => {
+    saveQuestionTime();
     setCurrentQuestion(questionNum);
   };
 
@@ -187,187 +230,37 @@ const ExamContent: React.FC = () => {
     return 'unanswered';
   };
 
-  const handleSubmitExam = () => {
-    const answered = Object.keys(userAnswers).length;
-    alert(`Exam submitted! You answered ${answered} out of ${examData!.totalQuestions} questions.`);
-    // In a real app, this would redirect to results page
+  const submitExam = async (autoSubmitted = false) => {
+    saveQuestionTime();
+
+    const payload = {
+      attemptId,
+      answers: userAnswers,
+      questionTimes: questionTimeMap.current,
+      totalTimeTaken: examData!.duration * 60 - timeLeft,
+      examType: examData?.examType,
+      autoSubmitted,
+    };
+
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      await fetch('/api/students/exams/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      router.push('/student-pages/exam_res_rev');
+    } catch {
+      alert('Submission failed');
+    }
   };
 
   const answeredCount = Object.keys(userAnswers).length;
   const currentQ = getCurrentQuestion();
-
-  const { sidebarOpen } = useSidebar();
-  const isDesktop = useMediaQuery('(min-width:1024px)');
-  const leftPosition = isDesktop && sidebarOpen ? '220px' : '0px';
-
-  const renderQuestionSidebar = () => (
-    <div className={`${styles.questionSidebar} ${showNavigator ? '' : styles.compact} ${isDesktop ? styles.questionSidebarDesktop : ''}`}>
-      <div className={styles.sidebarHeader}>
-        <h3 className={styles.sidebarTitle}>Question Navigator</h3>
-        {!isDesktop && (
-          <button
-            className={`${styles.btn} ${styles.btnClose}`}
-            onClick={() => setShowNavigator(false)}
-            aria-label="Close Navigator"
-          >
-            <i className="fas fa-times"></i>
-          </button>
-        )}
-      </div>
-
-      <div className={styles.questionGrid}>
-        {Array.from({ length: examData?.totalQuestions || 0 }, (_, i) => i + 1).map(num => {
-          const status = getQuestionStatus(num);
-          return (
-            <button
-              key={num}
-              className={`${styles.questionNumber} ${styles[status]}`}
-              onClick={() => goToQuestion(num)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  goToQuestion(num);
-                }
-              }}
-              type="button"
-              aria-label={`Go to question ${num}`}
-            >
-              {num}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className={styles.questionStatus}>
-        <div className={styles.statusItem}>
-          <div className={`${styles.statusColor} ${styles.statusCurrent}`}></div>
-          <span>Current</span>
-        </div>
-        <div className={styles.statusItem}>
-          <div className={`${styles.statusColor} ${styles.statusAnswered}`}></div>
-          <span>Answered</span>
-        </div>
-        <div className={styles.statusItem}>
-          <div className={`${styles.statusColor} ${styles.statusFlagged}`}></div>
-          <span>Flagged</span>
-        </div>
-        <div className={styles.statusItem}>
-          <div className={`${styles.statusColor} ${styles.statusUnanswered}`}></div>
-          <span>Unanswered</span>
-        </div>
-      </div>
-
-      <div className={styles.examNotes}>
-        <p><strong>Instructions:</strong></p>
-        <ul className={styles.instructionsList}>
-          <li>Select one answer per question</li>
-          <li>You can flag questions for review</li>
-          <li>Timer will auto-submit when time expires</li>
-          <li>No going back after submission</li>
-        </ul>
-      </div>
-    </div>
-  );
-
-  const renderQuestionMain = () => (
-    <div className={styles.questionMain}>
-      <div className={styles.questionContainer}>
-        <div className={styles.questionHeader}>
-          <h2 className={styles.questionTitle}>Question {currentQuestion} of {examData!.totalQuestions}</h2>
-          <div className={styles.questionActions}>
-            {!isDesktop && (
-              <button
-                className={`${styles.btn} ${styles.btnOutline}`}
-                onClick={() => setShowNavigator(!showNavigator)}
-              >
-                <i className="fas fa-list"></i> {showNavigator ? 'Hide Navigator' : 'Show Navigator'}
-              </button>
-            )}
-            <button
-              className={`${styles.btn} ${styles.btnFlag} ${flaggedQuestions.has(currentQuestion) ? styles.flagged : ''}`}
-              onClick={toggleFlag}
-            >
-              <i className="fas fa-flag"></i> {flaggedQuestions.has(currentQuestion) ? 'Remove Flag' : 'Flag for Review'}
-            </button>
-            <button
-              className={`${styles.btn} ${styles.btnClear}`}
-              onClick={clearAnswer}
-              disabled={!userAnswers[currentQuestion]}
-            >
-              <i className="fas fa-trash-alt"></i> Clear Answer
-            </button>
-          </div>
-        </div>
-
-        <div className={styles.questionContent}>
-          {currentQ ? (
-            <>
-              <div className={styles.questionText}>
-                {currentQ.text}
-              </div>
-
-              <ul className={styles.optionsList} aria-label="Multiple choice options">
-                {currentQ.options.map(option => {
-                  const isSelected = userAnswers[currentQuestion] === option.id;
-                  return (
-                    <li key={option.id}>
-                      <button
-                        className={`${styles.optionItem} ${isSelected ? styles.selected : ''}`}
-                        onClick={() => selectOption(option.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            selectOption(option.id);
-                          }
-                        }}
-                        aria-label={`Select option ${option.id}: ${option.text}`}
-                        type="button"
-                      >
-                        <div className={styles.optionMarker}>{option.id}</div>
-                        <div className={styles.optionText}>{option.text}</div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ) : (
-            <div>No question available</div>
-          )}
-        </div>
-
-        <div className={styles.examFooter}>
-          <div className={styles.navButtons}>
-            <button
-              className={`${styles.btn} ${styles.btnOutline} ${styles.btnLarge}`}
-              onClick={goToPrevious}
-              disabled={currentQuestion === 1}
-            >
-              <i className="fas fa-chevron-left"></i> Previous
-            </button>
-            <button
-              className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLarge}`}
-              onClick={goToNext}
-              disabled={currentQuestion === examData!.totalQuestions}
-            >
-              Next <i className="fas fa-chevron-right"></i>
-            </button>
-          </div>
-
-          <div className={styles.progressText}>
-            <span>{answeredCount}</span> of {examData!.totalQuestions} questions answered
-          </div>
-
-          <button
-            className={`${styles.btn} ${styles.btnDanger} ${styles.btnLarge}`}
-            onClick={() => setShowSubmitModal(true)}
-          >
-            Submit Exam
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -390,44 +283,209 @@ const ExamContent: React.FC = () => {
   }
 
   return (
-    <div className={`${styles.examContainer} ${leftPosition === '220px' ? styles.containerShifted : styles.containerFull}`}>
-      {/* Exam Header */}
-      <div className={`${styles.examHeader} ${leftPosition === '220px' ? styles.left220 : styles.left0}`}>
-        <div className={styles.examInfo}>
-          <h1>{examData!.title}</h1>
-          <p>{examData!.totalQuestions} questions • {examData!.duration} minutes • {examData!.points || 200} points</p>
+    <>
+      <LiveExamWarningModal open={showLiveWarning} />
+
+      <div className={`${styles.examContainer} ${leftPosition === '220px' ? styles.containerShifted : styles.containerFull}`}>
+        {/* Exam Header */}
+        <div className={`${styles.examHeader} ${leftPosition === '220px' ? styles.left220 : styles.left0}`}>
+          <div className={styles.examInfo}>
+            <h1>{examData!.title}</h1>
+            <p>{examData!.totalQuestions} questions • {examData!.duration} minutes • {examData!.points || 200} points</p>
+          </div>
+          <div className={`${styles.timer} ${getTimerClass()}`}>
+            <i className="fas fa-clock"></i> <span>{formatTime(timeLeft)}</span>
+          </div>
         </div>
-        <div className={`${styles.timer} ${getTimerClass()}`}>
-          <i className="fas fa-clock"></i> <span>{formatTime(timeLeft)}</span>
+
+        <div className={styles.examContent}>
+          {/* Question Navigator Sidebar */}
+          <div className={`${styles.questionSidebar} ${showNavigator ? '' : styles.compact} ${isDesktop ? styles.questionSidebarDesktop : ''}`}>
+            <div className={styles.sidebarHeader}>
+              <h3 className={styles.sidebarTitle}>Question Navigator</h3>
+              {!isDesktop && (
+                <button
+                  className={`${styles.btn} ${styles.btnClose}`}
+                  onClick={() => setShowNavigator(false)}
+                  aria-label="Close Navigator"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              )}
+            </div>
+
+            <div className={styles.questionGrid}>
+              {Array.from({ length: examData?.totalQuestions || 0 }, (_, i) => i + 1).map(num => {
+                const status = getQuestionStatus(num);
+                return (
+                  <button
+                    key={num}
+                    className={`${styles.questionNumber} ${styles[status]}`}
+                    onClick={() => goToQuestion(num)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        goToQuestion(num);
+                      }
+                    }}
+                    type="button"
+                    aria-label={`Go to question ${num}`}
+                  >
+                    {num}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className={styles.questionStatus}>
+              <div className={styles.statusItem}>
+                <div className={`${styles.statusColor} ${styles.statusCurrent}`}></div>
+                <span>Current</span>
+              </div>
+              <div className={styles.statusItem}>
+                <div className={`${styles.statusColor} ${styles.statusAnswered}`}></div>
+                <span>Answered</span>
+              </div>
+              <div className={styles.statusItem}>
+                <div className={`${styles.statusColor} ${styles.statusFlagged}`}></div>
+                <span>Flagged</span>
+              </div>
+              <div className={styles.statusItem}>
+                <div className={`${styles.statusColor} ${styles.statusUnanswered}`}></div>
+                <span>Unanswered</span>
+              </div>
+            </div>
+
+            <div className={styles.examNotes}>
+              <p><strong>Instructions:</strong></p>
+              <ul className={styles.instructionsList}>
+                <li>Select one answer per question</li>
+                <li>You can flag questions for review</li>
+                <li>Timer will auto-submit when time expires</li>
+                <li>No going back after submission</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Main Question Area */}
+          <div className={styles.questionMain}>
+            <div className={styles.questionContainer}>
+              <div className={styles.questionHeader}>
+                <h2 className={styles.questionTitle}>Question {currentQuestion} of {examData!.totalQuestions}</h2>
+                <div className={styles.questionActions}>
+                  {!isDesktop && (
+                    <button
+                      className={`${styles.btn} ${styles.btnOutline}`}
+                      onClick={() => setShowNavigator(!showNavigator)}
+                    >
+                      <i className="fas fa-list"></i> {showNavigator ? 'Hide Navigator' : 'Show Navigator'}
+                    </button>
+                  )}
+                  <button
+                    className={`${styles.btn} ${styles.btnFlag} ${flaggedQuestions.has(currentQuestion) ? styles.flagged : ''}`}
+                    onClick={toggleFlag}
+                  >
+                    <i className="fas fa-flag"></i> {flaggedQuestions.has(currentQuestion) ? 'Remove Flag' : 'Flag for Review'}
+                  </button>
+                  <button
+                    className={`${styles.btn} ${styles.btnClear}`}
+                    onClick={clearAnswer}
+                    disabled={!userAnswers[currentQuestion]}
+                  >
+                    <i className="fas fa-trash-alt"></i> Clear Answer
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.questionContent}>
+                {currentQ ? (
+                  <>
+                    <div className={styles.questionText}>
+                      {currentQ.text}
+                    </div>
+
+                    <ul className={styles.optionsList} aria-label="Multiple choice options">
+                      {currentQ.options.map(option => {
+                        const isSelected = userAnswers[currentQuestion] === option.id;
+                        return (
+                          <li key={option.id}>
+                            <button
+                              className={`${styles.optionItem} ${isSelected ? styles.selected : ''}`}
+                              onClick={() => selectOption(option.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  selectOption(option.id);
+                                }
+                              }}
+                              aria-label={`Select option ${option.id}: ${option.text}`}
+                              type="button"
+                            >
+                              <div className={styles.optionMarker}>{option.id}</div>
+                              <div className={styles.optionText}>{option.text}</div>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                ) : (
+                  <div>No question available</div>
+                )}
+              </div>
+
+              <div className={styles.examFooter}>
+                <div className={styles.navButtons}>
+                  <button
+                    className={`${styles.btn} ${styles.btnOutline} ${styles.btnLarge}`}
+                    onClick={goToPrevious}
+                    disabled={currentQuestion === 1}
+                  >
+                    <i className="fas fa-chevron-left"></i> Previous
+                  </button>
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimary} ${styles.btnLarge}`}
+                    onClick={goToNext}
+                    disabled={currentQuestion === examData!.totalQuestions}
+                  >
+                    Next <i className="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+
+                <div className={styles.progressText}>
+                  <span>{answeredCount}</span> of {examData!.totalQuestions} questions answered
+                </div>
+
+                <button
+                  className={`${styles.btn} ${styles.btnDanger} ${styles.btnLarge}`}
+                  onClick={() => setShowSubmitModal(true)}
+                >
+                  Submit Exam
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className={styles.examContent}>
-        {/* Question Navigator Sidebar */}
-        {renderQuestionSidebar()}
-
-        {/* Main Question Area */}
-        {renderQuestionMain()}
-      </div>
-
-      {/* Submit Confirmation Modal */}
-      <div className={`${styles.modal} ${showSubmitModal ? styles.show : ''}`} id="submitModal">
-        <div className={styles.modalContent}>
-          <h2 className={styles.modalTitle}>Submit Exam?</h2>
-          <p className={styles.modalText} id="modalText">
-            You have answered {answeredCount} out of {examData.totalQuestions} questions. Are you sure you want to submit your exam?
-          </p>
-          <div className={styles.modalButtons}>
-            <button className={`${styles.btn} ${styles.btnOutline}`} id="cancelSubmit" onClick={() => setShowSubmitModal(false)}>
-              Cancel
-            </button>
-            <button className={`${styles.btn} ${styles.btnDanger}`} id="confirmSubmit" onClick={handleSubmitExam}>
-              Yes, Submit
-            </button>
+        {/* Submit Confirmation Modal */}
+        <div className={`${styles.modal} ${showSubmitModal ? styles.show : ''}`} id="submitModal">
+          <div className={styles.modalContent}>
+            <h2 className={styles.modalTitle}>Submit Exam?</h2>
+            <p className={styles.modalText} id="modalText">
+              You have answered {answeredCount} out of {examData.totalQuestions} questions. Are you sure you want to submit your exam?
+            </p>
+            <div className={styles.modalButtons}>
+              <button className={`${styles.btn} ${styles.btnOutline}`} id="cancelSubmit" onClick={() => setShowSubmitModal(false)}>
+                Cancel
+              </button>
+              <button className={`${styles.btn} ${styles.btnDanger}`} id="confirmSubmit" onClick={() => submitExam(false)}>
+                Yes, Submit
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
