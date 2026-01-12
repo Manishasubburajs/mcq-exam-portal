@@ -1,4 +1,4 @@
-// app/api/students/exams/answer/route.ts
+// app/api/students/answer/route.ts
 
 import { prisma } from "@/lib/db";
 import { verifyToken } from "@/utils/auth";

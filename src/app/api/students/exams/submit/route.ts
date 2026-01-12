@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       return prisma.student_answers.upsert({
         where: {
           attempt_id_question_id: {
-            attempt_id: attemptId,
+            attempt_id: parseInt(attemptId),
             question_id: questionId,
           },
         },
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
           time_taken_seconds: timeTaken,
         },
         create: {
-          attempt_id: attemptId,
+          attempt_id: parseInt(attemptId),
           question_id: questionId,
           selected_answer: selectedAnswer as string,
           time_taken_seconds: timeTaken,
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
 
     // Calculate marks
     const savedAnswers = await prisma.student_answers.findMany({
-      where: { attempt_id: attemptId },
+      where: { attempt_id: parseInt(attemptId) },
       include: {
         question: {
           select: { correct_answer: true, marks: true, negative_marks: true }
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
 
     // Update attempt
     await prisma.student_exam_attempts.update({
-      where: { attempt_id: attemptId },
+      where: { attempt_id: parseInt(attemptId) },
       data: {
         status: "completed",
         end_time: new Date(),
