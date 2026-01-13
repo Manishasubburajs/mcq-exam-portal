@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Avatar,
   Button,
   TextField,
   IconButton,
@@ -13,9 +12,9 @@ import {
   FormControl,
   InputLabel,
   Card,
-  Chip,
   CardContent,
   useTheme,
+  CircularProgress,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
@@ -94,168 +93,13 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
   </div>
 );
 
-/* ---- Profile Stats Card Component ---- */
-const ProfileStatsCard = ({
-  userData,
-  loading,
-}: {
-  userData: any;
-  loading: boolean;
-}) => {
-  const displayName = useMemo(() => {
-    if (!userData) return "Loading...";
-    return (
-      ((userData.first_name || "") + " " + (userData.last_name || "")).trim() ||
-      userData.username ||
-      "User"
-    );
-  }, [userData]);
-
-  const avatarUrl = useMemo(() => {
-    if (!userData) return "";
-    return `https://ui-avatars.com/api/?name=${displayName}&background=6a11cb&color=fff&size=120`;
-  }, [displayName, userData]);
-
-  const studentId = useMemo(
-    () => (userData ? `S${userData.user_id || "00000"}` : "Loading..."),
-    [userData]
-  );
-
-  return (
-    <Card sx={{ mb: 3, boxShadow: "0 5px 15px rgba(0,0,0,0.05)" }}>
-      <CardContent
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          p: { xs: 2, sm: 3 },
-          flexDirection: { xs: "column", sm: "row" },
-          textAlign: { xs: "center", sm: "left" },
-          gap: 3,
-          opacity: loading ? 0.6 : 1,
-          transition: "opacity 0.3s ease-in-out",
-        }}
-      >
-        <Box
-          sx={{
-            position: "relative",
-            mr: { xs: 0, sm: 3 },
-            mb: { xs: 2, sm: 0 },
-            p: 1,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #6a11cb, #2575fc)",
-            display: "inline-block",
-          }}
-        >
-          <Avatar
-            src={avatarUrl}
-            sx={{
-              width: { xs: 100, sm: 120 },
-              height: { xs: 100, sm: 120 },
-              border: "4px solid #6a11cb",
-            }}
-          />
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 700,
-              color: "#2c3e50",
-              mb: 0.5,
-              fontSize: { xs: "1.8rem", sm: "2rem" },
-            }}
-          >
-            {loading ? "Loading..." : displayName}
-          </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: { xs: "center", sm: "flex-start" },
-              mb: 2,
-              gap: 1,
-              flexWrap: "wrap",
-            }}
-          >
-            <Typography variant="body2" sx={{ color: "#95a5a6" }}>
-              Student ID:
-            </Typography>
-            <Chip
-              label={studentId}
-              size="small"
-              sx={{ bgcolor: "#f0f0f0", fontWeight: 500 }}
-            />
-          </Box>
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 3,
-              justifyContent: { xs: "center", sm: "flex-start" },
-              "& > *": {
-                flex: { xs: "1 1 120px", sm: "1 1 150px" },
-                minWidth: { xs: "100px", sm: "120px" },
-              },
-            }}
-          >
-            <Box sx={{ textAlign: "center" }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: "#6a11cb",
-                  fontSize: { xs: "1.5rem", sm: "2.125rem" },
-                }}
-              >
-                82%
-              </Typography>
-              <Typography variant="body2" sx={{ color: "#7f8c8d" }}>
-                Average Score
-              </Typography>
-            </Box>
-            <Box sx={{ textAlign: "center" }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: "#6a11cb",
-                  fontSize: { xs: "1.5rem", sm: "2.125rem" },
-                }}
-              >
-                15
-              </Typography>
-              <Typography variant="body2" sx={{ color: "#7f8c8d" }}>
-                Exams Taken
-              </Typography>
-            </Box>
-            <Box sx={{ textAlign: "center" }}>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  color: "#6a11cb",
-                  fontSize: { xs: "1.5rem", sm: "2.125rem" },
-                }}
-              >
-                #5
-              </Typography>
-              <Typography variant="body2" sx={{ color: "#7f8c8d" }}>
-                Class Rank
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-};
-
 /* ----- Personal Information Tab Component ---- */
 const PersonalInformationTab = ({
   personalInfo,
   setPersonalInfo,
   isMobile,
-  fetchUserData, loading,
+  fetchUserData,
+  loading,
 }: any) => {
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [errors, setErrors] = useState<any>({});
@@ -325,11 +169,31 @@ const PersonalInformationTab = ({
       <Card
         sx={{
           boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
-          opacity: loading ? 0.5 : 1, 
-          pointerEvents: loading ? "none" : "auto", 
+          opacity: loading ? 0.5 : 1,
+          pointerEvents: loading ? "none" : "auto",
+          position: "relative",
           transition: "opacity 0.3s ease-in-out",
         }}
       >
+        {loading && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(255,255,255,0.5)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 10,
+              borderRadius: 1,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Typography
             variant="h5"
@@ -380,6 +244,7 @@ const PersonalInformationTab = ({
               label="Email Address"
               type="email"
               value={personalInfo.email}
+              disabled
               onChange={handlePersonalInfoChange("email")}
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
@@ -511,7 +376,8 @@ const AccountSettingsTab = ({
   handleChange,
   isMobile,
   userData,
-  fetchUserData, loading,
+  fetchUserData,
+  loading,
 }: any) => {
   const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [errors, setErrors] = useState<any>({});
@@ -655,9 +521,33 @@ const AccountSettingsTab = ({
 
   return (
     <>
-      <Card sx={{ boxShadow: "0 5px 15px rgba(0,0,0,0.05)",opacity: loading ? 0.5 : 1, 
-          pointerEvents: loading ? "none" : "auto", 
-          transition: "opacity 0.3s ease-in-out"}}>
+      <Card
+        sx={{
+          boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
+          opacity: loading ? 0.5 : 1,
+          pointerEvents: loading ? "none" : "auto",
+          transition: "opacity 0.3s ease-in-out",
+        }}
+      >
+        {loading && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(255,255,255,0.5)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 10,
+              borderRadius: 1,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Typography
             variant="h5"
@@ -677,6 +567,7 @@ const AccountSettingsTab = ({
               label="Username"
               value={accountSettings.username}
               onChange={handleChange("username")}
+              disabled
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.username}
@@ -904,8 +795,6 @@ const ProfilePage = () => {
         },
       }}
     >
-      <ProfileStatsCard userData={userData} loading={loading} />
-
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
         <Box

@@ -1,7 +1,7 @@
-"use client"
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Box, Paper, Typography, useMediaQuery } from '@mui/material';
+"use client";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Box, Paper, Typography, useMediaQuery } from "@mui/material";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,18 +13,18 @@ import {
   Tooltip,
   Legend,
   ArcElement,
-} from 'chart.js';
+} from "chart.js";
 // cSpell:ignore chartjs
-import { Bar, Line, Doughnut } from 'react-chartjs-2';
+import { Bar, Line, Doughnut } from "react-chartjs-2";
 
-import dynamic from 'next/dynamic';
-import Sidebar from '../components/Sidebar';
-import StatsCard from '../components/StatsCard';
-import ChartContainer from '../components/ChartContainer';
-import ActivityList from '../components/ActivityList';
-import QuickActionCard from '../components/QuickActionCard';
+import dynamic from "next/dynamic";
+import Sidebar from "../components/Sidebar";
+import StatsCard from "../components/StatsCard";
+import ChartContainer from "../components/ChartContainer";
+import ActivityList from "../components/ActivityList";
+import QuickActionCard from "../components/QuickActionCard";
 
-const Header = dynamic(() => import('../components/Header'), { ssr: false });
+const Header = dynamic(() => import("../components/Header"), { ssr: false });
 
 ChartJS.register(
   CategoryScale,
@@ -40,52 +40,46 @@ ChartJS.register(
 
 export default function Home() {
   const router = useRouter();
-  const isDesktop = useMediaQuery('(min-width:1024px)');
-  const isMobile = useMediaQuery('(max-width:767px)');
-  const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
+  const isDesktop = useMediaQuery("(min-width:1024px)");
+  const isMobile = useMediaQuery("(max-width:767px)");
+  const isTablet = useMediaQuery("(min-width:768px) and (max-width:1023px)");
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
+
   const [stats, setStats] = useState([
     {
-      title: 'Loading...',
-      subtitle: 'Total Students',
-      trend: '12% increase this month',
-      trendUp: true,
-      icon: 'School',
-      color: 'white',
-      bgColor: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+      title: "0",
+      subtitle: "Total Students",
+      icon: "School",
+      color: "white",
+      bgColor: "linear-gradient(135deg, #4caf50, #66bb6a)",
     },
     {
-      title: '86',
-      subtitle: 'Active Exams',
-      trend: '5 new exams this week',
-      trendUp: true,
-      icon: 'Assignment',
-      color: 'white',
-      bgColor: 'linear-gradient(135deg, #2196f3, #42a5f5)',
+      title: "0",
+      subtitle: "Total Exams",
+      icon: "Assignment",
+      color: "white",
+      bgColor: "linear-gradient(135deg, #2196f3, #42a5f5)",
     },
     {
-      title: '2,548',
-      subtitle: 'Questions in Bank',
-      trend: '42 added today',
-      trendUp: true,
-      icon: 'HelpOutline',
-      color: 'white',
-      bgColor: 'linear-gradient(135deg, #ff9800, #ffb74d)',
+      title: "0",
+      subtitle: "Questions in Bank",
+      icon: "HelpOutline",
+      color: "white",
+      bgColor: "linear-gradient(135deg, #ff9800, #ffb74d)",
     },
     {
-      title: '78.5%',
-      subtitle: 'Average Performance',
-      trend: '2.3% from last month',
-      trendUp: false,
-      icon: 'TrendingUp',
-      color: 'white',
-      bgColor: 'linear-gradient(135deg, #f44336, #ef5350)',
+      title: "0%",
+      subtitle: "Average Score",
+      icon: "TrendingUp",
+      color: "white",
+      bgColor: "linear-gradient(135deg, #f44336, #ef5350)",
     },
   ]);
 
   useEffect(() => {
     // Check if user is logged in and is admin
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
     const role = localStorage.getItem("role") || sessionStorage.getItem("role");
 
     if (!token || role !== "admin") {
@@ -100,7 +94,7 @@ export default function Home() {
   const fetchStats = async () => {
     try {
       // Fetch students count
-      const studentsRes = await fetch('/api/students');
+      const studentsRes = await fetch("/api/students");
       const studentsData = await studentsRes.json();
       let studentCount = 0;
       if (studentsData.success) {
@@ -108,52 +102,55 @@ export default function Home() {
       }
 
       // Fetch exams count
-      const examsRes = await fetch('/api/exams');
+      const examsRes = await fetch("/api/exams");
       const examsData = await examsRes.json();
       let activeExamsCount = 0;
       if (Array.isArray(examsData)) {
-        activeExamsCount = examsData.filter((exam: any) => exam.status === 'active').length;
+        activeExamsCount = examsData.filter(
+          (exam: any) => exam.status === "active"
+        ).length;
       }
 
       // Fetch questions count
-      const questionsRes = await fetch('/api/questions');
+      const questionsRes = await fetch("/api/questions");
       const questionsData = await questionsRes.json();
       let totalQuestions = 0;
       if (Array.isArray(questionsData)) {
         totalQuestions = questionsData.length;
       }
 
-      setStats(prevStats => prevStats.map(stat => {
-        if (stat.subtitle === 'Total Students') {
-          return { ...stat, title: studentCount.toString() };
-        } else if (stat.subtitle === 'Active Exams') {
-          return { ...stat, title: activeExamsCount.toString() };
-        } else if (stat.subtitle === 'Questions in Bank') {
-          return { ...stat, title: totalQuestions.toString() };
-        }
-        return stat;
-      }));
+      setStats((prevStats) =>
+        prevStats.map((stat) => {
+          if (stat.subtitle === "Total Students") {
+            return { ...stat, title: studentCount.toString() };
+          } else if (stat.subtitle === "Total Exams") {
+            return { ...stat, title: activeExamsCount.toString() };
+          } else if (stat.subtitle === "Questions in Bank") {
+            return { ...stat, title: totalQuestions.toString() };
+          }
+          return stat;
+        })
+      );
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error("Error fetching stats:", error);
     }
   };
 
-
   const examActivityData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     datasets: [
       {
-        label: 'Exams Taken',
+        label: "Exams Taken",
         data: [45, 62, 58, 71, 84, 52, 38],
-        backgroundColor: 'rgba(106, 17, 203, 0.7)',
-        borderColor: 'rgba(106, 17, 203, 1)',
+        backgroundColor: "rgba(106, 17, 203, 0.7)",
+        borderColor: "rgba(106, 17, 203, 1)",
         borderWidth: 1,
       },
       {
-        label: 'Exams Created',
+        label: "Exams Created",
         data: [3, 5, 4, 7, 6, 2, 1],
-        backgroundColor: 'rgba(37, 117, 252, 0.7)',
-        borderColor: 'rgba(37, 117, 252, 1)',
+        backgroundColor: "rgba(37, 117, 252, 0.7)",
+        borderColor: "rgba(37, 117, 252, 1)",
         borderWidth: 1,
       },
     ],
@@ -165,36 +162,36 @@ export default function Home() {
     scales: {
       y: {
         beginAtZero: true,
-        ticks: { font: { size: 9 } }
+        ticks: { font: { size: 9 } },
       },
-      x: { ticks: { font: { size: 9 } } }
+      x: { ticks: { font: { size: 9 } } },
     },
     plugins: {
       legend: {
         display: false,
       },
     },
-    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } },
   };
 
   const subjectPerformanceData = {
-    labels: ['Mathematics', 'Science', 'History', 'English', 'Geography'],
+    labels: ["Mathematics", "Science", "History", "English", "Geography"],
     datasets: [
       {
         data: [85, 78, 72, 80, 75],
         backgroundColor: [
-          'rgba(106, 17, 203, 0.7)',
-          'rgba(37, 117, 252, 0.7)',
-          'rgba(255, 193, 7, 0.7)',
-          'rgba(40, 167, 69, 0.7)',
-          'rgba(220, 53, 69, 0.7)',
+          "rgba(106, 17, 203, 0.7)",
+          "rgba(37, 117, 252, 0.7)",
+          "rgba(255, 193, 7, 0.7)",
+          "rgba(40, 167, 69, 0.7)",
+          "rgba(220, 53, 69, 0.7)",
         ],
         borderColor: [
-          'rgba(106, 17, 203, 1)',
-          'rgba(37, 117, 252, 1)',
-          'rgba(255, 193, 7, 1)',
-          'rgba(40, 167, 69, 1)',
-          'rgba(220, 53, 69, 1)',
+          "rgba(106, 17, 203, 1)",
+          "rgba(37, 117, 252, 1)",
+          "rgba(255, 193, 7, 1)",
+          "rgba(40, 167, 69, 1)",
+          "rgba(220, 53, 69, 1)",
         ],
         borderWidth: 1,
       },
@@ -215,26 +212,26 @@ export default function Home() {
         },
       },
     },
-    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } },
   };
 
   const performanceTrendData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
     datasets: [
       {
-        label: 'Average Score',
+        label: "Average Score",
         data: [72, 75, 78, 76, 80, 82, 85],
-        borderColor: 'rgba(106, 17, 203, 1)',
-        backgroundColor: 'rgba(106, 17, 203, 0.1)',
+        borderColor: "rgba(106, 17, 203, 1)",
+        backgroundColor: "rgba(106, 17, 203, 0.1)",
         borderWidth: 2,
         fill: true,
         tension: 0.4,
       },
       {
-        label: 'Pass Rate',
+        label: "Pass Rate",
         data: [68, 72, 75, 73, 78, 80, 83],
-        borderColor: 'rgba(37, 117, 252, 1)',
-        backgroundColor: 'rgba(37, 117, 252, 0.1)',
+        borderColor: "rgba(37, 117, 252, 1)",
+        backgroundColor: "rgba(37, 117, 252, 0.1)",
         borderWidth: 2,
         fill: true,
         tension: 0.4,
@@ -274,83 +271,83 @@ export default function Home() {
         },
       },
     },
-    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } }
+    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } },
   };
 
   const activities = [
     {
-      icon: 'Assignment',
+      icon: "Assignment",
       title: 'New exam "Advanced Calculus" created',
-      time: '10 minutes ago • By Dr. Smith',
-      color: 'white',
-      bgColor: 'primary.main',
+      time: "10 minutes ago • By Dr. Smith",
+      color: "white",
+      bgColor: "primary.main",
     },
     {
-      icon: 'PersonAdd',
-      title: '15 new students registered',
-      time: '1 hour ago • System',
-      color: 'white',
-      bgColor: 'success.main',
+      icon: "PersonAdd",
+      title: "15 new students registered",
+      time: "1 hour ago • System",
+      color: "white",
+      bgColor: "success.main",
     },
     {
-      icon: 'Backup',
-      title: 'System backup completed successfully',
-      time: '3 hours ago • Automated',
-      color: 'white',
-      bgColor: 'info.main',
+      icon: "Backup",
+      title: "System backup completed successfully",
+      time: "3 hours ago • Automated",
+      color: "white",
+      bgColor: "info.main",
     },
     {
-      icon: 'Publish',
-      title: 'Chemistry Midterm results published',
-      time: '5 hours ago • By Dr. Johnson',
-      color: 'white',
-      bgColor: 'secondary.main',
+      icon: "Publish",
+      title: "Chemistry Midterm results published",
+      time: "5 hours ago • By Dr. Johnson",
+      color: "white",
+      bgColor: "secondary.main",
     },
     {
-      icon: 'ReportProblem',
-      title: '3 exam attempts flagged for review',
-      time: 'Yesterday • System',
-      color: 'white',
-      bgColor: 'warning.main',
+      icon: "ReportProblem",
+      title: "3 exam attempts flagged for review",
+      time: "Yesterday • System",
+      color: "white",
+      bgColor: "warning.main",
     },
   ];
 
   const actions = [
     {
-      icon: 'AddCircle',
-      title: 'Create Exam',
-      description: 'Set up a new examination',
+      icon: "AddCircle",
+      title: "Create Exam",
+      description: "Set up a new examination",
     },
     {
-      icon: 'Person',
-      title: 'Manage Users',
-      description: 'Add or modify user accounts',
+      icon: "Person",
+      title: "Manage Users",
+      description: "Add or modify user accounts",
     },
     {
-      icon: 'HelpOutline',
-      title: 'Question Bank',
-      description: 'Manage question database',
+      icon: "HelpOutline",
+      title: "Question Bank",
+      description: "Manage question database",
     },
     {
-      icon: 'BarChart',
-      title: 'View Reports',
-      description: 'Generate detailed analytics',
+      icon: "BarChart",
+      title: "View Reports",
+      description: "Generate detailed analytics",
     },
     {
-      icon: 'Settings',
-      title: 'System Settings',
-      description: 'Configure portal settings',
+      icon: "Settings",
+      title: "System Settings",
+      description: "Configure portal settings",
     },
     {
-      icon: 'Download',
-      title: 'Export Data',
-      description: 'Download reports and data',
+      icon: "Download",
+      title: "Export Data",
+      description: "Download reports and data",
     },
   ];
 
   const handleActionClick = (title: string) => {
-    if (title === 'System Settings') {
-      router.push('/admin-pages/Settings');
+    if (title === "System Settings") {
+      router.push("/admin-pages/Settings");
     } else {
       alert(`Navigating to: ${title}`);
       // In a real application, this would redirect to the appropriate page
@@ -358,100 +355,87 @@ export default function Home() {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", backgroundColor: "grey.50" }}
+    >
       <Sidebar isOpen={sidebarOpen} />
       {sidebarOpen && (isMobile || isTablet) && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
             zIndex: 999,
           }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <Box className={`main-content ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`} sx={{
-        ml: sidebarOpen && !isMobile && !isTablet ? '220px' : 0,
-        transition: 'margin-left 0.3s ease',
-        paddingTop: { xs: '50px', md: '80px' }
-      }}>
-        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
+      <Box
+        className={`main-content ${
+          sidebarOpen ? "sidebar-open" : "sidebar-closed"
+        }`}
+        sx={{
+          ml: sidebarOpen && !isMobile && !isTablet ? "220px" : 0,
+          transition: "margin-left 0.3s ease",
+          paddingTop: { xs: "50px", md: "80px" },
+        }}
+      >
+        <Header
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          sidebarOpen={sidebarOpen}
+        />
 
         {/* Stats Cards */}
-        <div className="stats-grid">
-          {stats.map((stat) => (
-            <StatsCard key={stat.subtitle} stat={stat} />
-          ))}
-        </div>
+        <Box sx={{ mt: 4 }}>
+          <div className="stats-grid">
+            {stats.map((stat) => (
+              <StatsCard key={stat.subtitle} stat={stat} />
+            ))}
+          </div>
+        </Box>
 
         {/* Charts */}
         <Box
           sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "1fr",
+              md: "repeat(2, 1fr)",
+            },
             gap: 2,
-            marginBottom: '30px',
+            mb: 4,
           }}
         >
-          <ChartContainer title="Exam Activity Overview" minHeight={{ xs: 240, sm: 300, md: 380 }}>
+          <ChartContainer
+            title="Exam Activity Overview"
+            minHeight={{ xs: 240, sm: 300, md: 380 }}
+          >
             <Bar data={examActivityData} options={examActivityOptions} />
           </ChartContainer>
-          <ChartContainer title="Subject Performance" minHeight={{ xs: 240, sm: 300, md: 380 }}>
-            <Doughnut data={subjectPerformanceData} options={{ ...subjectPerformanceOptions, plugins: { ...subjectPerformanceOptions.plugins, legend: { ...subjectPerformanceOptions.plugins.legend, labels: { font: { size: 12 } } } } }} />
-          </ChartContainer>
-          <ChartContainer title="Performance Trend" minHeight={{ xs: 240, sm: 300, md: 380 }}>
-            <Line data={performanceTrendData} options={{ ...performanceTrendOptions, plugins: { ...performanceTrendOptions.plugins, legend: { ...performanceTrendOptions.plugins.legend, labels: { font: { size: 12 } } } } }} />
+
+          <ChartContainer
+            title="Performance Trend"
+            minHeight={{ xs: 240, sm: 300, md: 380 }}
+          >
+            <Line
+              data={performanceTrendData}
+              options={{
+                ...performanceTrendOptions,
+                plugins: {
+                  ...performanceTrendOptions.plugins,
+                  legend: {
+                    ...performanceTrendOptions.plugins.legend,
+                    labels: { font: { size: 12 } },
+                  },
+                },
+              }}
+            />
           </ChartContainer>
         </Box>
-
-        {/* Recent Activity */}
-        {/* <Paper
-          elevation={1}
-          sx={{
-            padding: '25px',
-            borderRadius: '10px',
-            marginBottom: '30px',
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: '1.25rem',
-              marginBottom: '1.25rem',
-              color: '#2c3e50',
-              paddingBottom: '0.625rem',
-              borderBottom: '2px solid #f0f0f0',
-            }}
-          >
-            Recent System Activity
-          </Typography>
-          <ActivityList activities={activities} />
-        </Paper> */}
-
-        {/* Quick Actions */}
-        {/* <Paper elevation={1} sx={{ padding: '25px', borderRadius: '10px' }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontSize: '1.25rem',
-              marginBottom: '1.25rem',
-              color: '#2c3e50',
-              paddingBottom: '0.625rem',
-              borderBottom: '2px solid #f0f0f0',
-            }}
-          >
-            Quick Actions
-          </Typography>
-          <div className="actions-grid">
-            {actions.map((action) => (
-              <QuickActionCard key={action.title} action={action} onClick={handleActionClick} />
-            ))}
-          </div>
-        </Paper> */}
       </Box>
     </Box>
   );
