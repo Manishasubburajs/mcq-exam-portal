@@ -161,6 +161,8 @@ export async function GET(req: Request) {
             questions: exam.question_count,
             due: exam.scheduled_end ? exam.scheduled_end.toISOString().split('T')[0] : "No due date",
             points: exam.total_marks.toString(),
+            examType: exam.exam_type,
+            
           });
         }
       }

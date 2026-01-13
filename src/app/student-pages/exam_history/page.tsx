@@ -49,8 +49,9 @@ const ACTION_BUTTON_SX = {
 interface ExamMeta {
   duration: string | number;
   questions: string | number;
-  due: string;
+  completedAt: string;
   points: string | number;
+  score: string | number;
   examType: "practice" | "mock" | "live";
 }
 
@@ -58,10 +59,12 @@ interface ExamCardProps {
   title: string;
   subject: string;
   meta: ExamMeta;
-  onStart?: () => void;
+  onViewResults?: () => void;
+  onTakeExam?: () => void;
+  canRetake?: boolean;
 }
 
-const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
+const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }: ExamCardProps) => (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -187,7 +190,7 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
             gap: { xs: 0.5, sm: 0.625 },
           }}
         >
-          <EventIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+          <CalendarTodayIcon fontSize="small" sx={{ color: "#6a11cb" }} />
           <Typography
             variant="body2"
             sx={{
@@ -195,7 +198,7 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
               fontSize: { xs: 13, sm: 14 },
             }}
           >
-            Due: {meta.due}
+            Completed: {meta.completedAt}
           </Typography>
         </Box>
         <Box
@@ -215,7 +218,7 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
               fontSize: { xs: 13, sm: 14 },
             }}
           >
-            {meta.points} points
+            Score: {meta.score}/{meta.points}
           </Typography>
         </Box>
       </Box>
@@ -247,7 +250,7 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
               fontWeight: 600,
             }}
           >
-            Available
+            Completed
           </Typography>
         </Box>
 
@@ -255,15 +258,16 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
           sx={{
             width: { xs: "100%", sm: ACTION_BUTTON_MD_WIDTH },
             display: "flex",
+            gap: canRetake ? 1 : 0,
           }}
         >
           <Button
             variant="contained"
-            fullWidth
             sx={{
-              padding: { xs: "6px 12px", sm: "8px 15px" },
+              flex: canRetake ? 1 : "none",
+              width: canRetake ? "auto" : "100%",
+              padding: { xs: "6px 8px", sm: "8px 10px" },
               height: { xs: "36px", sm: "40px" },
-              lineHeight: { xs: "36px", sm: "40px" },
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
@@ -271,25 +275,52 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
               background: "linear-gradient(to right, #6a11cb, #2575fc)",
               color: "#fff",
               borderRadius: 2,
-              fontSize: { xs: "13px", sm: "14px" },
+              fontSize: { xs: "10px", sm: "11px" },
               fontWeight: 600,
               boxShadow: "none",
               "&:hover": { transform: "translateY(-2px)" },
             }}
-            onClick={onStart}
+            onClick={onViewResults}
           >
-            Start Exam
+            View Results
           </Button>
+          {canRetake && (
+            <Button
+              variant="outlined"
+              sx={{
+                flex: 1,
+                padding: { xs: "6px 8px", sm: "8px 10px" },
+                height: { xs: "36px", sm: "40px" },
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textTransform: "none",
+                borderColor: "#6a11cb",
+                color: "#6a11cb",
+                borderRadius: 2,
+                fontSize: { xs: "10px", sm: "11px" },
+                fontWeight: 600,
+                "&:hover": {
+                  backgroundColor: "#6a11cb",
+                  color: "#fff",
+                  transform: "translateY(-2px)"
+                },
+              }}
+              onClick={onTakeExam}
+            >
+              Retake
+            </Button>
+          )}
         </Box>
       </Box>
     </Box>
   </Card>
 );
 
-export default function MyExamsPage() {
+export default function ExamHistoryPage() {
   const router = useRouter();
   const theme = useTheme();
-  const [availableExams, setAvailableExams] = useState<any[]>([]);
+  const [completedExams, setCompletedExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -303,56 +334,51 @@ export default function MyExamsPage() {
       return;
     }
 
-    const fetchExams = async () => {
+    const fetchAttempts = async () => {
       try {
-        const response = await fetch("/api/students/exams", {
+        const response = await fetch("/api/students/attempts", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         const data = await response.json();
-        console.log(data,"data from api call");
         if (data.success) {
-          setAvailableExams(data.data);
+          setCompletedExams(data.data);
         }
       } catch (error) {
-        console.error("Failed to fetch exams:", error);
+        console.error("Failed to fetch attempts:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchExams();
+    fetchAttempts();
   }, [router]);
 
-  console.log("availableExams",availableExams);
+  const viewResults = (attemptId: number) => {
+    router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
+  };
 
-  const startExam = async (examId: number) => {
+  const takeExam = async (attemptId: number) => {
     try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      const res = await fetch("/api/students/start", {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await fetch("/api/students/retake", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ examId }),
+        body: JSON.stringify({ attemptId }),
       });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        alert(data.message); // mock/live limit message
-        return;
+      const data = await response.json();
+      if (data.success) {
+        router.push("/student-pages/my_exams");
+      } else {
+        alert(data.message || "Failed to enable retake");
       }
-
-      router.push(
-        `/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`
-      );
-    } catch (err) {
-      alert("Failed to start exam");
+    } catch (error) {
+      console.error("Failed to retake exam:", error);
+      alert("Failed to retake exam");
     }
   };
 
@@ -368,7 +394,7 @@ export default function MyExamsPage() {
         p: { xs: 1.5, sm: 2.5, md: 3.75 },
       }}
     >
-      {/* Available Exams */}
+      {/* Completed Exams */}
       <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
         <Card
           sx={{
@@ -399,7 +425,7 @@ export default function MyExamsPage() {
                 textAlign: { xs: "center", sm: "left" },
               }}
             >
-              My Exams
+              Exam History
             </Typography>
           </Box>
 
@@ -412,11 +438,11 @@ export default function MyExamsPage() {
             }}
           >
             {loading ? (
-              <Typography>Loading exams...</Typography>
-            ) : availableExams.length > 0 ? (
-              availableExams.map((exam) => (
+              <Typography>Loading exam history...</Typography>
+            ) : completedExams.length > 0 ? (
+              completedExams.map((exam) => (
                 <Box
-                  key={exam.id}
+                  key={exam.attemptId}
                   sx={{
                     flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
                   }}
@@ -427,16 +453,19 @@ export default function MyExamsPage() {
                     meta={{
                       duration: exam.duration.toString(),
                       questions: exam.questions.toString(),
-                      due: exam.due,
+                      completedAt: exam.completedAt,
                       points: exam.points,
+                      score: exam.score,
                       examType: exam.examType,
                     }}
-                    onStart={() => startExam(exam.id)}
+                    onViewResults={() => viewResults(exam.attemptId)}
+                    onTakeExam={() => takeExam(exam.attemptId)}
+                    canRetake={exam.canRetake}
                   />
                 </Box>
               ))
             ) : (
-              <Typography>No available exams at the moment.</Typography>
+              <Typography>No completed exams yet.</Typography>
             )}
           </Box>
         </Card>
