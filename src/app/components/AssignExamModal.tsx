@@ -34,29 +34,31 @@ interface Student {
 
 export default function AssignExamModal({ open, onClose, examId }: Props) {
   const [students, setStudents] = useState<Student[]>([]);
-  const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // -------------------------------
-  // Fetch students when modal opens
-  // -------------------------------
+  // Pre-assigned students
+  const [preAssigned, setPreAssigned] = useState<number[]>([]);
+
+  // Current checked state (selected by user)
+  const [checked, setChecked] = useState<Set<number>>(new Set());
+
   useEffect(() => {
-    if (open) {
-      setSelected([]);
+    if (open && examId) {
       setError("");
+      setPreAssigned([]);
+      setChecked(new Set());
       fetchStudents();
+      fetchAssignedStudents();
     }
-  }, [open]);
+  }, [open, examId]);
 
   const fetchStudents = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/students");
       const json = await res.json();
-
       if (!json.success) throw new Error();
-
       setStudents(json.data);
     } catch {
       setError("Failed to load students");
@@ -65,57 +67,79 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
     }
   };
 
-  // -------------------------------
-  // Toggle individual student
-  // -------------------------------
-  const toggleStudent = (id: number) => {
-    setError("");
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  // -------------------------------
-  // Select / Deselect all
-  // -------------------------------
-  const handleSelectAll = (checked: boolean) => {
-    setError("");
-    setSelected(checked ? students.map((s) => s.user_id) : []);
-  };
-
-  // -------------------------------
-  // Assign exam
-  // -------------------------------
-  const handleAssign = async () => {
-    if (selected.length === 0) {
-      setError("Please select at least one student");
-      return;
+  const fetchAssignedStudents = async () => {
+    try {
+      const res = await fetch(`/api/exams/${examId}/assigned-students`);
+      const json = await res.json();
+      if (json.success) {
+        setPreAssigned(json.data);
+        setChecked(new Set(json.data)); // check initially assigned
+      }
+    } catch {
+      // silent fail
     }
+  };
 
+  const toggleStudent = (studentId: number) => {
+    setChecked(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) newSet.delete(studentId);
+      else newSet.add(studentId);
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (selectAll: boolean) => {
+    if (selectAll) {
+      setChecked(new Set(students.map(s => s.user_id)));
+    } else {
+      setChecked(new Set());
+    }
+  };
+
+  const handleAssign = async () => {
     try {
       const res = await fetch("/api/exams/assign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           examId,
-          studentIds: selected,
-          assignedBy: 1, // TODO: replace with logged-in admin
+          studentIds: Array.from(checked),
+          assignedBy: 1, // TODO: Replace with logged-in admin
         }),
       });
 
       const data = await res.json();
-
       if (!data.success) throw new Error(data.message);
 
-      alert("✅ Exam assigned successfully");
+      alert("✅ Exam assignments updated successfully");
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to assign exam");
     }
   };
 
-  const allSelected =
-    students.length > 0 && selected.length === students.length;
+  const isChanged = () => {
+    const current = Array.from(checked).sort();
+    const previous = [...preAssigned].sort();
+    return JSON.stringify(current) !== JSON.stringify(previous);
+  };
+
+  const getButtonText = () => {
+    if (preAssigned.length === 0) return "Assign Exam"; // no assignment yet
+    if (checked.size === 0 && preAssigned.length > 0) return "Update"; // unassign all
+    if (isChanged()) return "Update Assignment"; // changes made
+    return "Assign Exam"; // fallback
+  };
+
+  const isButtonDisabled = () => {
+    if (preAssigned.length === 0 && checked.size === 0) return true; // nothing selected yet
+    if (checked.size === 0 && preAssigned.length > 0) return false; // can unassign all
+    return isChanged() ? false : true; // enable only if changes made
+  };
+
+  const selectedCount = checked.size;
+  const allSelected = students.length > 0 && checked.size === students.length;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -136,7 +160,7 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
 
         <TextField
           label="Number of Students Selected"
-          value={selected.length}
+          value={selectedCount}
           fullWidth
           margin="dense"
           disabled
@@ -150,7 +174,7 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
               <ListItem key={s.user_id} disablePadding>
                 <ListItemButton onClick={() => toggleStudent(s.user_id)}>
                   <ListItemIcon>
-                    <Checkbox checked={selected.includes(s.user_id)} />
+                    <Checkbox checked={checked.has(s.user_id)} />
                   </ListItemIcon>
                   <ListItemText
                     primary={`${s.first_name} ${s.last_name}`}
@@ -168,9 +192,9 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
         <Button
           variant="contained"
           onClick={handleAssign}
-          disabled={selected.length === 0}
+          disabled={isButtonDisabled()}
         >
-          Assign Exam
+          {getButtonText()}
         </Button>
       </DialogActions>
     </Dialog>
