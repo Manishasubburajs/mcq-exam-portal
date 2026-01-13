@@ -57,6 +57,21 @@ interface Props {
 }
 
 export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
+  const resetForm = () => {
+    setActiveStep(0);
+    setExamTitle("");
+    setDescription("");
+    setExamType("practice");
+    setDuration(60);
+    setQuestionMode("random");
+    setStartTime("");
+    setEndTime("");
+    setSelectedSubjects([]);
+    setTopicCounts({});
+    setTopicErrors({});
+    setFormErrors({});
+  };
+
   const [activeStep, setActiveStep] = useState(0);
 
   // STEP 1: General Info
@@ -199,6 +214,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       const data = await res.json();
       if (data.success) {
         alert("Exam created successfully!");
+        resetForm();
         onSuccess?.();
         onClose();
       } else {
@@ -299,73 +315,79 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       case "Questions":
         return (
           <Box>
-            {subjects.map((subj) => {
-              const selected = selectedSubjects.includes(subj.subject_id);
-              return (
-                <Box key={subj.subject_id} mb={3}>
-                  <FormControlLabel
-                    control={
-                      isPractice ? (
-                        <Radio
-                          checked={selected}
-                          onChange={() => toggleSubject(subj.subject_id)}
-                        />
-                      ) : (
-                        <Checkbox
-                          checked={selected}
-                          onChange={() => toggleSubject(subj.subject_id)}
-                        />
-                      )
-                    }
-                    label={subj.subject_name}
-                  />
-                  {selected && (
-                    <Box ml={4} mt={1}>
-                      {subj.topics.map((topic) => {
-                        const disabled = topic.question_count === 0;
-                        return (
-                          <Box
-                            key={topic.topic_id}
-                            display="grid"
-                            gridTemplateColumns="200px 120px 120px"
-                            alignItems="center"
-                            gap={2}
-                            mb={1}
-                          >
-                            <Typography>{topic.topic_name}</Typography>
-                            <Typography color={disabled ? "text.disabled" : "text.primary"}>
-                              Available: {topic.question_count}
-                            </Typography>
-                            <TextField
-                              size="small"
-                              type="number"
-                              disabled={disabled}
-                              value={topicCounts[topic.topic_id] ?? ""}
-                              error={!!topicErrors[topic.topic_id]}
-                              helperText={topicErrors[topic.topic_id] || " "}
-                              onChange={(e) =>
-                                handleTopicChange(
-                                  topic.topic_id,
-                                  Number(e.target.value),
-                                  topic.question_count
-                                )
-                              }
-                              inputProps={{ min: 0, max: topic.question_count }}
-                            />
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  )}
-                  <Divider sx={{ mt: 2 }} />
-                </Box>
-              );
-            })}
-            <Typography fontWeight={700} mt={2}>
-              Total Questions: {totalQuestions}
-            </Typography>
-          </Box>
-        );
+            {loadingSubjects ? (
+              <Box display="flex" justifyContent="center" mt={3}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              subjects.map((subj) => {
+                const selected = selectedSubjects.includes(subj.subject_id);
+                return (
+                  <Box key={subj.subject_id} mb={3}>
+                    <FormControlLabel
+                      control={
+                        isPractice ? (
+                          <Radio
+                            checked={selected}
+                            onChange={() => toggleSubject(subj.subject_id)}
+                          />
+                        ) : (
+                          <Checkbox
+                            checked={selected}
+                            onChange={() => toggleSubject(subj.subject_id)}
+                          />
+                        )
+                      }
+                      label={subj.subject_name}
+                    />
+                    {selected && (
+                      <Box ml={4} mt={1}>
+                        {subj.topics.map((topic) => {
+                          const disabled = topic.question_count === 0;
+                          return (
+                            <Box
+                              key={topic.topic_id}
+                              display="grid"
+                              gridTemplateColumns="200px 120px 120px"
+                              alignItems="center"
+                              gap={2}
+                              mb={1}
+                            >
+                              <Typography>{topic.topic_name}</Typography>
+                              <Typography color={disabled ? "text.disabled" : "text.primary"}>
+                                Available: {topic.question_count}
+                              </Typography>
+                              <TextField
+                                size="small"
+                                type="number"
+                                disabled={disabled}
+                                value={topicCounts[topic.topic_id] ?? ""}
+                                error={!!topicErrors[topic.topic_id]}
+                                helperText={topicErrors[topic.topic_id] || " "}
+                                onChange={(e) =>
+                                  handleTopicChange(
+                                    topic.topic_id,
+                                    Number(e.target.value),
+                                    topic.question_count
+                                  )
+                                }
+                                inputProps={{ min: 0, max: topic.question_count }}
+                              />
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    )}
+                    <Divider sx={{ mt: 2 }} />
+                  </Box>
+                );
+              })
+            )}
+              <Typography fontWeight={700} mt={2}>
+                Total Questions: {totalQuestions}
+              </Typography>
+            </Box>
+          );
 
       case "Review":
         return (
@@ -380,7 +402,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={() => { resetForm(); onClose(); }} maxWidth="md" fullWidth>
       <DialogTitle>Create New Exam</DialogTitle>
       <DialogContent>
         <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
