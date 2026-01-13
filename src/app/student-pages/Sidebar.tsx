@@ -33,7 +33,7 @@ const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
     { text: 'Dashboard', icon: <FaTachometerAlt />, route: '/student-pages' },
     // { text: 'Take Exam', icon: <Assignment />, route: '/student-pages/exam_taking' },
     { text: 'My Exams', icon: <Assignment />, route: '/student-pages/my_exams' },
-    { text: 'Exam History', icon: <History />, route: '/student-pages/exam_res_rev' },
+    { text: 'Exam History', icon: <History />, route: '/student-pages/exam_history' },
     { text: 'Progress', icon: <BarChart />, route: '/student-pages/student_progress' },
     { text: 'My Profile', icon: <Person />, route: '/student-pages/profile_settings' },
     { text: 'Logout', icon: <FaSignOutAlt /> },
