@@ -55,7 +55,16 @@ interface CreateSubjectForm {
 
 const createSubjectSchema = yup.object({
   subject_name: yup.string().required("Subject name is required"),
-  topics: yup.array().of(yup.string().required("Topic name is required")).min(1, "At least one topic is required")
+  topics: yup
+    .array()
+    .of(yup.string().trim())
+    .test(
+      "at-least-one-topic",
+      "Enter at least one topic",
+      (topics) =>
+        Array.isArray(topics) &&
+        topics.some(topic => topic && topic.trim() !== "")
+    ),
 });
 
 const SubjectDetails: React.FC = () => {
@@ -309,26 +318,6 @@ const SubjectDetails: React.FC = () => {
         {/* Main Content */}
         <Box sx={{ p: 3 }}>
           {/* Page Header */}
-          <Paper elevation={1} sx={{ padding: "20px", marginBottom: "25px", borderRadius: "10px" }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Typography variant="h6" sx={{ marginBottom: "0", color: "text.primary" }}>
-                Filter Subjects
-              </Typography>
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<Add />}
-                onClick={() => setCreateModalOpen(true)}
-                sx={{
-                  background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                  "&:hover": { opacity: 0.9 }
-                }}
-              >
-                Create Subject / Topic
-              </Button>
-            </Box>
-          </Paper>
-
           {/* Subjects Table */}
           <Paper elevation={1} sx={{ borderRadius: "10px", overflow: "hidden" }}>
             <Box
@@ -342,6 +331,19 @@ const SubjectDetails: React.FC = () => {
                 <Typography variant="h6" sx={{ color: "text.primary" }}>
                   List of Subjects
                 </Typography>
+
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<Add />}
+                  onClick={() => setCreateModalOpen(true)}
+                  sx={{
+                    background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                    "&:hover": { opacity: 0.9 }
+                  }}
+                >
+                  Create Subject / Topic
+                </Button>
               </Box>
             </Box>
 
@@ -462,6 +464,16 @@ const SubjectDetails: React.FC = () => {
                   )}
                 </Box>
               ))}
+
+              {errors.topics && (
+                <Typography
+                  color="error"
+                  variant="caption"
+                  sx={{ mt: 0.5, display: "block" }}
+                >
+                  {errors.topics}
+                </Typography>
+              )}
               
               <Button
                 startIcon={<Add />}
@@ -472,12 +484,6 @@ const SubjectDetails: React.FC = () => {
               >
                 Add Topic
               </Button>
-              
-              {errors.topics && (
-                <Typography color="error" variant="caption" sx={{ mt: 1 }}>
-                  {errors.topics}
-                </Typography>
-              )}
             </Box>
           </Box>
         </DialogContent>
@@ -549,7 +555,15 @@ const SubjectDetails: React.FC = () => {
                   )}
                 </Box>
               ))}
-              
+              {errors.topics && (
+                <Typography
+                  color="error"
+                  variant="caption"
+                  sx={{ mt: 0.5, display: "block" }}
+                >
+                  {errors.topics}
+                </Typography>
+              )}
               <Button
                 startIcon={<Add />}
                 onClick={() => setEditFormData(prev => ({
@@ -562,12 +576,6 @@ const SubjectDetails: React.FC = () => {
               >
                 Add Topic
               </Button>
-              
-              {errors.topics && (
-                <Typography color="error" variant="caption" sx={{ mt: 1 }}>
-                  {errors.topics}
-                </Typography>
-              )}
             </Box>
           </Box>
         </DialogContent>
