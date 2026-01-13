@@ -267,12 +267,12 @@ export default function Login() {
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent: "flex-end",
                 alignItems: "center",
                 my: 1,
               }}
             >
-              <FormControlLabel
+              {/* <FormControlLabel
                 control={
                   <Checkbox
                     checked={rememberMe}
@@ -280,7 +280,7 @@ export default function Login() {
                   />
                 }
                 label="Remember me"
-              />
+              /> */}
               <Link
                 href="/forgot-password"
                 style={{ textDecoration: "none", color: "#2575fc" }}
