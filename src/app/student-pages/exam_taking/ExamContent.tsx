@@ -460,10 +460,11 @@ const ExamContent: React.FC = () => {
                 <strong>Instructions:</strong>
               </p>
               <ul className={styles.instructionsList}>
-                <li>Select one answer per question</li>
-                <li>You can flag questions for review</li>
-                <li>Timer will auto-submit when time expires</li>
-                <li>No going back after submission</li>
+                <li>Select only one answer for each question.</li>
+                <li>You may flag questions for review before submitting.</li>
+                <li>The exam will be automatically submitted when the timer expires.</li>
+                <li>Do not switch to another tab or window during the exam; doing so will result in automatic submission.</li>
+                <li>Once submitted, you cannot return to the exam.</li>
               </ul>
             </div>
           </div>
