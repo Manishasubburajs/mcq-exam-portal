@@ -48,6 +48,7 @@ const ExamContent: React.FC = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showNavigator, setShowNavigator] = useState(true);
   const [showLiveWarning, setShowLiveWarning] = useState(false);
+  const [violationCount, setViolationCount] = useState(0);
 
   const questionStartRef = useRef<number>(Date.now());
   const questionTimeMap = useRef<Record<number, number>>({});
@@ -59,6 +60,10 @@ const ExamContent: React.FC = () => {
       setLoading(false);
       return;
     }
+
+    // Initialize violation count
+    const stored = sessionStorage.getItem(`violation_${attemptId}`);
+    setViolationCount(stored ? parseInt(stored, 10) : 0);
 
     const fetchExam = async () => {
       try {
@@ -138,16 +143,24 @@ const ExamContent: React.FC = () => {
   useEffect(() => {
     if (examData?.examType !== "live") return;
 
-    const handleVisibility = () => {
-      if (document.hidden) {
-        setShowLiveWarning(true);
+    const handleViolation = () => {
+      const newCount = violationCount + 1;
+      setViolationCount(newCount);
+      sessionStorage.setItem(`violation_${attemptId}`, newCount.toString());
+      setShowLiveWarning(true);
+      if (newCount > 1) {
         setTimeout(() => submitExam(true), 1500);
       }
     };
 
+    const handleVisibility = () => {
+      if (document.hidden) {
+        handleViolation();
+      }
+    };
+
     const handleBlur = () => {
-      setShowLiveWarning(true);
-      setTimeout(() => submitExam(true), 1500);
+      handleViolation();
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
@@ -157,7 +170,17 @@ const ExamContent: React.FC = () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [examData]);
+  }, [examData, violationCount, attemptId]);
+
+  // Check for auto submit flag
+  useEffect(() => {
+    const autoSubmit = sessionStorage.getItem('autoSubmit');
+    if (autoSubmit === 'true') {
+      sessionStorage.removeItem('autoSubmit');
+      setShowLiveWarning(true);
+      setTimeout(() => submitExam(true), 1500);
+    }
+  }, []);
 
   const saveQuestionTime = () => {
     const currentQ = getCurrentQuestion();
@@ -460,10 +483,11 @@ const ExamContent: React.FC = () => {
                 <strong>Instructions:</strong>
               </p>
               <ul className={styles.instructionsList}>
-                <li>Select one answer per question</li>
-                <li>You can flag questions for review</li>
-                <li>Timer will auto-submit when time expires</li>
-                <li>No going back after submission</li>
+                <li>Select only one answer for each question.</li>
+                <li>You may flag questions for review before submitting.</li>
+                <li>The exam will be automatically submitted when the timer expires.</li>
+                <li>Do not switch to another tab or window during the exam; doing so will result in automatic submission.</li>
+                <li>Once submitted, you cannot return to the exam.</li>
               </ul>
             </div>
           </div>

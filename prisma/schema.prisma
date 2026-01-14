@@ -144,20 +144,21 @@ model student_details {
 }
 
 model student_exam_attempts {
-  attempt_id         Int                          @id @default(autoincrement())
+  attempt_id         Int                                  @id @default(autoincrement())
   student_id         Int
   exam_id            Int
   start_time         DateTime
   end_time           DateTime?
   total_time_seconds Int?
-  score              Decimal                      @default(0.0000) @db.Decimal(12, 4)
-  correct_answers    Int                          @default(0)
-  wrong_answers      Int                          @default(0)
-  unanswered         Int                          @default(0)
-  status             student_exam_attempts_status @default(in_progress)
+  score              Decimal                              @default(0.0000) @db.Decimal(12, 4)
+  correct_answers    Int                                  @default(0)
+  wrong_answers      Int                                  @default(0)
+  unanswered         Int                                  @default(0)
+  status             student_exam_attempts_status         @default(in_progress)
+  result_status      student_exam_attempts_result_status?
   student_answers    student_answers[]
-  exam               exams                        @relation(fields: [exam_id], references: [exam_id])
-  student            users                        @relation(fields: [student_id], references: [user_id])
+  exam               exams                                @relation(fields: [exam_id], references: [exam_id])
+  student            users                                @relation(fields: [student_id], references: [user_id])
 
   @@index([exam_id], map: "idx_student_exam_attempts_exam_id")
   @@index([student_id, exam_id], map: "idx_student_exam_attempts_student_id_exam_id")
@@ -238,4 +239,9 @@ enum users_status {
   active
   inactive
   blocked
+}
+
+enum student_exam_attempts_result_status {
+  pass
+  fail
 }
