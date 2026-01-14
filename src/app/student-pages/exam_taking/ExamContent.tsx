@@ -48,6 +48,7 @@ const ExamContent: React.FC = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showNavigator, setShowNavigator] = useState(true);
   const [showLiveWarning, setShowLiveWarning] = useState(false);
+  const [violationCount, setViolationCount] = useState(0);
 
   const questionStartRef = useRef<number>(Date.now());
   const questionTimeMap = useRef<Record<number, number>>({});
@@ -59,6 +60,10 @@ const ExamContent: React.FC = () => {
       setLoading(false);
       return;
     }
+
+    // Initialize violation count
+    const stored = sessionStorage.getItem(`violation_${attemptId}`);
+    setViolationCount(stored ? parseInt(stored, 10) : 0);
 
     const fetchExam = async () => {
       try {
@@ -138,16 +143,24 @@ const ExamContent: React.FC = () => {
   useEffect(() => {
     if (examData?.examType !== "live") return;
 
-    const handleVisibility = () => {
-      if (document.hidden) {
-        setShowLiveWarning(true);
+    const handleViolation = () => {
+      const newCount = violationCount + 1;
+      setViolationCount(newCount);
+      sessionStorage.setItem(`violation_${attemptId}`, newCount.toString());
+      setShowLiveWarning(true);
+      if (newCount > 1) {
         setTimeout(() => submitExam(true), 1500);
       }
     };
 
+    const handleVisibility = () => {
+      if (document.hidden) {
+        handleViolation();
+      }
+    };
+
     const handleBlur = () => {
-      setShowLiveWarning(true);
-      setTimeout(() => submitExam(true), 1500);
+      handleViolation();
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
@@ -157,7 +170,17 @@ const ExamContent: React.FC = () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [examData]);
+  }, [examData, violationCount, attemptId]);
+
+  // Check for auto submit flag
+  useEffect(() => {
+    const autoSubmit = sessionStorage.getItem('autoSubmit');
+    if (autoSubmit === 'true') {
+      sessionStorage.removeItem('autoSubmit');
+      setShowLiveWarning(true);
+      setTimeout(() => submitExam(true), 1500);
+    }
+  }, []);
 
   const saveQuestionTime = () => {
     const currentQ = getCurrentQuestion();

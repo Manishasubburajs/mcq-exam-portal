@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, createContext, useContext, useMemo } from "react";
 import { Box, useMediaQuery } from "@mui/material";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "../student-pages/Sidebar";
 import StudentDashboardLayout from "../student-pages/StudentDashboardLayout";
 import StudentHeader from "./StudentHeader";
+import NavigationWarningModal from "./NavigationWarningModal";
+import LiveExamWarningModal from "./LiveExamWarningModal";
 
 interface StudentLayoutProps {
   readonly children: React.ReactNode;
@@ -101,11 +103,15 @@ function getBoxStyles(paddingTop: string | object, isExamPage: boolean, sidebarO
 }
 
 export default function StudentLayout({ children }: StudentLayoutProps) {
+  const router = useRouter();
   const isDesktop = useMediaQuery('(min-width:1024px)');
   const isMobile = useMediaQuery('(max-width:767px)');
   const isTablet = useMediaQuery('(min-width:768px) and (max-width:1023px)');
   const isGalaxyFold = useMediaQuery('(min-width:900px) and (max-width:910px)');
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
+  const [showNavigationWarning, setShowNavigationWarning] = useState(false);
+  const [showLiveWarning, setShowLiveWarning] = useState(false);
+  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
   useEffect(() => {
     setSidebarOpen(isDesktop);
@@ -118,13 +124,51 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   const pageType: PageType = isExamPage ? 'exam' : 'nonExam';
   const paddingTop = calculatePaddingTop(pageType, deviceType, foldType);
 
+  const handleShowNavigationWarning = (route: string) => {
+    setPendingRoute(route);
+    // Get attemptId from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const attemptId = urlParams.get('attemptId');
+    const violationKey = attemptId ? `violation_${attemptId}` : null;
+    const currentViolations = violationKey ? parseInt(sessionStorage.getItem(violationKey) || '0', 10) : 0;
+
+    if (currentViolations > 0) {
+      // Second violation: auto-submit
+      sessionStorage.setItem('autoSubmit', 'true');
+    } else {
+      setShowNavigationWarning(true);
+    }
+  };
+
+  const handleConfirmNavigation = () => {
+    // Increment violation count
+    const urlParams = new URLSearchParams(window.location.search);
+    const attemptId = urlParams.get('attemptId');
+    const violationKey = attemptId ? `violation_${attemptId}` : null;
+    if (violationKey) {
+      const current = parseInt(sessionStorage.getItem(violationKey) || '0', 10);
+      sessionStorage.setItem(violationKey, (current + 1).toString());
+    }
+
+    if (pendingRoute) {
+      router.push(pendingRoute);
+      setPendingRoute(null);
+    }
+    setShowNavigationWarning(false);
+  };
+
+  const handleCancelNavigation = () => {
+    setShowNavigationWarning(false);
+    setPendingRoute(null);
+  };
+
   const contextValue = useMemo(() => ({ sidebarOpen, setSidebarOpen }), [sidebarOpen]);
 
   return (
     <SidebarContext.Provider value={contextValue}>
       <StudentDashboardLayout>
         <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-          <Sidebar isOpen={sidebarOpen} />
+          <Sidebar isOpen={sidebarOpen} onShowNavigationWarning={handleShowNavigationWarning} />
           {sidebarOpen && (isMobile || isTablet) && (
             <Box
               sx={{
@@ -147,6 +191,12 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           </Box>
         </Box>
       </StudentDashboardLayout>
+      <NavigationWarningModal
+        open={showNavigationWarning}
+        onConfirm={handleConfirmNavigation}
+        onCancel={handleCancelNavigation}
+      />
+      <LiveExamWarningModal open={showLiveWarning} />
     </SidebarContext.Provider>
   );
 }

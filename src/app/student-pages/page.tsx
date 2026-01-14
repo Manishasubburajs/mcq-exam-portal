@@ -96,6 +96,7 @@ interface ExamMeta {
   questions: string | number;
   due: string;
   points: string | number;
+  examType: "practice" | "mock" | "live";
 }
 
 interface ExamCardProps {
@@ -141,21 +142,50 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
       },
     }}
   >
-    <Box sx={{ p: { xs: 1.25, sm: 1.5, md: 1.875 }, background: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
-      <Typography sx={{
-        fontSize: { xs: 16, sm: 17, md: 18 },
-        fontWeight: 600,
-        mb: { xs: 0.25, sm: 0.5, md: 0.625 },
-        color: '#2c3e50',
-        lineHeight: 1.2
-      }}>
-        {title}
-      </Typography>
-      <Typography sx={{
-        color: '#7f8c8d',
-        fontSize: { xs: 13, sm: 14 }
-      }}>
-        {subject}
+    <Box
+      sx={{
+        p: { xs: 1.25, sm: 1.5, md: 1.875 },
+        background: '#f8f9fa',
+        borderBottom: '1px solid #e0e0e0',
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <Box>
+        <Typography sx={{
+          fontSize: { xs: 16, sm: 17, md: 18 },
+          fontWeight: 600,
+          mb: { xs: 0.25, sm: 0.5, md: 0.625 },
+          color: '#2c3e50',
+          lineHeight: 1.2
+        }}>
+          {title}
+        </Typography>
+        <Typography sx={{
+          color: '#7f8c8d',
+          fontSize: { xs: 13, sm: 14 }
+        }}>
+          {subject}
+        </Typography>
+      </Box>
+      <Typography
+        sx={{
+          backgroundColor:
+            meta.examType === "practice"
+              ? "#3b82f6"
+              : meta.examType === "mock"
+              ? "#f59e0b"
+              : "#ef4444",
+          color: "#fff",
+          borderRadius: "12px",
+          padding: "4px 10px",
+          fontSize: 12,
+          fontWeight: 700,
+          textTransform: "uppercase",
+        }}
+      >
+        {meta.examType}
       </Typography>
     </Box>
     <Box sx={{ p: { xs: 1.25, sm: 1.5, md: 1.875 } }}>
@@ -676,6 +706,35 @@ export default function StudentDashboard() {
   const [availableExams, setAvailableExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const startExam = async (examId: number) => {
+    try {
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      const res = await fetch("/api/students/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ examId }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message); // mock/live limit message
+        return;
+      }
+
+      router.push(
+        `/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`
+      );
+    } catch (err) {
+      alert("Failed to start exam");
+    }
+  };
+
   useEffect(() => {
     // Check if user is logged in and is student
     const token = localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -807,9 +866,10 @@ export default function StudentDashboard() {
                       duration: exam.duration.toString(),
                       questions: exam.questions.toString(),
                       due: exam.due,
-                      points: exam.points
+                      points: exam.points,
+                      examType: exam.examType
                     }}
-                    onStart={() => router.push(`/student-pages/exam_taking?examId=${exam.id}`)}
+                    onStart={() => startExam(exam.id)}
                   />
                 </Box>
               ))

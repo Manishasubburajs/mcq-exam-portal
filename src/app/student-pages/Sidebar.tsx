@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
@@ -20,12 +20,14 @@ import {
 import { FaTachometerAlt, FaSignOutAlt } from 'react-icons/fa';
 import styles from '../components/Sidebar.module.css';
 import { logout } from '@/utils/auth';
+import NavigationWarningModal from '../components/NavigationWarningModal';
 
 interface Props {
   isOpen?: boolean;
+  onShowNavigationWarning?: (route: string) => void;
 }
 
-const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
+const Sidebar: React.FC<Props> = ({ isOpen = true, onShowNavigationWarning }) => {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -45,9 +47,14 @@ const Sidebar: React.FC<Props> = ({ isOpen = true }) => {
     if (item.text === 'Logout') {
       logout();
     } else if (item.route) {
-      router.push(item.route);
+      if (pathname === '/student-pages/exam_taking' && onShowNavigationWarning) {
+        onShowNavigationWarning(item.route);
+      } else {
+        router.push(item.route);
+      }
     }
   };
+
 
   return (
     <Box className={`${styles.sidebar} ${isOpen ? '' : styles.closed}`}>
