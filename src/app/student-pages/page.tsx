@@ -13,8 +13,8 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import EventIcon from "@mui/icons-material/Event";
 import GradeIcon from "@mui/icons-material/Grade";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 
 const MAIN_BG = "#f5f7fa";
 const CARD_BG = "#ffffff";
@@ -111,19 +111,12 @@ interface CompletedExam {
   subject: string;
   scorePercentage: number;
   completionDate: string;
-  timeTaken: string;
+  duration: string;
+  questions: string;
   scoreFraction: string;
-  rank: string;
+  examType: string;
 }
 
-interface UpcomingExam {
-  title: string;
-  subject: string;
-  duration: string;
-  questions: number;
-  scheduledDate: string;
-  points: number;
-}
 
 const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
   <Card
@@ -352,22 +345,45 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
         background: '#f8f9fa',
         borderBottom: '1px solid #e0e0e0',
         borderTopLeftRadius: { xs: '6px', sm: '8px', md: '10px' },
-        borderTopRightRadius: { xs: '6px', sm: '8px', md: '10px' }
+        borderTopRightRadius: { xs: '6px', sm: '8px', md: '10px' },
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
       }}>
-        <Typography sx={{
-          fontSize: { xs: 16, sm: 17, md: 18 },
-          fontWeight: 600,
-          mb: { xs: 0.25, sm: 0.5, md: 0.625 },
-          color: '#2c3e50',
-          lineHeight: 1.2
-        }}>
-          {exam.title}
-        </Typography>
-        <Typography sx={{
-          color: '#7f8c8d',
-          fontSize: { xs: 13, sm: 14 }
-        }}>
-          {exam.subject}
+        <Box>
+          <Typography sx={{
+            fontSize: { xs: 16, sm: 17, md: 18 },
+            fontWeight: 600,
+            mb: { xs: 0.25, sm: 0.5, md: 0.625 },
+            color: '#2c3e50',
+            lineHeight: 1.2
+          }}>
+            {exam.title}
+          </Typography>
+          <Typography sx={{
+            color: '#7f8c8d',
+            fontSize: { xs: 13, sm: 14 }
+          }}>
+            {exam.subject}
+          </Typography>
+        </Box>
+        <Typography
+          sx={{
+            backgroundColor:
+              exam.examType === "practice"
+                ? "#3b82f6"
+                : exam.examType === "mock"
+                ? "#f59e0b"
+                : "#ef4444",
+            color: "#fff",
+            borderRadius: "12px",
+            padding: "4px 10px",
+            fontSize: 12,
+            fontWeight: 700,
+            textTransform: "uppercase",
+          }}
+        >
+          {exam.examType}
         </Typography>
       </Box>
       <Box sx={{ p: { xs: 1, sm: 1.25, md: 1.5 } }}>
@@ -378,7 +394,7 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
           mb: { xs: 0.75, sm: 1 },
           color: scoreColor
         }}>
-          {exam.scorePercentage}%
+          {parseInt(exam.scoreFraction.split('/')[0])}
         </Typography>
         <Box sx={{
           display: "flex",
@@ -408,12 +424,12 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
             alignItems: "center",
             gap: 0.25
           }}>
-            <ScheduleIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+            <AccessTimeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
             <Typography variant="body2" sx={{
               color: TEXT_PRIMARY,
               fontSize: { xs: 13, sm: 14 }
             }}>
-              Time: {exam.timeTaken}
+              Duration: {exam.duration} min
             </Typography>
           </Box>
           <Box sx={{
@@ -423,27 +439,12 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
             alignItems: "center",
             gap: 0.25
           }}>
-            <GradeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
+            <HelpOutlineIcon fontSize="small" sx={{ color: '#6a11cb' }} />
             <Typography variant="body2" sx={{
               color: TEXT_PRIMARY,
               fontSize: { xs: 13, sm: 14 }
             }}>
-              Score: {exam.scoreFraction}
-            </Typography>
-          </Box>
-          <Box sx={{
-            flex: { xs: "1 0 100%", sm: "1 0 50%" },
-            mb: { xs: 0.5, sm: 0.6 },
-            display: "flex",
-            alignItems: "center",
-            gap: 0.25
-          }}>
-            <EmojiEventsIcon fontSize="small" sx={{ color: '#6a11cb' }} />
-            <Typography variant="body2" sx={{
-              color: TEXT_PRIMARY,
-              fontSize: { xs: 13, sm: 14 }
-            }}>
-              Rank: {exam.rank}
+              Questions: {exam.questions}
             </Typography>
           </Box>
         </Box>
@@ -504,171 +505,6 @@ const CompletedExamCard = ({ exam, onView }: { exam: CompletedExam; onView?: () 
   );
 };
 
-const UpcomingExamCard = ({ exam }: { exam: UpcomingExam }) => (
-  <Card
-    sx={{
-      border: `1px solid #e0e0e0`,
-      borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
-      background: CARD_BG,
-      color: TEXT_PRIMARY,
-      boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-      width: '100%',
-      overflow: "hidden",
-      transition: "all 0.3s ease",
-      "&:hover": {
-        transform: "translateY(-5px)",
-        boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
-      },
-    }}
-  >
-    <Box sx={{ p: { xs: 1.25, sm: 1.5, md: 1.875 }, background: '#f8f9fa', borderBottom: '1px solid #e0e0e0' }}>
-      <Typography sx={{
-        fontSize: { xs: 16, sm: 17, md: 18 },
-        fontWeight: 600,
-        mb: { xs: 0.25, sm: 0.5, md: 0.625 },
-        color: '#2c3e50',
-        lineHeight: 1.2
-      }}>
-        {exam.title}
-      </Typography>
-      <Typography sx={{
-        color: '#7f8c8d',
-        fontSize: { xs: 13, sm: 14 }
-      }}>
-        {exam.subject}
-      </Typography>
-    </Box>
-    <Box sx={{ p: { xs: 1.25, sm: 1.5, md: 1.875 } }}>
-      <Box sx={{
-        display: "flex",
-        flexWrap: "wrap",
-        mb: { xs: 1.25, sm: 1.5, md: 1.875 },
-        gap: { xs: 0.5, sm: 0.75 }
-      }}>
-        <Box sx={{
-          flex: { xs: "1 0 100%", sm: "1 0 50%" },
-          mb: { xs: 0.75, sm: 1, md: 1.25 },
-          display: "flex",
-          alignItems: "center",
-          gap: { xs: 0.5, sm: 0.625 }
-        }}>
-          <AccessTimeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
-          <Typography variant="body2" sx={{
-            color: TEXT_PRIMARY,
-            fontSize: { xs: 13, sm: 14 }
-          }}>
-            {exam.duration} min
-          </Typography>
-        </Box>
-        <Box sx={{
-          flex: { xs: "1 0 100%", sm: "1 0 50%" },
-          mb: { xs: 0.75, sm: 1, md: 1.25 },
-          display: "flex",
-          alignItems: "center",
-          gap: { xs: 0.5, sm: 0.625 }
-        }}>
-          <HelpOutlineIcon fontSize="small" sx={{ color: '#6a11cb' }} />
-          <Typography variant="body2" sx={{
-            color: TEXT_PRIMARY,
-            fontSize: { xs: 13, sm: 14 }
-          }}>
-            {exam.questions} questions
-          </Typography>
-        </Box>
-        <Box sx={{
-          flex: { xs: "1 0 100%", sm: "1 0 50%" },
-          mb: { xs: 0.75, sm: 1, md: 1.25 },
-          display: "flex",
-          alignItems: "center",
-          gap: { xs: 0.5, sm: 0.625 }
-        }}>
-          <EventIcon fontSize="small" sx={{ color: '#6a11cb' }} />
-          <Typography variant="body2" sx={{
-            color: TEXT_PRIMARY,
-            fontSize: { xs: 13, sm: 14 }
-          }}>
-            {exam.scheduledDate}
-          </Typography>
-        </Box>
-        <Box sx={{
-          flex: { xs: "1 0 100%", sm: "1 0 50%" },
-          mb: { xs: 0.75, sm: 1, md: 1.25 },
-          display: "flex",
-          alignItems: "center",
-          gap: { xs: 0.5, sm: 0.625 }
-        }}>
-          <GradeIcon fontSize="small" sx={{ color: '#6a11cb' }} />
-          <Typography variant="body2" sx={{
-            color: TEXT_PRIMARY,
-            fontSize: { xs: 13, sm: 14 }
-          }}>
-            {exam.points} points
-          </Typography>
-        </Box>
-      </Box>
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: { xs: 1, sm: 2 },
-          flexDirection: { xs: 'column', sm: 'row' },
-        }}
-      >
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          justifyContent: { xs: 'center', sm: 'flex-start' },
-          width: { xs: '100%', sm: 'auto' }
-        }}>
-          <Chip
-            sx={{
-              background: '#fce8e6',
-              color: '#c5221f',
-              borderRadius: '20px',
-              padding: { xs: '4px 8px', sm: '5px 10px' },
-              fontSize: { xs: 11, sm: 12 },
-              fontWeight: 600
-            }}
-            label="Not Available Yet"
-            size="small"
-          />
-        </Box>
-
-        <Box sx={{
-          width: { xs: '100%', sm: ACTION_BUTTON_MD_WIDTH },
-          display: 'flex'
-        }}>
-          <Button
-            variant="outlined"
-            color="secondary"
-            fullWidth
-            disabled
-            sx={{
-              padding: { xs: '6px 12px', sm: '8px 15px' },
-              height: { xs: '36px', sm: '40px' },
-              lineHeight: { xs: '36px', sm: '40px' },
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textTransform: 'none',
-              background: 'transparent',
-              border: '1px solid #2575fc',
-              color: '#2575fc',
-              borderRadius: 2,
-              fontSize: { xs: '13px', sm: '14px' },
-              fontWeight: 600,
-              boxShadow: 'none',
-            }}
-          >
-            Starts Soon
-          </Button>
-        </Box>
-      </Box>
-    </Box>
-  </Card>
-);
 
 const ActionCard = ({ button }: { button: ReactNode }) => (
   <Card
@@ -695,15 +531,13 @@ const ActionCard = ({ button }: { button: ReactNode }) => (
   </Card>
 );
 
-const upcomingExams: UpcomingExam[] = [
-  { title: "Chemistry Final", subject: "Science", duration: "90", questions: 50, scheduledDate: "Nov 20, 2023", points: 150 },
-];
 
 export default function StudentDashboard() {
   const router = useRouter();
   const theme = useTheme();
   const [isMobile, setIsMobile] = useState(false);
   const [availableExams, setAvailableExams] = useState<any[]>([]);
+  const [completedExams, setCompletedExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const startExam = async (examId: number) => {
@@ -747,14 +581,26 @@ export default function StudentDashboard() {
 
     const fetchExams = async () => {
       try {
-        const response = await fetch("/api/students/exams", {
+        // Fetch available exams
+        const availableResponse = await fetch("/api/students/exams", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        const data = await response.json();
-        if (data.success) {
-          setAvailableExams(data.data);
+        const availableData = await availableResponse.json();
+        if (availableData.success) {
+          setAvailableExams(availableData.data);
+        }
+
+        // Fetch completed exams
+        const completedResponse = await fetch("/api/students/attempts", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const completedData = await completedResponse.json();
+        if (completedData.success) {
+          setCompletedExams(completedData.data);
         }
       } catch (error) {
         console.error("Failed to fetch exams:", error);
@@ -793,7 +639,7 @@ export default function StudentDashboard() {
           gap: { xs: 1.5, sm: 2, md: 2.5 }
         }}>
           <StatCard icon={<AssignmentIcon />} label="Available Exams" value={availableExams.length} color={'#e6f4ea'} iconColor={'#137333'} />
-          <StatCard icon={<CheckCircleIcon />} label="Completed Exams" value="5" color={'#e8f0fe'} iconColor={'#1a73e8'} />
+          <StatCard icon={<CheckCircleIcon />} label="Completed Exams" value={completedExams.length} color={'#e8f0fe'} iconColor={'#1a73e8'} />
           <StatCard icon={<ScheduleIcon />} label="Pending Results" value="2" color={'#fef7e0'} iconColor={'#e37400'} />
           <StatCard icon={<StarRateIcon />} label="Average Score" value="82%" color={'#fce8e6'} iconColor={'#c5221f'} />
         </Box>
@@ -903,78 +749,33 @@ export default function StudentDashboard() {
               alignItems: 'stretch',
             }}
           >
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
-              <CompletedExamCard exam={{ title: "Algebra Basics", subject: "Mathematics", scorePercentage: 92, completionDate: "Oct 15, 2023", timeTaken: "28/30 min", scoreFraction: "46/50", rank: "5/120" }} onView={() => router.push('/student-pages/exam-history')} />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
-              <CompletedExamCard exam={{ title: "Physics Test", subject: "Science", scorePercentage: 78, completionDate: "Oct 10, 2023", timeTaken: "42/45 min", scoreFraction: "39/50", rank: "32/120" }} onView={() => router.push('/student-pages/exam-history')} />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
-              <CompletedExamCard exam={{ title: "World History", subject: "History", scorePercentage: 65, completionDate: "Oct 5, 2023", timeTaken: "55/60 min", scoreFraction: "65/100", rank: "78/120" }} onView={() => router.push('/student-pages/exam-history')} />
-            </Box>
-          </Box>
-        </Card>
-      </Box>
-
-      {/* Upcoming Exams */}
-      <Box sx={{ mb: 3.75 }}>
-        <Card sx={{ background: CARD_BG, borderRadius: 2.5, boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)", p: 3.125, transition: "all 0.3s ease" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5, pb: 1.875, borderBottom: `2px solid #f0f0f0`, flexDirection: isMobile ? "column" : "row" }}>
-            <Typography sx={{ fontWeight: 700, color: '#2c3e50', fontSize: 20 }}>Upcoming Exams</Typography>
-            <Button
-              variant="outlined"
-              color="secondary"
-              sx={{ padding: "10px 20px", fontSize: "16px", fontWeight: 600, borderRadius: 2, mt: isMobile ? 1 : 0, background: 'transparent' }}
-              onClick={() => router.push('/student-pages/progress')}
-            >
-              View Calendar
-            </Button>
-          </Box>
-
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 2.5,
-              alignItems: 'start',
-            }}
-          >
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
-              <UpcomingExamCard exam={upcomingExams[0]} />
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 600px' } }}>
-              <Card
-                sx={{
-                  border: `1px solid #e0e0e0`,
-                  borderRadius: 2.5,
-                  background: CARD_BG,
-                  color: '#7f8c8d',
-                  boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-                  width: '100%',
-                  overflow: "hidden",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-5px)",
-                    boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
-                  },
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  p: 2,
-                }}
-              >
-                <Box sx={{ position: "relative", mb: 1.5 }}>
-                  <CalendarTodayIcon sx={{ fontSize: 36, color: '#7f8c8d' }} />
-                  <Typography sx={{ position: "absolute", top: -4, right: -4, fontSize: 20, color: '#7f8c8d', fontWeight: "bold" }}>+</Typography>
+            {loading ? (
+              <Typography>Loading completed exams...</Typography>
+            ) : completedExams.length > 0 ? (
+              completedExams.slice(0, 3).map((exam: any) => (
+                <Box key={exam.attemptId} sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
+                  <CompletedExamCard
+                    exam={{
+                      title: exam.title,
+                      subject: exam.subject,
+                      scorePercentage: Math.round((parseInt(exam.score) / parseInt(exam.points)) * 100),
+                      completionDate: exam.completedAt,
+                      duration: exam.duration.toString(),
+                      questions: exam.questions.toString(),
+                      scoreFraction: `${parseInt(exam.score)}/${parseInt(exam.points)}`,
+                      examType: exam.examType,
+                    }}
+                    onView={() => router.push(`/student-pages/exam_res_rev?attemptId=${exam.attemptId}`)}
+                  />
                 </Box>
-                <Typography sx={{ fontSize: 14, fontWeight: 600, color: '#7f8c8d', textAlign: "center", mb: 1 }}>No More Upcoming Exams</Typography>
-                <Typography sx={{ fontSize: 14, color: '#7f8c8d', textAlign: "center" }}>Check back later for new exam schedules</Typography>
-              </Card>
-            </Box>
+              ))
+            ) : (
+              <Typography>No completed exams yet.</Typography>
+            )}
           </Box>
         </Card>
       </Box>
+
     </Box>
   );
 }
