@@ -51,10 +51,10 @@ const categories: any[] = [];
 
 const ScoreCircle = ({ score }: { score: number }) => {
   const percentage = score;
-  const getScoreColor = (score: number): string => {
-    if (score >= 90) return "#28a745";
-    if (score >= 70) return "#ffc107";
-    return "#dc3545";
+  const getScoreColor = (val: number): string => {
+    if (val >= 66) return '#28a745';
+    if (val >= 33) return '#ffc107';
+    return '#dc3545';
   };
   const color = getScoreColor(percentage);
 
@@ -207,9 +207,11 @@ export default function ExamResultsReview() {
 
   const score = resultData.score || 0;
   const totalQuestions = exam.question_count || 0;
+  const totalMarks = resultData.totalMarks || (totalQuestions * 2); // Assuming backend provides totalMarks
   const correctCount = resultData.correct_answers || 0;
   const wrongCount = resultData.wrong_answers || 0;
   const unansweredCount = totalQuestions - correctCount - wrongCount;
+  const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0;
 
   const filteredQuestions = questions.filter(
     (q: any) => filter === "all" || q.status === filter
@@ -290,7 +292,7 @@ export default function ExamResultsReview() {
           textAlign: "center",
         }}
       >
-        <ScoreCircle score={Math.round((score / (totalQuestions * 2)) * 100)} />
+        <ScoreCircle score={percentage} />
         <Typography
           variant="h5"
           sx={{
@@ -375,15 +377,10 @@ export default function ExamResultsReview() {
                 fontWeight: 700,
                 mb: 0.5,
                 fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
-                color:
-                  Math.round((score / (totalQuestions * 2)) * 100) >= 50
-                    ? "green"
-                    : "red",
+                color: percentage >= 33 ? "green" : "red",
               }}
             >
-              {Math.round((score / (totalQuestions * 2)) * 100) >= 50
-                ? "Pass"
-                : "Fail"}
+              {percentage >= 33 ? "Pass" : "Fail"}
             </Typography>
             <Typography
               sx={{
@@ -433,6 +430,15 @@ export default function ExamResultsReview() {
               }}
             >
               Unanswered: {unansweredCount}
+            </Typography>
+            <Typography
+              sx={{
+                fontWeight: 700,
+                mb: 0.5,
+                fontSize: { xs: "0.8rem", sm: "0.9rem", md: "1rem" },
+              }}
+            >
+              Score: {score}/{totalMarks}
             </Typography>
             <Typography
               sx={{
