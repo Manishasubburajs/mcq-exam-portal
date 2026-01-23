@@ -31,7 +31,7 @@ export async function GET() {
         subject_id: cfg.subject_id,
         subject_name: cfg.subject.subject_name,
         topic_id: cfg.topic_id,
-        topic_name: cfg.topic.topic_name,
+        topic_name: cfg.topic ? cfg.topic.topic_name : null,
         question_count: cfg.question_count,
       })),
     }));
