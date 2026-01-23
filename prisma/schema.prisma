@@ -54,7 +54,7 @@ model exams {
   exam_title              String                  @db.VarChar(255)
   description             String?                 @db.Text
   time_limit_minutes      Int                     @default(30)
-  total_marks             Decimal                 @default(0.0000) @db.Decimal(12, 4)
+  total_marks             Decimal                 @default(0) @db.Decimal(12, 4)
   question_count          Int                     @default(0)
   scheduled_start         DateTime?
   scheduled_end           DateTime?
@@ -112,8 +112,8 @@ model questions {
   option_c        String?              @db.Text
   option_d        String?              @db.Text
   correct_answer  String?              @db.Char(1)
-  marks           Decimal?             @db.Decimal(8, 4)
-  negative_marks  Decimal?             @db.Decimal(8, 4)
+  marks           Decimal              @default(2) @db.Decimal(8, 4)
+  negative_marks  Decimal              @default(0.66) @db.Decimal(8, 4)
   difficulty      questions_difficulty @default(Medium)
   subject_id      Int
   topic_id        Int
@@ -144,24 +144,22 @@ model student_details {
 }
 
 model student_exam_attempts {
-  attempt_id         Int                                  @id @default(autoincrement())
+  attempt_id         Int                          @id @default(autoincrement())
   student_id         Int
   exam_id            Int
   start_time         DateTime
   end_time           DateTime?
   total_time_seconds Int?
-  score              Decimal                              @default(0.0000) @db.Decimal(12, 4)
-  correct_answers    Int                                  @default(0)
-  wrong_answers      Int                                  @default(0)
-  unanswered         Int                                  @default(0)
-  status             student_exam_attempts_status         @default(in_progress)
-  result_status      student_exam_attempts_result_status?
+  score              Decimal                      @default(0) @db.Decimal(12, 4)
+  correct_answers    Int                          @default(0)
+  wrong_answers      Int                          @default(0)
+  unanswered         Int                          @default(0)
+  status             student_exam_attempts_status @default(in_progress)
   student_answers    student_answers[]
-  exam               exams                                @relation(fields: [exam_id], references: [exam_id])
-  student            users                                @relation(fields: [student_id], references: [user_id])
+  exam               exams                        @relation(fields: [exam_id], references: [exam_id])
+  student            users                        @relation(fields: [student_id], references: [user_id])
 
-  @@index([exam_id], map: "idx_student_exam_attempts_exam_id")
-  @@index([student_id, exam_id], map: "idx_student_exam_attempts_student_id_exam_id")
+  @@unique([student_id, exam_id])
   @@index([exam_id], map: "student_exam_attempts_exam_id_fkey")
 }
 
@@ -197,7 +195,7 @@ model student_answers {
   selected_answer    String?               @db.Char(1)
   is_correct         Boolean               @default(false)
   time_taken_seconds Int?
-  marks_awarded      Decimal               @default(0.0000) @db.Decimal(12, 4)
+  marks_awarded      Decimal               @default(0) @db.Decimal(12, 4)
   attempt            student_exam_attempts @relation(fields: [attempt_id], references: [attempt_id], onDelete: Cascade)
   question           questions             @relation(fields: [question_id], references: [question_id])
 
@@ -223,12 +221,6 @@ enum student_details_gender {
   other
 }
 
-enum student_exam_attempts_status {
-  in_progress
-  completed
-  expired
-}
-
 enum questions_difficulty {
   Easy
   Medium
@@ -241,7 +233,13 @@ enum users_status {
   blocked
 }
 
-enum student_exam_attempts_result_status {
-  pass
-  fail
+enum users_role {
+  admin
+  student
+}
+
+enum student_exam_attempts_status {
+  in_progress
+  completed
+  expired
 }

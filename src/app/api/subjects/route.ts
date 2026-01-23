@@ -22,30 +22,48 @@ export async function GET() {
     const subjects = await prisma.subjects.findMany({
       include: {
         topics: {
-          select: {
-            topic_id: true,
-            topic_name: true,
+          include: {
+            _count: {
+              select: { questions: true },
+            },
           },
         },
       },
       orderBy: { subject_name: "asc" },
     });
 
-    // Add topic count dynamically
-    const formattedSubjects = subjects.map((subject) => ({
-      subject_id: subject.subject_id,
-      subject_name: subject.subject_name,
-      topic_count: subject.topics.length,
-      topics: subject.topics,
-      created_at: subject.created_at,
-    }));
+    const formattedSubjects = subjects.map((subject) => {
+      const topics = subject.topics.map((topic) => {
+        const questionCount = topic._count.questions;
+
+        return {
+          topic_id: topic.topic_id,
+          topic_name: topic.topic_name,
+          questionCount,
+          canEdit: questionCount === 0,
+          canDelete: questionCount === 0,
+        };
+      });
+
+      const subjectHasQuestions = topics.some((t) => t.questionCount > 0);
+
+      return {
+        subject_id: subject.subject_id,
+        subject_name: subject.subject_name,
+        topic_count: topics.length,
+        canEdit: !subjectHasQuestions,
+        canDelete: !subjectHasQuestions,
+        topics,
+        created_at: subject.created_at,
+      };
+    });
 
     return NextResponse.json({ success: true, data: formattedSubjects });
   } catch (error) {
     console.error("❌ GET /subjects error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to load subjects" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -85,64 +103,102 @@ export async function POST(req: Request) {
     if (error.name === "ValidationError") {
       return NextResponse.json(
         { success: false, errors: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (error.code === "P2002") {
       return NextResponse.json(
         { success: false, message: "Subject name already exists" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
       { success: false, message: "Failed to create subject" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 // ----------------------
-// PUT - Update subject + topics (FIXED)
+// PUT - Update subject + topics
 // ----------------------
 export async function PUT(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const subjectId = searchParams.get("id");
+    const subjectId = Number(searchParams.get("id"));
 
     if (!subjectId) {
       return NextResponse.json(
         { success: false, message: "Subject ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const body = await req.json();
-    await createSubjectSchema.validate(body, { abortEarly: false });
-
     const { subject_name, topics } = body;
 
+    if (!Array.isArray(topics) || topics.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "At least one topic is required" },
+        { status: 400 },
+      );
+    }
+
+    // Validate topic names
+    for (const topic of topics) {
+      if (!topic.topic_name || !topic.topic_name.trim()) {
+        return NextResponse.json(
+          { success: false, message: "Topic name cannot be empty" },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Start transaction
     await prisma.$transaction(async (tx) => {
       // 1️⃣ Update subject name
       await tx.subjects.update({
-        where: { subject_id: Number(subjectId) },
+        where: { subject_id: subjectId },
         data: { subject_name },
       });
 
-      // 2️⃣ Delete old topics
-      await tx.topics.deleteMany({
-        where: { subject_id: Number(subjectId) },
+      // 2️⃣ Fetch existing topics
+      const existingTopics = await tx.topics.findMany({
+        where: { subject_id: subjectId },
+        include: {
+          _count: { select: { questions: true } },
+        },
       });
 
-      // 3️⃣ Re-create topics (SAFE WAY)
-      for (const topicName of topics) {
-        await tx.topics.create({
-          data: {
-            subject_id: Number(subjectId),
-            topic_name: topicName,
-          },
-        });
+      // 3️⃣ Delete removed topics ONLY if they have no questions
+      for (const existing of existingTopics) {
+        const stillExists = topics.find((t: any) => t.topic_id === existing.topic_id);
+        if (!stillExists && existing._count.questions === 0) {
+          await tx.topics.delete({
+            where: { topic_id: existing.topic_id },
+          });
+        }
+      }
+
+      // 4️⃣ Update existing topics
+      for (const topic of topics) {
+        if (topic.topic_id) {
+          await tx.topics.update({
+            where: { topic_id: topic.topic_id },
+            data: { topic_name: topic.topic_name },
+          });
+        }
+      }
+
+      // 5️⃣ Create new topics
+      for (const topic of topics) {
+        if (!topic.topic_id) {
+          await tx.topics.create({
+            data: { subject_id: subjectId, topic_name: topic.topic_name },
+          });
+        }
       }
     });
 
@@ -150,29 +206,15 @@ export async function PUT(req: Request) {
       success: true,
       message: "Subject updated successfully",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ PUT /subjects error:", error);
-
-    if (error.name === "ValidationError") {
-      return NextResponse.json(
-        { success: false, errors: error.errors },
-        { status: 400 }
-      );
-    }
-
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        { success: false, message: "Subject name already exists" },
-        { status: 400 }
-      );
-    }
-
     return NextResponse.json(
       { success: false, message: "Failed to update subject" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
+
 
 // ----------------------
 // DELETE - Delete subject + topics
@@ -180,17 +222,36 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const subjectId = searchParams.get("id");
+    const subjectId = Number(searchParams.get("id"));
 
     if (!subjectId) {
       return NextResponse.json(
         { success: false, message: "Subject ID is required" },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+
+    // 🔒 Check if ANY topic has questions
+    const usedTopics = await prisma.topics.count({
+      where: {
+        subject_id: subjectId,
+        questions: { some: {} },
+      },
+    });
+
+    if (usedTopics > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Cannot delete subject. Some topics are associated with questions.",
+        },
+        { status: 400 },
       );
     }
 
     await prisma.subjects.delete({
-      where: { subject_id: Number(subjectId) },
+      where: { subject_id: subjectId },
     });
 
     return NextResponse.json({
@@ -201,7 +262,7 @@ export async function DELETE(req: Request) {
     console.error("❌ DELETE /subjects error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to delete subject" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

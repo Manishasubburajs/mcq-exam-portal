@@ -18,7 +18,7 @@ export async function GET() {
       },
     });
 
-    const transformedExams = exams.map(exam => ({
+    const transformedExams = exams.map((exam) => ({
       id: exam.exam_id,
       exam_name: exam.exam_title,
       exam_type: exam.exam_type,
@@ -27,11 +27,13 @@ export async function GET() {
       duration_minutes: exam.time_limit_minutes,
       created_at: exam.created_at.toISOString(),
 
-      // OPTIONAL: first subject/topic only (safe)
-      subject_name: exam.exam_subject_configs[0]?.subject?.subject_name ?? "",
-      topic_name: exam.exam_subject_configs[0]?.topic?.topic_name ?? "",
-      subject_id: exam.exam_subject_configs[0]?.subject_id ?? null,
-      topic_id: exam.exam_subject_configs[0]?.topic_id ?? null,
+      subjects: exam.exam_subject_configs.map((cfg) => ({
+        subject_id: cfg.subject_id,
+        subject_name: cfg.subject.subject_name,
+        topic_id: cfg.topic_id,
+        topic_name: cfg.topic.topic_name,
+        question_count: cfg.question_count,
+      })),
     }));
 
     return NextResponse.json(transformedExams);
@@ -136,43 +138,43 @@ export async function POST(req: Request) {
   DELETE: Delete exam
 =========================== */
 export async function DELETE(req: Request) {
- try {
-   const body = await req.json();
-   const { examId }: { examId: number } = body;
+  try {
+    const body = await req.json();
+    const { examId }: { examId: number } = body;
 
-   if (!examId) {
-     return NextResponse.json(
-       { success: false, message: "Exam ID is required" },
-       { status: 400 }
-     );
-   }
+    if (!examId) {
+      return NextResponse.json(
+        { success: false, message: "Exam ID is required" },
+        { status: 400 }
+      );
+    }
 
-   // Check if exam exists
-   const exam = await prisma.exams.findUnique({
-     where: { exam_id: examId },
-   });
+    // Check if exam exists
+    const exam = await prisma.exams.findUnique({
+      where: { exam_id: examId },
+    });
 
-   if (!exam) {
-     return NextResponse.json(
-       { success: false, message: "Exam not found" },
-       { status: 404 }
-     );
-   }
+    if (!exam) {
+      return NextResponse.json(
+        { success: false, message: "Exam not found" },
+        { status: 404 }
+      );
+    }
 
-   // Delete the exam (cascade will handle related records)
-   await prisma.exams.delete({
-     where: { exam_id: examId },
-   });
+    // Delete the exam (cascade will handle related records)
+    await prisma.exams.delete({
+      where: { exam_id: examId },
+    });
 
-   return NextResponse.json({
-     success: true,
-     message: "Exam deleted successfully",
-   });
- } catch (error) {
-   console.error("Error deleting exam:", error);
-   return NextResponse.json(
-     { success: false, message: "Failed to delete exam" },
-     { status: 500 }
-   );
- }
+    return NextResponse.json({
+      success: true,
+      message: "Exam deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting exam:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to delete exam" },
+      { status: 500 }
+    );
+  }
 }
