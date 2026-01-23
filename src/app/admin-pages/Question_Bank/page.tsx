@@ -102,7 +102,7 @@ export default function QuestionBankPage() {
     option_c: "",
     option_d: "",
     correct_answer: "",
-    points: 1,
+    points: 2,
     subject_id: 0,
     topic_id: 0,
     difficulty: "Medium",
@@ -265,7 +265,7 @@ export default function QuestionBankPage() {
       option_c: "",
       option_d: "",
       correct_answer: "",
-      points: 1,
+      points: 2,
       subject_id: 0,
       topic_id: 0,
       difficulty: "Medium",
@@ -342,9 +342,6 @@ export default function QuestionBankPage() {
     if (newQuestion.subject_id === 0) {
       errors.subject_id = "Subject is required";
     }
-    if (!newQuestion.points || newQuestion.points <= 0) {
-      errors.points = "Points must be greater than 0";
-    }
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -382,7 +379,7 @@ export default function QuestionBankPage() {
           option_c: "",
           option_d: "",
           correct_answer: "",
-          points: 1,
+          points: 2,
           subject_id: 0,
           topic_id: 0,
           difficulty: "Medium",
@@ -573,13 +570,6 @@ export default function QuestionBankPage() {
             continue;
           }
 
-          // Validate points
-          const points = parseInt(question.points);
-          if (isNaN(points) || points <= 0) {
-            errors.push(`Row ${i + 1}: Invalid points value`);
-            continue;
-          }
-
           questions.push({
             question_text: question.question_text,
             option_a: question.option_a,
@@ -587,7 +577,7 @@ export default function QuestionBankPage() {
             option_c: question.option_c,
             option_d: question.option_d,
             correct_answer: question.correct_answer,
-            points: points,
+            points: 2,
             difficulty: question.difficulty,
             subject_id: 0, // Will use pre-selected bulk subject
             topic_id: 0, // Will use pre-selected bulk topic
@@ -673,9 +663,9 @@ export default function QuestionBankPage() {
 
   const downloadTemplate = () => {
     const csvContent = `question_text,option_a,option_b,option_c,option_d,correct_answer,points,difficulty
-"What is 2+2?","3","4","5","6","B",1,Easy
+"What is 2+2?","3","4","5","6","B",2,Easy
 "What is the capital of France?","London","Berlin","Paris","Madrid","C",2,Medium
-"Who wrote Romeo and Juliet?","Shakespeare","Hemingway","Tolstoy","Dickens","A",3,Hard`;
+"Who wrote Romeo and Juliet?","Shakespeare","Hemingway","Tolstoy","Dickens","A",2,Hard`;
 
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -712,7 +702,7 @@ export default function QuestionBankPage() {
       option_c: "",
       option_d: "",
       correct_answer: "",
-      points: 1,
+      points: 2,
       subject_id: 0,
       topic_id: 0,
       difficulty: "Medium",
@@ -1176,14 +1166,7 @@ export default function QuestionBankPage() {
               fullWidth
               margin="dense"
               value={newQuestion.points}
-              onChange={(e) =>
-                setNewQuestion({
-                  ...newQuestion,
-                  points: Number(e.target.value),
-                })
-              }
-              error={!!validationErrors.points}
-              helperText={validationErrors.points}
+              disabled
               inputProps={{ min: 1 }}
             />
 
@@ -1464,14 +1447,7 @@ export default function QuestionBankPage() {
                   fullWidth
                   margin="dense"
                   value={newQuestion.points}
-                  onChange={(e) =>
-                    setNewQuestion({
-                      ...newQuestion,
-                      points: Number(e.target.value),
-                    })
-                  }
-                  error={!!validationErrors.points}
-                  helperText={validationErrors.points}
+                  disabled
                   inputProps={{ min: 1 }}
                 />
 
