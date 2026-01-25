@@ -37,17 +37,18 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Pre-assigned students
   const [preAssigned, setPreAssigned] = useState<number[]>([]);
-
-  // Current checked state (selected by user)
   const [checked, setChecked] = useState<Set<number>>(new Set());
+
+  // ✅ NEW: shuffle toggle
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
 
   useEffect(() => {
     if (open && examId) {
       setError("");
       setPreAssigned([]);
       setChecked(new Set());
+      setShuffleQuestions(false);
       fetchStudents();
       fetchAssignedStudents();
     }
@@ -73,28 +74,21 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
       const json = await res.json();
       if (json.success) {
         setPreAssigned(json.data);
-        setChecked(new Set(json.data)); // check initially assigned
+        setChecked(new Set(json.data));
       }
-    } catch {
-      // silent fail
-    }
+    } catch {}
   };
 
   const toggleStudent = (studentId: number) => {
     setChecked(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(studentId)) newSet.delete(studentId);
-      else newSet.add(studentId);
-      return newSet;
+      const next = new Set(prev);
+      next.has(studentId) ? next.delete(studentId) : next.add(studentId);
+      return next;
     });
   };
 
   const handleSelectAll = (selectAll: boolean) => {
-    if (selectAll) {
-      setChecked(new Set(students.map(s => s.user_id)));
-    } else {
-      setChecked(new Set());
-    }
+    setChecked(selectAll ? new Set(students.map(s => s.user_id)) : new Set());
   };
 
   const handleAssign = async () => {
@@ -105,14 +99,15 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
         body: JSON.stringify({
           examId,
           studentIds: Array.from(checked),
-          assignedBy: 1, // TODO: Replace with logged-in admin
+          shuffleEnabled: shuffleQuestions, // ✅ send flag
+          assignedBy: 1,
         }),
       });
 
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
 
-      alert("✅ Exam assignments updated successfully");
+      alert("✅ Exam assignment updated");
       onClose();
     } catch (err: any) {
       setError(err.message || "Failed to assign exam");
@@ -120,25 +115,14 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
   };
 
   const isChanged = () => {
-    const current = Array.from(checked).sort();
-    const previous = [...preAssigned].sort();
-    return JSON.stringify(current) !== JSON.stringify(previous);
-  };
-
-  const getButtonText = () => {
-    if (preAssigned.length === 0) return "Assign Exam"; // no assignment yet
-    if (checked.size === 0 && preAssigned.length > 0) return "Update"; // unassign all
-    if (isChanged()) return "Update Assignment"; // changes made
-    return "Assign Exam"; // fallback
+    return JSON.stringify([...checked].sort()) !== JSON.stringify([...preAssigned].sort());
   };
 
   const isButtonDisabled = () => {
-    if (preAssigned.length === 0 && checked.size === 0) return true; // nothing selected yet
-    if (checked.size === 0 && preAssigned.length > 0) return false; // can unassign all
-    return isChanged() ? false : true; // enable only if changes made
+    if (preAssigned.length === 0 && checked.size === 0) return true;
+    return !isChanged();
   };
 
-  const selectedCount = checked.size;
   const allSelected = students.length > 0 && checked.size === students.length;
 
   return (
@@ -159,18 +143,29 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
         />
 
         <TextField
-          label="Number of Students Selected"
-          value={selectedCount}
+          label="Students Selected"
+          value={checked.size}
           fullWidth
           margin="dense"
           disabled
+        />
+
+        {/* ✅ Shuffle option */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={shuffleQuestions}
+              onChange={(e) => setShuffleQuestions(e.target.checked)}
+            />
+          }
+          label="Shuffle questions for each student"
         />
 
         {loading ? (
           <CircularProgress />
         ) : (
           <List dense>
-            {students.map((s) => (
+            {students.map(s => (
               <ListItem key={s.user_id} disablePadding>
                 <ListItemButton onClick={() => toggleStudent(s.user_id)}>
                   <ListItemIcon>
@@ -194,7 +189,7 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
           onClick={handleAssign}
           disabled={isButtonDisabled()}
         >
-          {getButtonText()}
+          Assign Exam
         </Button>
       </DialogActions>
     </Dialog>

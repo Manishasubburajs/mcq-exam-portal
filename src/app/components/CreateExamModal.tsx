@@ -19,13 +19,12 @@ import {
   Divider,
   Select,
   MenuItem,
-  CircularProgress
+  CircularProgress,
 } from "@mui/material";
 import { useState, useMemo, useEffect } from "react";
 import * as Yup from "yup";
 
 type ExamType = "practice" | "mock" | "live";
-type QuestionMode = "same" | "shuffle" | "random";
 
 interface Topic {
   topic_id: number;
@@ -54,16 +53,18 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  isEdit?: boolean;
+  examData?: any;
 }
 
-export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
+export default function CreateExamModal({ open, onClose, onSuccess, isEdit = false, examData }: Props) {
   const resetForm = () => {
     setActiveStep(0);
     setExamTitle("");
     setDescription("");
     setExamType("practice");
     setDuration(60);
-    setQuestionMode("random");
+
     setStartTime("");
     setEndTime("");
     setSelectedSubjects([]);
@@ -81,7 +82,6 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
   // STEP 2: Rules
   const [duration, setDuration] = useState(60);
-  const [questionMode, setQuestionMode] = useState<QuestionMode>("random");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -103,7 +103,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
   const totalQuestions = Object.values(topicCounts).reduce(
     (sum, v) => sum + (Number(v) || 0),
-    0
+    0,
   );
 
   // Fetch subjects + topics + counts when modal opens
@@ -117,6 +117,25 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       .finally(() => setLoadingSubjects(false));
   }, [open]);
 
+  // Populate form for edit
+  useEffect(() => {
+    if (open && isEdit && examData) {
+      setExamTitle(examData.exam_name || "");
+      setDescription(examData.description || "");
+      setExamType(examData.exam_type);
+      setDuration(examData.duration_minutes);
+      setStartTime(examData.scheduled_start ? new Date(examData.scheduled_start).toISOString().slice(0, 16) : "");
+      setEndTime(examData.scheduled_end ? new Date(examData.scheduled_end).toISOString().slice(0, 16) : "");
+      // For subjects and topics, need to set selectedSubjects and topicCounts from examData.subjects
+      const selected = examData.subjects.map((s: any) => s.subject_id);
+      setSelectedSubjects(selected);
+      const counts: Record<number, number> = {};
+      examData.subjects.forEach((s: any) => {
+        counts[s.topic_id] = s.question_count;
+      });
+      setTopicCounts(counts);
+    }
+  }, [open, isEdit, examData]);
 
   // Toggle Subject
   const toggleSubject = (id: number) => {
@@ -126,7 +145,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       setTopicErrors({});
     } else {
       setSelectedSubjects((prev) =>
-        prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+        prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
       );
     }
   };
@@ -146,18 +165,24 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       examTitle: Yup.string().required("Exam title is required"),
       description: Yup.string(),
       topicCounts: Yup.object(
-        selectedSubjects.reduce((acc, subjectId) => {
-          const subj = subjects.find((s) => s.subject_id === subjectId);
-          subj?.topics.forEach((topic) => {
-            if (topic.question_count > 0) {
-              acc[topic.topic_id] = Yup.number()
-                .required("Required")
-                .min(1, "Must be at least 1")
-                .max(topic.question_count, `Cannot exceed ${topic.question_count}`);
-            }
-          });
-          return acc;
-        }, {} as Record<number, Yup.NumberSchema>)
+        selectedSubjects.reduce(
+          (acc, subjectId) => {
+            const subj = subjects.find((s) => s.subject_id === subjectId);
+            subj?.topics.forEach((topic) => {
+              if (topic.question_count > 0) {
+                acc[topic.topic_id] = Yup.number()
+                  .required("Required")
+                  .min(1, "Must be at least 1")
+                  .max(
+                    topic.question_count,
+                    `Cannot exceed ${topic.question_count}`,
+                  );
+              }
+            });
+            return acc;
+          },
+          {} as Record<number, Yup.NumberSchema>,
+        ),
       ),
     });
 
@@ -169,7 +194,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       try {
         await schema.validate(
           { examTitle, description, topicCounts },
-          { abortEarly: false }
+          { abortEarly: false },
         );
         setTopicErrors({});
         setFormErrors({});
@@ -199,35 +224,36 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       description,
       examType,
       duration,
-      questionMode,
+
       startTime,
       endTime,
       topicCounts,
     };
 
     try {
-      const res = await fetch("/api/exams", {
-        method: "POST",
+      const url = isEdit ? `/api/exams/${examData.id}` : "/api/exams";
+      const method = isEdit ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
-        alert("Exam created successfully!");
+        alert(`Exam ${isEdit ? "updated" : "created"} successfully!`);
         resetForm();
         onSuccess?.();
         onClose();
       } else {
-        alert(data.message || "Failed to create exam");
+        alert(data.message || `Failed to ${isEdit ? "update" : "create"} exam`);
       }
     } catch (err) {
       console.error(err);
-      alert("Error creating exam");
+      alert(`Error ${isEdit ? "updating" : "creating"} exam`);
     }
   };
 
   const renderStepContent = () => {
-
     switch (steps[activeStep]) {
       case "General Info":
         return (
@@ -257,11 +283,13 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                 const type = e.target.value as ExamType;
                 setExamType(type);
                 setActiveStep(0);
-                if (type === "practice") setQuestionMode("random");
-                if (type === "live") setQuestionMode("same");
               }}
             >
-              <FormControlLabel value="practice" control={<Radio />} label="Practice" />
+              <FormControlLabel
+                value="practice"
+                control={<Radio />}
+                label="Practice"
+              />
               <FormControlLabel value="mock" control={<Radio />} label="Mock" />
               <FormControlLabel value="live" control={<Radio />} label="Live" />
             </RadioGroup>
@@ -277,22 +305,8 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
             />
-            {examType === "mock" && (
-              <>
-                <Typography fontWeight={600}>Question Pattern</Typography>
-                <Select
-                  value={questionMode}
-                  onChange={(e) => setQuestionMode(e.target.value as QuestionMode)}
-                >
-                  <MenuItem value="same">Same</MenuItem>
-                  <MenuItem value="shuffle">Shuffle</MenuItem>
-                  <MenuItem value="random">Random</MenuItem>
-                </Select>
-              </>
-            )}
             {examType === "live" && (
               <>
-                <Typography fontWeight={600}>Question Pattern: SAME (Locked)</Typography>
                 <TextField
                   label="Start Time"
                   type="datetime-local"
@@ -354,7 +368,11 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                               mb={1}
                             >
                               <Typography>{topic.topic_name}</Typography>
-                              <Typography color={disabled ? "text.disabled" : "text.primary"}>
+                              <Typography
+                                color={
+                                  disabled ? "text.disabled" : "text.primary"
+                                }
+                              >
                                 Available: {topic.question_count}
                               </Typography>
                               <TextField
@@ -368,10 +386,13 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                                   handleTopicChange(
                                     topic.topic_id,
                                     Number(e.target.value),
-                                    topic.question_count
+                                    topic.question_count,
                                   )
                                 }
-                                inputProps={{ min: 0, max: topic.question_count }}
+                                inputProps={{
+                                  min: 0,
+                                  max: topic.question_count,
+                                }}
                               />
                             </Box>
                           );
@@ -383,27 +404,40 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                 );
               })
             )}
-              <Typography fontWeight={700} mt={2}>
-                Total Questions: {totalQuestions}
-              </Typography>
-            </Box>
-          );
+            <Typography fontWeight={700} mt={2}>
+              Total Questions: {totalQuestions}
+            </Typography>
+          </Box>
+        );
 
       case "Review":
         return (
           <Box>
-            <Typography><b>Title:</b> {examTitle}</Typography>
-            <Typography><b>Type:</b> {examType}</Typography>
-            <Typography><b>Pattern:</b> {questionMode}</Typography>
-            <Typography><b>Total Questions:</b> {totalQuestions}</Typography>
+            <Typography>
+              <b>Title:</b> {examTitle}
+            </Typography>
+            <Typography>
+              <b>Type:</b> {examType}
+            </Typography>
+            <Typography>
+              <b>Total Questions:</b> {totalQuestions}
+            </Typography>
           </Box>
         );
     }
   };
 
   return (
-    <Dialog open={open} onClose={() => { resetForm(); onClose(); }} maxWidth="md" fullWidth>
-      <DialogTitle>Create New Exam</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
+      maxWidth="md"
+      fullWidth
+    >
+      <DialogTitle>{isEdit ? "Edit Exam" : "Create New Exam"}</DialogTitle>
       <DialogContent>
         <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
           {steps.map((label) => (
@@ -419,7 +453,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
           Back
         </Button>
         <Button variant="contained" onClick={handleNext}>
-          {activeStep === steps.length - 1 ? "Create Exam" : "Next"}
+          {activeStep === steps.length - 1 ? (isEdit ? "Update Exam" : "Create Exam") : "Next"}
         </Button>
       </DialogActions>
     </Dialog>

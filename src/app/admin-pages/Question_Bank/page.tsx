@@ -82,7 +82,7 @@ export default function QuestionBankPage() {
   const [bulkQuestions, setBulkQuestions] = useState<any[]>([]);
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkValidationErrors, setBulkValidationErrors] = useState<string[]>(
-    []
+    [],
   );
   const [showBulkPreview, setShowBulkPreview] = useState(false);
   const [bulkSelectedSubjectId, setBulkSelectedSubjectId] = useState<number>(0);
@@ -142,8 +142,8 @@ export default function QuestionBankPage() {
       const subjectsData = Array.isArray(data)
         ? data
         : Array.isArray(data.data)
-        ? data.data
-        : [];
+          ? data.data
+          : [];
       const subject = subjectsData.find((s: any) => s.subject_id === subjectId);
 
       if (subject && subject.topics) {
@@ -163,6 +163,7 @@ export default function QuestionBankPage() {
     try {
       const res = await fetch("/api/questions");
       const data = await res.json();
+      console.log("QUESTIONS FROM API 👉", data);
       if (Array.isArray(data)) {
         setQuestions(data);
       } else {
@@ -175,7 +176,7 @@ export default function QuestionBankPage() {
     }
     setLoading(false);
   };
-
+console.log("QUESTIONS fetch FROM after API 👉", questions);
   useEffect(() => {
     fetchSubjects();
     fetchQuestions();
@@ -198,7 +199,7 @@ export default function QuestionBankPage() {
         (q) =>
           q.question_text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           q.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          q.difficulty?.toLowerCase().includes(searchTerm.toLowerCase())
+          q.difficulty?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -243,7 +244,7 @@ export default function QuestionBankPage() {
 
   const showSnackbar = (
     message: string,
-    severity: "success" | "error" | "info" | "warning" = "success"
+    severity: "success" | "error" | "info" | "warning" = "success",
   ) => {
     setSnackbarOpen(false); // 🔴 reset first
     setSnackbarMessage(message);
@@ -333,7 +334,7 @@ export default function QuestionBankPage() {
     if (
       !newQuestion.correct_answer.trim() ||
       !["A", "B", "C", "D"].includes(
-        newQuestion.correct_answer.trim().toUpperCase()
+        newQuestion.correct_answer.trim().toUpperCase(),
       )
     ) {
       errors.correct_answer =
@@ -366,7 +367,7 @@ export default function QuestionBankPage() {
         setAddQuestionModalOpen(false);
         showSnackbar(
           `Question ${isEditMode ? "updated" : "added"} successfully!`,
-          "success"
+          "success",
         );
         setUploadTypeSelection(null);
         setIsEditMode(false);
@@ -445,6 +446,7 @@ export default function QuestionBankPage() {
       subject_id: subjectId,
       topic_id: 0,
     }));
+    setValidationErrors({ ...validationErrors, subject_id: "" });
 
     if (subjectId) {
       fetchTopicsForSubject(subjectId);
@@ -481,19 +483,19 @@ export default function QuestionBankPage() {
   };
 
   const parseCSV = (csv: string) => {
-    const lines = csv.split('\n').filter(line => line.trim());
+    const lines = csv.split("\n").filter((line) => line.trim());
     const result: string[][] = [];
     for (const line of lines) {
       const row: string[] = [];
-      let current = '';
+      let current = "";
       let inQuotes = false;
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
         if (char === '"') {
           inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
+        } else if (char === "," && !inQuotes) {
           row.push(current.trim());
-          current = '';
+          current = "";
         } else {
           current += char;
         }
@@ -516,7 +518,7 @@ export default function QuestionBankPage() {
           return;
         }
 
-        const headers = rows[0].map(h => h.toLowerCase().trim());
+        const headers = rows[0].map((h) => h.toLowerCase().trim());
 
         const requiredFields = [
           "question_text",
@@ -529,7 +531,7 @@ export default function QuestionBankPage() {
           "difficulty",
         ];
         const missingFields = requiredFields.filter(
-          (field) => !headers.includes(field)
+          (field) => !headers.includes(field),
         );
 
         if (missingFields.length > 0) {
@@ -548,7 +550,7 @@ export default function QuestionBankPage() {
 
           const question: any = {};
           headers.forEach((header, index) => {
-            question[header] = (values[index] || '').replace(/^"|"$/g, ''); // Remove surrounding quotes
+            question[header] = (values[index] || "").replace(/^"|"$/g, ""); // Remove surrounding quotes
           });
 
           // Validate question
@@ -591,7 +593,7 @@ export default function QuestionBankPage() {
         if (questions.length > 0) {
           showSnackbar(
             `Successfully parsed ${questions.length} questions`,
-            "success"
+            "success",
           );
         }
       } catch (error) {
@@ -614,7 +616,7 @@ export default function QuestionBankPage() {
       if (!bulkSelectedSubjectId || !bulkSelectedTopicId) {
         showSnackbar(
           "Please select both subject and topic before bulk upload",
-          "error"
+          "error",
         );
         return;
       }
@@ -644,7 +646,7 @@ export default function QuestionBankPage() {
       if (data.success) {
         showSnackbar(
           `✅ Successfully uploaded ${questionsWithIds.length} questions!`,
-          "success"
+          "success",
         );
         setAddQuestionModalOpen(false);
         setBulkFile(null);
@@ -679,7 +681,7 @@ export default function QuestionBankPage() {
 
   const paginatedQuestions = filteredQuestions.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const handleCloseAddModal = () => {
@@ -733,8 +735,8 @@ export default function QuestionBankPage() {
       const subjectsData = Array.isArray(data)
         ? data
         : Array.isArray(data.data)
-        ? data.data
-        : [];
+          ? data.data
+          : [];
       const subject = subjectsData.find((s: any) => s.subject_id === subjectId);
 
       if (subject && subject.topics) {
@@ -964,25 +966,47 @@ export default function QuestionBankPage() {
                                     <VisibilityIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title="Edit" arrow>
-                                  <IconButton
-                                    size="small"
-                                    color="secondary"
-                                    onClick={() => handleEditQuestion(q)}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
+                                {/* Edit */}
+                                <Tooltip
+                                  title={
+                                    q.canEdit
+                                      ? "Edit Question"
+                                      : "Cannot edit: question already used in exam"
+                                  }
+                                  arrow
+                                >
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="secondary"
+                                      disabled={!q.canEdit}
+                                      onClick={() => handleEditQuestion(q)}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
-                                <Tooltip title="Delete" arrow>
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() =>
-                                      handleDeleteQuestion(q.question_id)
-                                    }
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
+                                {/* Delete */}
+                                <Tooltip
+                                  title={
+                                    q.canDelete
+                                      ? "Delete Question"
+                                      : "Cannot delete: question already used in exam"
+                                  }
+                                  arrow
+                                >
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      disabled={!q.canDelete}
+                                      onClick={() =>
+                                        handleDeleteQuestion(q.question_id)
+                                      }
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
                               </Box>
                             </TableCell>
@@ -1036,6 +1060,7 @@ export default function QuestionBankPage() {
                 onChange={(e) => {
                   const subjectId = Number(e.target.value);
                   handleFormSubjectChange(subjectId);
+                  setValidationErrors({ ...validationErrors, subject_id: "" });
                 }}
               >
                 <MenuItem value={0}>Select Subject</MenuItem>
@@ -1078,12 +1103,13 @@ export default function QuestionBankPage() {
               fullWidth
               margin="dense"
               value={newQuestion.question_text}
-              onChange={(e) =>
+              onChange={(e) => {
                 setNewQuestion({
                   ...newQuestion,
                   question_text: e.target.value,
-                })
-              }
+                });
+                setValidationErrors({ ...validationErrors, question_text: "" });
+              }}
               error={!!validationErrors.question_text}
               helperText={validationErrors.question_text}
             />
@@ -1093,9 +1119,10 @@ export default function QuestionBankPage() {
               fullWidth
               margin="dense"
               value={newQuestion.option_a}
-              onChange={(e) =>
-                setNewQuestion({ ...newQuestion, option_a: e.target.value })
-              }
+              onChange={(e) => {
+                setNewQuestion({ ...newQuestion, option_a: e.target.value });
+                setValidationErrors({ ...validationErrors, option_a: "" });
+              }}
               error={!!validationErrors.option_a}
               helperText={validationErrors.option_a}
             />
@@ -1104,9 +1131,10 @@ export default function QuestionBankPage() {
               fullWidth
               margin="dense"
               value={newQuestion.option_b}
-              onChange={(e) =>
-                setNewQuestion({ ...newQuestion, option_b: e.target.value })
-              }
+              onChange={(e) => {
+                setNewQuestion({ ...newQuestion, option_b: e.target.value });
+                setValidationErrors({ ...validationErrors, option_b: "" });
+              }}
               error={!!validationErrors.option_b}
               helperText={validationErrors.option_b}
             />
@@ -1115,9 +1143,10 @@ export default function QuestionBankPage() {
               fullWidth
               margin="dense"
               value={newQuestion.option_c}
-              onChange={(e) =>
-                setNewQuestion({ ...newQuestion, option_c: e.target.value })
-              }
+              onChange={(e) => {
+                setNewQuestion({ ...newQuestion, option_c: e.target.value });
+                setValidationErrors({ ...validationErrors, option_c: "" });
+              }}
               error={!!validationErrors.option_c}
               helperText={validationErrors.option_c}
             />
@@ -1126,9 +1155,10 @@ export default function QuestionBankPage() {
               fullWidth
               margin="dense"
               value={newQuestion.option_d}
-              onChange={(e) =>
-                setNewQuestion({ ...newQuestion, option_d: e.target.value })
-              }
+              onChange={(e) => {
+                setNewQuestion({ ...newQuestion, option_d: e.target.value });
+                setValidationErrors({ ...validationErrors, option_d: "" });
+              }}
               error={!!validationErrors.option_d}
               helperText={validationErrors.option_d}
             />
@@ -1141,12 +1171,16 @@ export default function QuestionBankPage() {
               <InputLabel>Correct Answer</InputLabel>
               <Select
                 value={newQuestion.correct_answer}
-                onChange={(e) =>
+                onChange={(e) => {
                   setNewQuestion({
                     ...newQuestion,
                     correct_answer: e.target.value,
-                  })
-                }
+                  });
+                  setValidationErrors({
+                    ...validationErrors,
+                    correct_answer: "",
+                  });
+                }}
               >
                 <MenuItem value="A">A: {newQuestion.option_a}</MenuItem>
                 <MenuItem value="B">B: {newQuestion.option_b}</MenuItem>
@@ -1265,7 +1299,7 @@ export default function QuestionBankPage() {
                     value={uploadTypeSelection || ""}
                     onChange={(e) =>
                       setUploadTypeSelection(
-                        e.target.value as "individual" | "bulk"
+                        e.target.value as "individual" | "bulk",
                       )
                     }
                   >
@@ -1359,12 +1393,16 @@ export default function QuestionBankPage() {
                   multiline
                   rows={3}
                   value={newQuestion.question_text}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setNewQuestion({
                       ...newQuestion,
                       question_text: e.target.value,
-                    })
-                  }
+                    });
+                    setValidationErrors({
+                      ...validationErrors,
+                      question_text: "",
+                    });
+                  }}
                   error={!!validationErrors.question_text}
                   helperText={validationErrors.question_text}
                 />
@@ -1374,9 +1412,13 @@ export default function QuestionBankPage() {
                   fullWidth
                   margin="dense"
                   value={newQuestion.option_a}
-                  onChange={(e) =>
-                    setNewQuestion({ ...newQuestion, option_a: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewQuestion({
+                      ...newQuestion,
+                      option_a: e.target.value,
+                    });
+                    setValidationErrors({ ...validationErrors, option_a: "" });
+                  }}
                   error={!!validationErrors.option_a}
                   helperText={validationErrors.option_a}
                 />
@@ -1385,9 +1427,13 @@ export default function QuestionBankPage() {
                   fullWidth
                   margin="dense"
                   value={newQuestion.option_b}
-                  onChange={(e) =>
-                    setNewQuestion({ ...newQuestion, option_b: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewQuestion({
+                      ...newQuestion,
+                      option_b: e.target.value,
+                    });
+                    setValidationErrors({ ...validationErrors, option_b: "" });
+                  }}
                   error={!!validationErrors.option_b}
                   helperText={validationErrors.option_b}
                 />
@@ -1396,9 +1442,13 @@ export default function QuestionBankPage() {
                   fullWidth
                   margin="dense"
                   value={newQuestion.option_c}
-                  onChange={(e) =>
-                    setNewQuestion({ ...newQuestion, option_c: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewQuestion({
+                      ...newQuestion,
+                      option_c: e.target.value,
+                    });
+                    setValidationErrors({ ...validationErrors, option_c: "" });
+                  }}
                   error={!!validationErrors.option_c}
                   helperText={validationErrors.option_c}
                 />
@@ -1407,9 +1457,13 @@ export default function QuestionBankPage() {
                   fullWidth
                   margin="dense"
                   value={newQuestion.option_d}
-                  onChange={(e) =>
-                    setNewQuestion({ ...newQuestion, option_d: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setNewQuestion({
+                      ...newQuestion,
+                      option_d: e.target.value,
+                    });
+                    setValidationErrors({ ...validationErrors, option_d: "" });
+                  }}
                   error={!!validationErrors.option_d}
                   helperText={validationErrors.option_d}
                 />
@@ -1422,12 +1476,16 @@ export default function QuestionBankPage() {
                   <InputLabel>Correct Answer</InputLabel>
                   <Select
                     value={newQuestion.correct_answer}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setNewQuestion({
                         ...newQuestion,
                         correct_answer: e.target.value,
-                      })
-                    }
+                      });
+                      setValidationErrors({
+                        ...validationErrors,
+                        correct_answer: "",
+                      });
+                    }}
                   >
                     <MenuItem value="A">A: {newQuestion.option_a}</MenuItem>
                     <MenuItem value="B">B: {newQuestion.option_b}</MenuItem>
@@ -1522,8 +1580,8 @@ export default function QuestionBankPage() {
                 {/* Upload Instructions */}
                 <Alert severity="info" sx={{ mb: 3 }}>
                   <Typography variant="body1">
-                    Upload a CSV file containing your questions. Please
-                    ensure the file follows the template format.
+                    Upload a CSV file containing your questions. Please ensure
+                    the file follows the template format.
                   </Typography>
                 </Alert>
 
@@ -1650,7 +1708,7 @@ export default function QuestionBankPage() {
                               </TableCell>
                               <TableCell>
                                 {bulkTopics.find(
-                                  (t) => t.topic_id === bulkSelectedTopicId
+                                  (t) => t.topic_id === bulkSelectedTopicId,
                                 )?.topic_name || "Selected Topic"}
                               </TableCell>
                               <TableCell>

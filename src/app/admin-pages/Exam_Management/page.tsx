@@ -91,6 +91,7 @@ const ExamManagement: React.FC = () => {
   const [examTypeSelection, setExamTypeSelection] = useState<
     "select" | "practice" | "mock" | "live" | ""
   >("");
+  const [isEdit, setIsEdit] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
@@ -313,6 +314,8 @@ const ExamManagement: React.FC = () => {
   const handleCloseCreateModal = () => {
     setCreateExamModalOpen(false);
     setExamTypeSelection("");
+    setIsEdit(false);
+    setSelectedExam(null);
     // Reset all forms
     setPracticeExamForm({
       examName: "",
@@ -353,7 +356,8 @@ const ExamManagement: React.FC = () => {
 
   const handleEditClick = (exam: Exam) => {
     setSelectedExam(exam);
-    setEditModalOpen(true);
+    setIsEdit(true);
+    setCreateExamModalOpen(true);
   };
 
   const handleDeleteClick = (exam: Exam) => {
@@ -827,7 +831,7 @@ const ExamManagement: React.FC = () => {
                                 <PersonAddAlt1Icon />
                               </IconButton>
 
-                              {/* <IconButton
+                              <IconButton
                                 size="small"
                                 color="primary"
                                 onClick={() => handleEditClick(exam)}
@@ -840,7 +844,7 @@ const ExamManagement: React.FC = () => {
                                 onClick={() => handleViewClick(exam)}
                               >
                                 <Visibility />
-                              </IconButton> */}
+                              </IconButton>
                               <IconButton
                                 size="small"
                                 color="error"
@@ -899,6 +903,8 @@ const ExamManagement: React.FC = () => {
           open={createExamModalOpen}
           onClose={handleCloseCreateModal}
           onSuccess={fetchExams}
+          isEdit={isEdit}
+          examData={selectedExam}
         />
 
         {/* Edit Exam Modal */}
