@@ -86,9 +86,20 @@ export async function POST(req: Request) {
       topicCounts: Record<number, number>;
     } = body;
 
-    if (!examTitle || !examType || !duration || !topicCounts) {
+    if (!examTitle || !examType || !topicCounts) {
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
+        { status: 400 },
+      );
+    }
+
+    // ⏱ Duration is REQUIRED only for mock & live
+    if ((examType === "mock" || examType === "live") && !duration) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Duration is required for mock and live exams",
+        },
         { status: 400 },
       );
     }
@@ -111,9 +122,14 @@ export async function POST(req: Request) {
           exam_title: examTitle,
           description,
           exam_type: examType,
-          time_limit_minutes: duration,
-          scheduled_start: startTime ? new Date(startTime) : null,
-          scheduled_end: endTime ? new Date(endTime) : null,
+          time_limit_minutes: examType === "practice" ? null : duration,
+
+          scheduled_start:
+            examType === "live" && startTime ? new Date(startTime) : null,
+
+          scheduled_end:
+            examType === "live" && endTime ? new Date(endTime) : null,
+
           question_count: totalQuestions,
           is_active: true,
         },

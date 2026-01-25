@@ -176,8 +176,8 @@ const ExamManagement: React.FC = () => {
       const subjectsData = Array.isArray(data)
         ? data
         : Array.isArray(data.data)
-        ? data.data
-        : [];
+          ? data.data
+          : [];
       const subject = subjectsData.find((s: any) => s.subject_id === subjectId);
 
       if (subject && subject.topics) {
@@ -237,7 +237,7 @@ const ExamManagement: React.FC = () => {
     // Filter by subject
     if (selectedSubjectId) {
       filtered = filtered.filter(
-        (exam) => exam.subject_id === selectedSubjectId
+        (exam) => exam.subject_id === selectedSubjectId,
       );
     }
 
@@ -252,7 +252,7 @@ const ExamManagement: React.FC = () => {
         (exam) =>
           exam.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           exam.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          exam.topic_name?.toLowerCase().includes(searchTerm.toLowerCase())
+          exam.topic_name?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -420,7 +420,7 @@ const ExamManagement: React.FC = () => {
         alert(
           `Not enough questions for subject ${
             subjects.find((s) => s.subject_id === subj.subjectId)?.subject_name
-          }. Available: ${available}`
+          }. Available: ${available}`,
         );
         return;
       }
@@ -479,7 +479,7 @@ const ExamManagement: React.FC = () => {
         alert(
           `Not enough questions for topic ${
             topics.find((t) => t.topic_id === topic.topicId)?.topic_name
-          }. Available: ${available}`
+          }. Available: ${available}`,
         );
         return;
       }
@@ -541,7 +541,7 @@ const ExamManagement: React.FC = () => {
         alert(
           `Not enough questions for topic ${
             topics.find((t) => t.topic_id === topic.topicId)?.topic_name
-          }. Available: ${available}`
+          }. Available: ${available}`,
         );
         return;
       }
@@ -587,7 +587,7 @@ const ExamManagement: React.FC = () => {
 
   const paginatedExams = filteredExams.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   return (
@@ -814,10 +814,13 @@ const ExamManagement: React.FC = () => {
                             >
                               <Timer sx={{ fontSize: 16 }} />
                               <Typography variant="body2">
-                                {exam.duration_minutes} min
+                                {exam.duration_minutes
+                                  ? `${exam.duration_minutes} min`
+                                  : "-No Timer-"}
                               </Typography>
                             </Box>
                           </TableCell>
+
                           <TableCell>
                             <Stack direction="row" spacing={1}>
                               <IconButton
@@ -1005,7 +1008,7 @@ const ExamManagement: React.FC = () => {
         )}
       </Box>
     </Box>
- );
+  );
 };
 
 export default ExamManagement;

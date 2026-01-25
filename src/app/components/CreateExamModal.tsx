@@ -305,7 +305,7 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
             />
-            {["live", "mock"].includes(examType) && (
+            {examType === "live" && (
               <>
                 <TextField
                   label="Start Time"
@@ -425,7 +425,7 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
             <Typography>
               <b>Total Questions:</b> {totalQuestions}
             </Typography>
-            {["live", "mock"].includes(examType) && (
+            {examType === "live" && (
               <>
                 <Typography>
                   <b>Start Time:</b> {startTime ? new Date(startTime).toLocaleString() : "Not set"}
