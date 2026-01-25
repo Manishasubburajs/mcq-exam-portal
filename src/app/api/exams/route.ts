@@ -35,6 +35,8 @@ export async function GET() {
         questions_count: exam.question_count,
         duration_minutes: exam.time_limit_minutes,
         created_at: exam.created_at.toISOString(),
+        scheduled_start: exam.scheduled_start?.toISOString() || null,
+        scheduled_end: exam.scheduled_end?.toISOString() || null,
 
         canEdit: !isAssigned,
         canDelete: !isAssigned,
