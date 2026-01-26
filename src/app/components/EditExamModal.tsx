@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+
 import {
   Dialog,
   DialogTitle,
@@ -7,172 +7,213 @@ import {
   DialogActions,
   Button,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
   Box,
+  Typography,
+  Divider,
+  CircularProgress,
   Alert,
-} from '@mui/material';
+} from "@mui/material";
+import { useEffect, useState } from "react";
 
-interface Exam {
-  id: number;
-  exam_name: string;
-  subject_name: string;
-  topic_name: string;
-  subject_id: number;
-  topic_id: number;
-  exam_type: 'practice' | 'mock' | 'live';
-  status: 'active' | 'draft' | 'completed' | 'inactive';
-  questions_count: number;
-  duration_minutes: number;
-  created_at: string;
-  total_participants: number;
-}
+type ExamType = "practice" | "mock" | "live";
 
-interface EditExamModalProps {
+interface Props {
   open: boolean;
   onClose: () => void;
-  exam: Exam | null;
-  subjects: any[];
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  examData: any; // from GET /api/exams/[id]
 }
 
-const EditExamModal: React.FC<EditExamModalProps> = ({
+export default function EditExamModal({
   open,
   onClose,
-  exam,
-  subjects,
   onSuccess,
-}) => {
-  const [examName, setExamName] = useState('');
-  const [subjectId, setSubjectId] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  examData,
+}: Props) {
+  /* -------------------- STATE -------------------- */
+  const [examTitle, setExamTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [examType, setExamType] = useState<ExamType>("practice");
+  const [duration, setDuration] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [topicCounts, setTopicCounts] = useState<Record<number, number>>({});
+  const [saving, setSaving] = useState(false);
 
+  const canEdit = examData?.canEdit;
+
+  /* -------------------- PREFILL -------------------- */
   useEffect(() => {
-    if (exam) {
-      setExamName(exam.exam_name);
-      setSubjectId(exam.subject_id);
-      setDuration(exam.duration_minutes);
-    }
-  }, [exam]);
+    if (!open || !examData) return;
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!examName.trim() || !subjectId || duration <= 0) {
-      setError('Please fill in all required fields');
-      return;
-    }
+    setExamTitle(examData.exam_name || "");
+    setDescription(examData.description || "");
+    setExamType(examData.exam_type);
+    setDuration(examData.duration_minutes);
 
-    setLoading(true);
-    setError('');
+    setStartTime(
+      examData.scheduled_start
+        ? new Date(examData.scheduled_start).toISOString().slice(0, 16)
+        : "",
+    );
+
+    setEndTime(
+      examData.scheduled_end
+        ? new Date(examData.scheduled_end).toISOString().slice(0, 16)
+        : "",
+    );
+
+    const counts: Record<number, number> = {};
+    examData.subjects.forEach((s: any) => {
+      counts[s.topic_id] = s.question_count;
+    });
+    setTopicCounts(counts);
+  }, [open, examData]);
+
+  /* -------------------- SUBMIT -------------------- */
+  const handleUpdate = async () => {
+    setSaving(true);
+
+    const payload = {
+      examTitle,
+      description,
+      examType, // backend ignores changes anyway
+      duration: examType === "practice" ? null : duration,
+      startTime: examType === "live" ? startTime : null,
+      endTime: examType === "live" ? endTime : null,
+      topicCounts,
+    };
 
     try {
-      const response = await fetch(`/api/exams/${exam?.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          exam_name: examName,
-          subject_id: subjectId,
-          duration_minutes: duration,
-        }),
+      const res = await fetch(`/api/exams/${examData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (data.success) {
-        onSuccess();
-        onClose();
-      } else {
-        setError(data.error || 'Failed to update exam');
+      if (!res.ok) {
+        alert(data.message || "Failed to update exam");
+        return;
       }
+
+      alert("Exam updated successfully");
+      onSuccess?.();
+      onClose();
     } catch (err) {
-      console.error('Error updating exam:', err);
-      setError('An error occurred while updating the exam');
+      console.error(err);
+      alert("Error updating exam");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleClose = () => {
-    setError('');
-    onClose();
-  };
-
+  /* -------------------- UI -------------------- */
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Edit Exam</DialogTitle>
+
       <DialogContent>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
+        {!canEdit && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This exam is already assigned to students and cannot be edited.
           </Alert>
         )}
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid size = {{xs:12}} >
+
+        <Box display="flex" flexDirection="column" gap={2}>
+          <TextField
+            label="Exam Title"
+            value={examTitle}
+            onChange={(e) => setExamTitle(e.target.value)}
+            disabled={!canEdit}
+            required
+          />
+
+          <TextField
+            label="Description"
+            multiline
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={!canEdit}
+          />
+
+          <Typography fontWeight={600}>
+            Exam Type: {examType.toUpperCase()}
+          </Typography>
+
+          {(examType === "mock" || examType === "live") && (
+            <TextField
+              label="Duration (minutes)"
+              type="number"
+              value={duration ?? ""}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              disabled={!canEdit}
+            />
+          )}
+
+          {examType === "live" && (
+            <>
               <TextField
-                fullWidth
-                label="Exam Name"
-                value={examName}
-                onChange={(e) => setExamName(e.target.value)}
-                required
+                label="Start Time"
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                disabled={!canEdit}
               />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <FormControl fullWidth>
-                <InputLabel>Subject</InputLabel>
-                <Select
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(Number(e.target.value))}
-                  label="Subject"
-                  required
-                >
-                  {subjects.map((subject) => (
-                    <MenuItem key={subject.subject_id} value={subject.subject_id}>
-                      {subject.subject_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
-                fullWidth
-                label="Duration (minutes)"
+                label="End Time"
+                type="datetime-local"
+                InputLabelProps={{ shrink: true }}
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                disabled={!canEdit}
+              />
+            </>
+          )}
+
+          <Divider />
+
+          <Typography fontWeight={600}>Questions</Typography>
+          {examData.subjects.map((s: any) => (
+            <Box
+              key={s.topic_id}
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography>
+                {s.subject_name} – {s.topic_name}
+              </Typography>
+              <TextField
+                size="small"
                 type="number"
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                inputProps={{ min: 1 }}
-                required
+                value={topicCounts[s.topic_id] ?? ""}
+                disabled={!canEdit}
+                onChange={(e) =>
+                  setTopicCounts((prev) => ({
+                    ...prev,
+                    [s.topic_id]: Number(e.target.value),
+                  }))
+                }
               />
-            </Grid>
-          </Grid>
+            </Box>
+          ))}
         </Box>
       </DialogContent>
+
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancel
-        </Button>
+        <Button onClick={onClose}>Cancel</Button>
         <Button
-          onClick={handleSubmit}
           variant="contained"
-          disabled={loading}
-          sx={{
-            background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-            '&:hover': { opacity: 0.9 }
-          }}
+          onClick={handleUpdate}
+          disabled={!canEdit || saving}
         >
-          {loading ? 'Saving...' : 'Save Changes'}
+          {saving ? <CircularProgress size={20} /> : "Update Exam"}
         </Button>
       </DialogActions>
     </Dialog>
   );
-};
-
-export default EditExamModal;
+}

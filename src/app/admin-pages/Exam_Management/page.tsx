@@ -27,6 +27,7 @@ import {
   useMediaQuery,
   Alert,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import { Grid } from "@mui/material";
 import {
@@ -52,6 +53,7 @@ import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
 import CreateExamModal from "../../components/CreateExamModal";
 import EditExamModal from "../../components/EditExamModal";
+import ExamDetailsModal from "../../components/ExamDetailsModal";
 import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import AssignExamModal from "../../components/AssignExamModal";
 
@@ -70,6 +72,9 @@ interface Exam {
   duration_minutes: number;
   created_at: string;
   total_participants: number;
+  // 🔒 permission flags
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 const ExamManagement: React.FC = () => {
@@ -91,10 +96,12 @@ const ExamManagement: React.FC = () => {
   const [examTypeSelection, setExamTypeSelection] = useState<
     "select" | "practice" | "mock" | "live" | ""
   >("");
-  const [isEdit, setIsEdit] = useState(false);
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
+  const [selectedExamForView, setSelectedExamForView] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -314,7 +321,7 @@ const ExamManagement: React.FC = () => {
   const handleCloseCreateModal = () => {
     setCreateExamModalOpen(false);
     setExamTypeSelection("");
-    setIsEdit(false);
+
     setSelectedExam(null);
     // Reset all forms
     setPracticeExamForm({
@@ -356,8 +363,7 @@ const ExamManagement: React.FC = () => {
 
   const handleEditClick = (exam: Exam) => {
     setSelectedExam(exam);
-    setIsEdit(true);
-    setCreateExamModalOpen(true);
+    setEditModalOpen(true);
   };
 
   const handleDeleteClick = (exam: Exam) => {
@@ -365,33 +371,39 @@ const ExamManagement: React.FC = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleViewClick = (exam: Exam) => {
-    alert(`Viewing exam: ${exam.exam_name}`);
+  const handleViewClick = async (exam: Exam) => {
+    try {
+      const res = await fetch(`/api/exams/${exam.id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedExamForView(data);
+        setViewModalOpen(true);
+      } else {
+        alert(data.message || "Failed to fetch exam details");
+      }
+    } catch (err) {
+      console.error("Error fetching exam details:", err);
+      alert("Error fetching exam details");
+    }
   };
 
   const handleResultsClick = (exam: Exam) => {
     alert(`Viewing results for: ${exam.exam_name}`);
   };
 
-  const handleEditSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    alert("Exam details updated successfully");
-    setEditModalOpen(false);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!selectedExam) return;
 
     try {
-      const res = await fetch("/api/exams", {
+      const res = await fetch(`/api/exams/${selectedExam.id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ examId: selectedExam.id }),
       });
+
       const data = await res.json();
-      if (data.success) {
+
+      if (res.ok && data.success) {
         alert("Exam deleted successfully");
-        fetchExams(); // Refresh the list
+        fetchExams(); // refresh list
         setDeleteModalOpen(false);
         setSelectedExam(null);
       } else {
@@ -400,188 +412,6 @@ const ExamManagement: React.FC = () => {
     } catch (err) {
       console.error("Error deleting exam:", err);
       alert("Error deleting exam");
-    }
-  };
-
-  const handleSubmitPracticeExam = async () => {
-    if (
-      !practiceExamForm.examName ||
-      practiceExamForm.subjects.length === 0 ||
-      practiceExamForm.totalMarks <= 0
-    ) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    // Validate question counts
-    for (const subj of practiceExamForm.subjects) {
-      const available = questionCounts[`subject_${subj.subjectId}`] || 0;
-      if (subj.questionCount > available) {
-        alert(
-          `Not enough questions for subject ${
-            subjects.find((s) => s.subject_id === subj.subjectId)?.subject_name
-          }. Available: ${available}`,
-        );
-        return;
-      }
-    }
-
-    const payload = {
-      exam_title: practiceExamForm.examName,
-      exam_type: "practice",
-      total_marks: practiceExamForm.totalMarks,
-      subject_configs: practiceExamForm.subjects.map((s) => ({
-        subject_id: s.subjectId,
-        question_count: s.questionCount,
-      })),
-      randomize_questions: practiceExamForm.randomizeQuestions,
-      show_results: practiceExamForm.showResults,
-      allow_review: practiceExamForm.allowReview,
-    };
-
-    try {
-      const res = await fetch("/api/exams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Practice exam created successfully!");
-        fetchExams();
-        handleCloseCreateModal();
-      } else {
-        alert(data.error || "Error creating exam");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error creating exam");
-    }
-  };
-
-  const handleSubmitMockExam = async () => {
-    if (
-      !mockExamForm.examName ||
-      mockExamForm.topics.length === 0 ||
-      !mockExamForm.startDate ||
-      !mockExamForm.endDate ||
-      mockExamForm.totalMarks <= 0 ||
-      mockExamForm.totalDuration <= 0
-    ) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    // Validate question counts
-    for (const topic of mockExamForm.topics) {
-      const available = questionCounts[`topic_${topic.topicId}`] || 0;
-      if (topic.questionCount > available) {
-        alert(
-          `Not enough questions for topic ${
-            topics.find((t) => t.topic_id === topic.topicId)?.topic_name
-          }. Available: ${available}`,
-        );
-        return;
-      }
-    }
-
-    const payload = {
-      exam_title: mockExamForm.examName,
-      exam_type: "mock",
-      total_marks: mockExamForm.totalMarks,
-      time_limit_minutes: mockExamForm.totalDuration,
-      scheduled_start: mockExamForm.startDate,
-      scheduled_end: mockExamForm.endDate,
-      topic_configs: mockExamForm.topics.map((t) => ({
-        topic_id: t.topicId,
-        question_count: t.questionCount,
-      })),
-      negative_marking: mockExamForm.negativeMarking,
-      pass_percentage: mockExamForm.passPercentage,
-      proctoring: mockExamForm.proctoring,
-      randomize_questions: mockExamForm.randomizeQuestions,
-    };
-
-    try {
-      const res = await fetch("/api/exams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Mock exam created successfully!");
-        fetchExams();
-        handleCloseCreateModal();
-      } else {
-        alert(data.error || "Error creating exam");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error creating exam");
-    }
-  };
-
-  const handleSubmitLiveExam = async () => {
-    if (
-      !liveExamForm.examName ||
-      liveExamForm.topics.length === 0 ||
-      !liveExamForm.startDateTime ||
-      liveExamForm.totalMarks <= 0 ||
-      liveExamForm.totalDuration <= 0
-    ) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    // Validate question counts
-    for (const topic of liveExamForm.topics) {
-      const available = questionCounts[`topic_${topic.topicId}`] || 0;
-      if (topic.questionCount > available) {
-        alert(
-          `Not enough questions for topic ${
-            topics.find((t) => t.topic_id === topic.topicId)?.topic_name
-          }. Available: ${available}`,
-        );
-        return;
-      }
-    }
-
-    const payload = {
-      exam_title: liveExamForm.examName,
-      exam_type: "live",
-      total_marks: liveExamForm.totalMarks,
-      time_limit_minutes: liveExamForm.totalDuration,
-      scheduled_start: liveExamForm.startDateTime,
-      topic_configs: liveExamForm.topics.map((t) => ({
-        topic_id: t.topicId,
-        question_count: t.questionCount,
-      })),
-      participant_capacity: liveExamForm.participantCapacity,
-      registration_deadline: liveExamForm.registrationDeadline,
-      proctoring_enabled: liveExamForm.proctoringEnabled,
-      auto_submit: liveExamForm.autoSubmit,
-      allow_camera: liveExamForm.allowCamera,
-      require_id: liveExamForm.requireID,
-    };
-
-    try {
-      const res = await fetch("/api/exams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert("Live exam created successfully!");
-        fetchExams();
-        handleCloseCreateModal();
-      } else {
-        alert(data.error || "Error creating exam");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error creating exam");
     }
   };
 
@@ -823,47 +653,85 @@ const ExamManagement: React.FC = () => {
 
                           <TableCell>
                             <Stack direction="row" spacing={1}>
-                              <IconButton
-                                size="small"
-                                color="info"
-                                onClick={() => {
-                                  setAssignExamId(exam.id);
-                                  setAssignModalOpen(true);
-                                }}
-                              >
-                                <PersonAddAlt1Icon />
-                              </IconButton>
-
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => handleEditClick(exam)}
-                              >
-                                <Edit />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="success"
-                                onClick={() => handleViewClick(exam)}
-                              >
-                                <Visibility />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDeleteClick(exam)}
-                              >
-                                <Delete />
-                              </IconButton>
-                              {(exam.status === "completed" ||
-                                exam.status === "inactive") && (
+                              {/* Assign */}
+                              <Tooltip title="Assign Exam" arrow>
                                 <IconButton
                                   size="small"
-                                  color="warning"
-                                  onClick={() => handleResultsClick(exam)}
+                                  color="info"
+                                  onClick={() => {
+                                    setAssignExamId(exam.id);
+                                    setAssignModalOpen(true);
+                                  }}
                                 >
-                                  <BarChart />
+                                  <PersonAddAlt1Icon />
                                 </IconButton>
+                              </Tooltip>
+
+                              {/* Edit */}
+                              <Tooltip
+                                title={
+                                  exam.canEdit
+                                    ? "Edit Exam"
+                                    : "Cannot edit: exam already assigned to students"
+                                }
+                                arrow
+                              >
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color="primary"
+                                    disabled={exam.canEdit === false}
+                                    onClick={() => handleEditClick(exam)}
+                                  >
+                                    <Edit />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+
+                              {/* View */}
+                              <Tooltip title="View Exam" arrow>
+                                <IconButton
+                                  size="small"
+                                  color="success"
+                                  onClick={() => handleViewClick(exam)}
+                                >
+                                  <Visibility />
+                                </IconButton>
+                              </Tooltip>
+
+                              {/* Delete */}
+                              <Tooltip
+                                title={
+                                  exam.canDelete
+                                    ? "Delete Exam"
+                                    : "Cannot delete: exam already assigned to students"
+                                }
+                                arrow
+                              >
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    disabled={exam.canDelete === false}
+                                    onClick={() => handleDeleteClick(exam)}
+                                  >
+                                    <Delete />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+
+                              {/* Results */}
+                              {(exam.status === "completed" ||
+                                exam.status === "inactive") && (
+                                <Tooltip title="View Results" arrow>
+                                  <IconButton
+                                    size="small"
+                                    color="warning"
+                                    onClick={() => handleResultsClick(exam)}
+                                  >
+                                    <BarChart />
+                                  </IconButton>
+                                </Tooltip>
                               )}
                             </Stack>
                           </TableCell>
@@ -906,75 +774,7 @@ const ExamManagement: React.FC = () => {
           open={createExamModalOpen}
           onClose={handleCloseCreateModal}
           onSuccess={fetchExams}
-          isEdit={isEdit}
-          examData={selectedExam}
         />
-
-        {/* Edit Exam Modal */}
-        <Dialog
-          open={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Edit Exam</DialogTitle>
-          <DialogContent>
-            <Box component="form" onSubmit={handleEditSubmit} sx={{ mt: 2 }}>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    fullWidth
-                    label="Exam Name"
-                    defaultValue={selectedExam?.exam_name}
-                    required
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Subject</InputLabel>
-                    <Select
-                      defaultValue={selectedExam?.subject_name}
-                      label="Subject"
-                      required
-                    >
-                      {subjects.map((subject) => (
-                        <MenuItem
-                          key={subject.subject_id}
-                          value={subject.subject_name}
-                        >
-                          {subject.subject_name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    fullWidth
-                    label="Duration (minutes)"
-                    type="number"
-                    defaultValue={selectedExam?.duration_minutes}
-                    inputProps={{ min: 1 }}
-                    required
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleEditSubmit}
-              variant="contained"
-              sx={{
-                background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                "&:hover": { opacity: 0.9 },
-              }}
-            >
-              Save Changes
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         {/* Delete Confirmation Modal */}
         <Dialog
@@ -1006,6 +806,28 @@ const ExamManagement: React.FC = () => {
             examId={assignExamId}
           />
         )}
+
+        {selectedExam && (
+          <EditExamModal
+            open={editModalOpen}
+            onClose={() => {
+              setEditModalOpen(false);
+              setSelectedExam(null);
+            }}
+            examData={selectedExam}
+            onSuccess={() => {
+              fetchExams();
+              setEditModalOpen(false);
+              setSelectedExam(null);
+            }}
+          />
+        )}
+
+        <ExamDetailsModal
+          open={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          exam={selectedExamForView}
+        />
       </Box>
     </Box>
   );
