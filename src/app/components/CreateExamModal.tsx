@@ -17,8 +17,6 @@ import {
   Radio,
   Checkbox,
   Divider,
-  Select,
-  MenuItem,
   CircularProgress,
 } from "@mui/material";
 import { useState, useMemo, useEffect } from "react";
@@ -38,33 +36,27 @@ interface Subject {
   topics: Topic[];
 }
 
-interface Subject {
-  subject_id: number;
-  subject_name: string;
-  topics: Topic[];
-}
-
-interface Topic {
-  topic_id: number;
-  topic_name: string;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  isEdit?: boolean;
-  examData?: any;
 }
 
-export default function CreateExamModal({ open, onClose, onSuccess, isEdit = false, examData }: Props) {
+export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
+  // Helper to format local datetime for input
+  const toDatetimeLocal = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+  };
+
   const resetForm = () => {
     setActiveStep(0);
     setExamTitle("");
     setDescription("");
     setExamType("practice");
     setDuration(60);
-
     setStartTime("");
     setEndTime("");
     setSelectedSubjects([]);
@@ -106,7 +98,7 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
     0,
   );
 
-  // Fetch subjects + topics + counts when modal opens
+  // Fetch subjects when modal opens
   useEffect(() => {
     if (!open) return;
     setLoadingSubjects(true);
@@ -116,26 +108,6 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
       .catch((err) => console.error(err))
       .finally(() => setLoadingSubjects(false));
   }, [open]);
-
-  // Populate form for edit
-  useEffect(() => {
-    if (open && isEdit && examData) {
-      setExamTitle(examData.exam_name || "");
-      setDescription(examData.description || "");
-      setExamType(examData.exam_type);
-      setDuration(examData.duration_minutes);
-      setStartTime(examData.scheduled_start ? new Date(examData.scheduled_start).toISOString().slice(0, 16) : "");
-      setEndTime(examData.scheduled_end ? new Date(examData.scheduled_end).toISOString().slice(0, 16) : "");
-      // For subjects and topics, need to set selectedSubjects and topicCounts from examData.subjects
-      const selected = examData.subjects.map((s: any) => s.subject_id);
-      setSelectedSubjects(selected);
-      const counts: Record<number, number> = {};
-      examData.subjects.forEach((s: any) => {
-        counts[s.topic_id] = s.question_count;
-      });
-      setTopicCounts(counts);
-    }
-  }, [open, isEdit, examData]);
 
   // Toggle Subject
   const toggleSubject = (id: number) => {
@@ -150,7 +122,6 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
     }
   };
 
-  // Handle topic input change
   const handleTopicChange = (topicId: number, value: number, max: number) => {
     let error = "";
     if (value < 1) error = "Must be at least 1";
@@ -159,7 +130,6 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
     setTopicCounts((prev) => ({ ...prev, [topicId]: value }));
   };
 
-  // Validate general info fields on change
   const validateGeneralInfo = async () => {
     try {
       await Yup.object({
@@ -177,7 +147,6 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
     }
   };
 
-  // Yup validation schema
   const getValidationSchema = () =>
     Yup.object({
       examTitle: Yup.string().required("Exam title is required"),
@@ -242,32 +211,29 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
       description,
       examType,
       duration,
-
       startTime,
       endTime,
       topicCounts,
     };
 
     try {
-      const url = isEdit ? `/api/exams/${examData.id}` : "/api/exams";
-      const method = isEdit ? "PUT" : "POST";
-      const res = await fetch(url, {
-        method,
+      const res = await fetch("/api/exams", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Exam ${isEdit ? "updated" : "created"} successfully!`);
+        alert("Exam created successfully!");
         resetForm();
         onSuccess?.();
         onClose();
       } else {
-        alert(data.message || `Failed to ${isEdit ? "update" : "create"} exam`);
+        alert(data.message || "Failed to create exam");
       }
     } catch (err) {
       console.error(err);
-      alert(`Error ${isEdit ? "updating" : "creating"} exam`);
+      alert("Error creating exam");
     }
   };
 
@@ -332,15 +298,15 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
             {examType === "live" && (
               <>
                 <TextField
-                  label="Start Time"
-                  type="datetime-local"
+                  label="Start Date"
+                  type="date"
                   InputLabelProps={{ shrink: true }}
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                 />
                 <TextField
-                  label="End Time"
-                  type="datetime-local"
+                  label="End Date"
+                  type="date"
                   InputLabelProps={{ shrink: true }}
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
@@ -437,25 +403,25 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
       case "Review":
         return (
           <Box>
-            <Typography>
+            <Typography sx={{ mb: 1 }}>
               <b>Title:</b> {examTitle}
             </Typography>
-            <Typography>
+            <Typography sx={{ mb: 1 }}>
               <b>Type:</b> {examType}
             </Typography>
-            <Typography>
+            <Typography sx={{ mb: 1 }}>
               <b>Duration:</b> {duration} minutes
             </Typography>
-            <Typography>
+            <Typography sx={{ mb: 1 }}>
               <b>Total Questions:</b> {totalQuestions}
             </Typography>
             {examType === "live" && (
               <>
                 <Typography>
-                  <b>Start Time:</b> {startTime ? new Date(startTime).toLocaleString() : "Not set"}
+                  <b>Start Date:</b> {startTime || "Not set"}
                 </Typography>
                 <Typography>
-                  <b>End Time:</b> {endTime ? new Date(endTime).toLocaleString() : "Not set"}
+                  <b>End Date:</b> {endTime || "Not set"}
                 </Typography>
               </>
             )}
@@ -474,7 +440,7 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
       maxWidth="md"
       fullWidth
     >
-      <DialogTitle>{isEdit ? "Edit Exam" : "Create New Exam"}</DialogTitle>
+      <DialogTitle>Create New Exam</DialogTitle>
       <DialogContent>
         <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
           {steps.map((label) => (
@@ -490,7 +456,7 @@ export default function CreateExamModal({ open, onClose, onSuccess, isEdit = fal
           Back
         </Button>
         <Button variant="contained" onClick={handleNext}>
-          {activeStep === steps.length - 1 ? (isEdit ? "Update Exam" : "Create Exam") : "Next"}
+          {activeStep === steps.length - 1 ? "Create Exam" : "Next"}
         </Button>
       </DialogActions>
     </Dialog>

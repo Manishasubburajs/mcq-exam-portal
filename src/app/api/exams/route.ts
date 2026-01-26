@@ -18,7 +18,7 @@ export async function GET() {
         },
         _count: {
           select: {
-            exam_assignments: true, // 👈 IMPORTANT
+            exam_assignments: true,
           },
         },
       },
@@ -33,11 +33,12 @@ export async function GET() {
         exam_type: exam.exam_type,
         status: exam.is_active ? "active" : "inactive",
         questions_count: exam.question_count,
+        total_marks: Number(exam.total_marks),
         duration_minutes: exam.time_limit_minutes,
         created_at: exam.created_at.toISOString(),
         scheduled_start: exam.scheduled_start?.toISOString() || null,
         scheduled_end: exam.scheduled_end?.toISOString() || null,
-
+        
         canEdit: !isAssigned,
         canDelete: !isAssigned,
 
@@ -56,7 +57,7 @@ export async function GET() {
     console.error("Error fetching exams:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch exams" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
     if (!examTitle || !examType || !topicCounts) {
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -100,44 +101,44 @@ export async function POST(req: Request) {
           success: false,
           message: "Duration is required for mock and live exams",
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    /* -----------------------------
-       Calculate total questions
-    ----------------------------- */
+    // -----------------------------
+    // Calculate total questions
+    // -----------------------------
     const totalQuestions = Object.values(topicCounts).reduce(
       (sum, v) => sum + Number(v),
-      0,
+      0
     );
 
-    /* -----------------------------
-       TRANSACTION START
-    ----------------------------- */
+    // -----------------------------
+    // TRANSACTION START
+    // -----------------------------
     const exam = await prisma.$transaction(async (tx) => {
-      /* ---- Create Exam ---- */
+      let totalMarks = 0; // Initialize total marks
+
+      /* ---- Create Exam with temporary 0 total_marks ---- */
       const exam = await tx.exams.create({
         data: {
           exam_title: examTitle,
           description,
           exam_type: examType,
           time_limit_minutes: examType === "practice" ? null : duration,
-
           scheduled_start:
             examType === "live" && startTime ? new Date(startTime) : null,
-
           scheduled_end:
             examType === "live" && endTime ? new Date(endTime) : null,
-
           question_count: totalQuestions,
+          total_marks: 0, // will update later
           is_active: true,
         },
       });
 
-      /* -----------------------------
-         FETCH TOPICS (for subject mapping)
-      ----------------------------- */
+      // -----------------------------
+      // FETCH TOPICS (for subject mapping)
+      // -----------------------------
       const topicIds = Object.keys(topicCounts).map(Number);
 
       const topics = await tx.topics.findMany({
@@ -148,9 +149,9 @@ export async function POST(req: Request) {
         },
       });
 
-      /* -----------------------------
-         INSERT exam_subject_configs ✅
-      ----------------------------- */
+      // -----------------------------
+      // INSERT exam_subject_configs ✅
+      // -----------------------------
       await tx.exam_subject_configs.createMany({
         data: topics.map((t) => ({
           exam_id: exam.exam_id,
@@ -160,9 +161,9 @@ export async function POST(req: Request) {
         })),
       });
 
-      /* -----------------------------
-         PREPARE exam_questions
-      ----------------------------- */
+      // -----------------------------
+      // PREPARE exam_questions
+      // -----------------------------
       let questionOrder = 1;
       const examQuestionsData: any[] = [];
 
@@ -193,23 +194,31 @@ export async function POST(req: Request) {
             assigned_marks: q.marks,
             assigned_negative: q.negative_marks,
           });
+
+          totalMarks += Number(q.marks); // ✅ Add question marks to total
         }
       }
 
-      /* ---- Insert exam_questions ---- */
+      // ---- Insert exam_questions ----
       await tx.exam_questions.createMany({
         data: examQuestionsData,
+      });
+
+      // ---- Update total_marks in exams table ----
+      await tx.exams.update({
+        where: { exam_id: exam.exam_id },
+        data: { total_marks: totalMarks },
       });
 
       return exam;
     });
 
-    /* -----------------------------
-       SUCCESS RESPONSE
-    ----------------------------- */
+    // -----------------------------
+    // SUCCESS RESPONSE
+    // -----------------------------
     return NextResponse.json({
       success: true,
-      message: "Exam created with random questions",
+      message: "Exam created with random questions and total marks calculated",
       examId: exam.exam_id,
     });
   } catch (error: any) {
@@ -220,7 +229,7 @@ export async function POST(req: Request) {
         success: false,
         message: error.message || "Failed to create exam",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

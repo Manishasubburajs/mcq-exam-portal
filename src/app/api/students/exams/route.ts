@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic"; // ✅ add this
+export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
@@ -27,17 +27,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const examId = searchParams.get("id");
 
+    /* ======================================================
+       SINGLE EXAM DETAILS (START EXAM)
+    ====================================================== */
     if (examId) {
-      // Fetch specific exam details with questions
-      const examIdNum = parseInt(examId);
+      const examIdNum = Number(examId);
 
-      // Check if assigned
       const assignment = await prisma.exam_assignment_students.findFirst({
         where: {
           student_id: studentId,
-          assignment: {
-            exam_id: examIdNum,
-          },
+          assignment: { exam_id: examIdNum },
         },
         include: {
           assignment: {
@@ -47,7 +46,7 @@ export async function GET(req: Request) {
                   exam_subject_configs: {
                     include: {
                       subject: true,
-                      topic: true, // Include topic to ensure topic_id is accessible
+                      topic: true,
                     },
                   },
                 },
@@ -65,112 +64,121 @@ export async function GET(req: Request) {
       }
 
       const exam = assignment.assignment.exam;
-      const subject = exam.exam_subject_configs[0]?.subject?.subject_name || "";
 
-      // Collect questions based on subject configs
+      /* ✅ FIX: collect ALL subjects (unique) */
+      const subjects = [
+        ...new Set(
+          exam.exam_subject_configs.map(
+            (c) => c.subject.subject_name
+          )
+        ),
+      ];
+
+      /* ------------------ QUESTIONS ------------------ */
       let allQuestions: any[] = [];
-      for (const config of exam.exam_subject_configs) {
-        if (config.topic_id !== null) {
-          const topicQuestions = await prisma.questions.findMany({
-            where: {
-              topic_id: config.topic_id,
-            },
-          });
 
-          // Shuffle and take question_count
-          const shuffled = topicQuestions.sort(() => 0.5 - Math.random());
-          const selected = shuffled.slice(0, config.question_count);
+      for (const cfg of exam.exam_subject_configs) {
+        if (!cfg.topic_id) continue;
 
-          const formatted = selected.map(q => ({
+        const topicQuestions = await prisma.questions.findMany({
+          where: { topic_id: cfg.topic_id },
+        });
+
+        const shuffled = topicQuestions.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, cfg.question_count);
+
+        allQuestions.push(
+          ...selected.map((q) => ({
             id: q.question_id,
             text: q.question_text,
             options: [
-              { id: 'A', text: q.option_a || '' },
-              { id: 'B', text: q.option_b || '' },
-              { id: 'C', text: q.option_c || '' },
-              { id: 'D', text: q.option_d || '' },
-            ].filter(opt => opt.text), // Remove empty options
-            correctAnswer: q.correct_answer || '',
-          }));
-
-          allQuestions = allQuestions.concat(formatted);
-        }
+              { id: "A", text: q.option_a },
+              { id: "B", text: q.option_b },
+              { id: "C", text: q.option_c },
+              { id: "D", text: q.option_d },
+            ].filter((o) => o.text),
+            correctAnswer: q.correct_answer,
+          }))
+        );
       }
-
-      // Shuffle the combined questions
-      const questions = allQuestions.sort(() => 0.5 - Math.random());
 
       const examData = {
         id: exam.exam_id,
         title: exam.exam_title,
-        subject: subject,
+        subject: subjects.join(", "), // ✅ FIXED
         duration: exam.time_limit_minutes,
         totalQuestions: exam.question_count,
-        questions: questions,
+        questions: allQuestions.sort(() => 0.5 - Math.random()),
         examType: exam.exam_type,
-        points: parseFloat(exam.total_marks.toString()),
+        points: Number(exam.total_marks || 0),
       };
 
       return NextResponse.json({ success: true, data: examData });
-    } else {
-      // Fetch assigned exams that are not completed
-      const assignedExams = await prisma.exam_assignment_students.findMany({
-        where: { student_id: studentId },
-        include: {
-          assignment: {
-            include: {
-              exam: {
-                include: {
-                  exam_subject_configs: {
-                    include: {
-                      subject: true,
-                    },
-                  },
+    }
+
+    /* ======================================================
+       AVAILABLE EXAMS LIST
+    ====================================================== */
+    const assignedExams = await prisma.exam_assignment_students.findMany({
+      where: { student_id: studentId },
+      include: {
+        assignment: {
+          include: {
+            exam: {
+              include: {
+                exam_subject_configs: {
+                  include: { subject: true },
                 },
               },
             },
           },
         },
+      },
+    });
+
+    const availableExamsMap = new Map<number, any>();
+
+    for (const a of assignedExams) {
+      const exam = a.assignment.exam;
+      if (availableExamsMap.has(exam.exam_id)) continue;
+
+      const completed = await prisma.student_exam_attempts.findFirst({
+        where: {
+          student_id: studentId,
+          exam_id: exam.exam_id,
+          status: "completed",
+        },
       });
 
-      // Filter out completed exams and ensure uniqueness
-      const availableExamsMap = new Map();
-      for (const assignment of assignedExams) {
-        const exam = assignment.assignment.exam;
-        const examId = exam.exam_id;
+      if (completed) continue;
 
-        // Skip if already processed
-        if (availableExamsMap.has(examId)) continue;
+      /* ✅ FIX: MULTIPLE SUBJECTS */
+      const subjects = [
+        ...new Set(
+          exam.exam_subject_configs.map(
+            (c) => c.subject.subject_name
+          )
+        ),
+      ];
 
-        const attempt = await prisma.student_exam_attempts.findFirst({
-          where: {
-            student_id: studentId,
-            exam_id: examId,
-            status: "completed",
-          },
-        });
-
-        if (!attempt) {
-          // Not completed, so available
-          const subject = exam.exam_subject_configs[0]?.subject?.subject_name || "";
-          availableExamsMap.set(examId, {
-            id: examId,
-            title: exam.exam_title,
-            subject: subject,
-            duration: exam.time_limit_minutes,
-            questions: exam.question_count,
-            due: exam.scheduled_end ? exam.scheduled_end.toISOString().split('T')[0] : "No due date",
-            points: exam.total_marks.toString(),
-            examType: exam.exam_type,
-            
-          });
-        }
-      }
-
-      const availableExams = Array.from(availableExamsMap.values());
-
-      return NextResponse.json({ success: true, data: availableExams });
+      availableExamsMap.set(exam.exam_id, {
+        id: exam.exam_id,
+        title: exam.exam_title,
+        subject: subjects.join(", "), // ✅ FIXED
+        duration: exam.time_limit_minutes,
+        questions: exam.question_count,
+        due: exam.scheduled_end
+          ? exam.scheduled_end.toISOString().split("T")[0]
+          : "No due date",
+        points: String(exam.total_marks || 0),
+        examType: exam.exam_type,
+      });
     }
+
+    return NextResponse.json({
+      success: true,
+      data: Array.from(availableExamsMap.values()),
+    });
   } catch (error) {
     console.error("Error fetching student exams:", error);
     return NextResponse.json(
