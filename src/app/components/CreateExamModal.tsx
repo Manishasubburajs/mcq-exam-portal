@@ -63,6 +63,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     setTopicCounts({});
     setTopicErrors({});
     setFormErrors({});
+    setDateErrors({});
   };
 
   const [activeStep, setActiveStep] = useState(0);
@@ -83,6 +84,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   const [topicCounts, setTopicCounts] = useState<Record<number, number>>({});
   const [topicErrors, setTopicErrors] = useState<Record<number, string>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
   const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   const steps = useMemo(() => {
@@ -145,6 +147,33 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       });
       setFormErrors(errors);
     }
+  };
+
+  const validateDates = () => {
+    const errors: Record<string, string> = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!startTime) {
+      errors.startTime = "Start date is required";
+    } else {
+      const startDate = new Date(startTime);
+      if (startDate < today) {
+        errors.startTime = "Start date must be today or later";
+      }
+    }
+
+    if (!endTime) {
+      errors.endTime = "End date is required";
+    } else if (startTime) {
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+      if (endDate < startDate) {
+        errors.endTime = "End date must be on or after start date";
+      }
+    }
+
+    setDateErrors(errors);
   };
 
   const getValidationSchema = () =>
@@ -302,14 +331,24 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                   type="date"
                   InputLabelProps={{ shrink: true }}
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    validateDates();
+                  }}
+                  error={!!dateErrors.startTime}
+                  helperText={dateErrors.startTime}
                 />
                 <TextField
                   label="End Date"
                   type="date"
                   InputLabelProps={{ shrink: true }}
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    validateDates();
+                  }}
+                  error={!!dateErrors.endTime}
+                  helperText={dateErrors.endTime}
                 />
               </>
             )}
