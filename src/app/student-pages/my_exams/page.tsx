@@ -425,10 +425,10 @@ export default function MyExamsPage() {
                     title={exam.title}
                     subject={exam.subject}
                     meta={{
-                      duration: exam.duration.toString(),
-                      questions: exam.questions.toString(),
-                      due: exam.due,
-                      points: exam.points,
+                      duration: exam.duration ?? 0,
+                      questions: exam.questions ?? 0,
+                      due: exam.due ?? "",
+                      points: exam.points ?? 0,
                       examType: exam.examType,
                     }}
                     onStart={() => startExam(exam.id)}
