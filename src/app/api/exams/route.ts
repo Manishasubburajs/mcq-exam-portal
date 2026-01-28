@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { shuffleArray } from "@/utils/shuffle";
 
 /* ===========================
    GET: Fetch exams list
@@ -15,24 +16,41 @@ export async function GET() {
             topic: true,
           },
         },
+        _count: {
+          select: {
+            exam_assignments: true,
+          },
+        },
       },
     });
 
-    const transformedExams = exams.map(exam => ({
-      id: exam.exam_id,
-      exam_name: exam.exam_title,
-      exam_type: exam.exam_type,
-      status: exam.is_active ? "active" : "inactive",
-      questions_count: exam.question_count,
-      duration_minutes: exam.time_limit_minutes,
-      created_at: exam.created_at.toISOString(),
+    const transformedExams = exams.map((exam) => {
+      const isAssigned = exam._count.exam_assignments > 0;
 
-      // OPTIONAL: first subject/topic only (safe)
-      subject_name: exam.exam_subject_configs[0]?.subject?.subject_name ?? "",
-      topic_name: exam.exam_subject_configs[0]?.topic?.topic_name ?? "",
-      subject_id: exam.exam_subject_configs[0]?.subject_id ?? null,
-      topic_id: exam.exam_subject_configs[0]?.topic_id ?? null,
-    }));
+      return {
+        id: exam.exam_id,
+        exam_name: exam.exam_title,
+        exam_type: exam.exam_type,
+        status: exam.is_active ? "active" : "inactive",
+        questions_count: exam.question_count,
+        total_marks: Number(exam.total_marks),
+        duration_minutes: exam.time_limit_minutes,
+        created_at: exam.created_at.toISOString(),
+        scheduled_start: exam.scheduled_start?.toISOString() || null,
+        scheduled_end: exam.scheduled_end?.toISOString() || null,
+        
+        canEdit: !isAssigned,
+        canDelete: !isAssigned,
+
+        subjects: exam.exam_subject_configs.map((cfg) => ({
+          subject_id: cfg.subject_id,
+          subject_name: cfg.subject.subject_name,
+          topic_id: cfg.topic_id,
+          topic_name: cfg.topic ? cfg.topic.topic_name : null,
+          question_count: cfg.question_count,
+        })),
+      };
+    });
 
     return NextResponse.json(transformedExams);
   } catch (error) {
@@ -61,7 +79,7 @@ export async function POST(req: Request) {
       topicCounts,
     }: {
       examTitle: string;
-      description: string;
+      description?: string;
       examType: "practice" | "mock" | "live";
       duration: number;
       startTime?: string;
@@ -69,110 +87,149 @@ export async function POST(req: Request) {
       topicCounts: Record<number, number>;
     } = body;
 
-    if (!examTitle || !examType || !duration || !topicCounts) {
+    if (!examTitle || !examType || !topicCounts) {
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
         { status: 400 }
       );
     }
 
+    // ⏱ Duration is REQUIRED only for mock & live
+    if ((examType === "mock" || examType === "live") && !duration) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Duration is required for mock and live exams",
+        },
+        { status: 400 }
+      );
+    }
+
+    // -----------------------------
+    // Calculate total questions
+    // -----------------------------
     const totalQuestions = Object.values(topicCounts).reduce(
-      (sum, count) => sum + count,
+      (sum, v) => sum + Number(v),
       0
     );
 
-    /* ---- Create Exam ---- */
-    const exam = await prisma.exams.create({
-      data: {
-        exam_title: examTitle,
-        description,
-        exam_type: examType,
-        time_limit_minutes: duration,
-        scheduled_start: startTime ? new Date(startTime) : null,
-        scheduled_end: endTime ? new Date(endTime) : null,
-        question_count: totalQuestions,
-      },
-    });
+    // -----------------------------
+    // TRANSACTION START
+    // -----------------------------
+    const exam = await prisma.$transaction(async (tx) => {
+      let totalMarks = 0; // Initialize total marks
 
-    /* ---- Prepare subject/topic configs ---- */
-    const configs = await Promise.all(
-      Object.entries(topicCounts).map(async ([topicId, count]) => {
-        const topic = await prisma.topics.findUnique({
-          where: { topic_id: Number(topicId) },
+      /* ---- Create Exam with temporary 0 total_marks ---- */
+      const exam = await tx.exams.create({
+        data: {
+          exam_title: examTitle,
+          description,
+          exam_type: examType,
+          time_limit_minutes: examType === "practice" ? null : duration,
+          scheduled_start:
+            examType === "live" && startTime ? new Date(startTime) : null,
+          scheduled_end:
+            examType === "live" && endTime ? new Date(endTime) : null,
+          question_count: totalQuestions,
+          total_marks: 0, // will update later
+          is_active: true,
+        },
+      });
+
+      // -----------------------------
+      // FETCH TOPICS (for subject mapping)
+      // -----------------------------
+      const topicIds = Object.keys(topicCounts).map(Number);
+
+      const topics = await tx.topics.findMany({
+        where: { topic_id: { in: topicIds } },
+        select: {
+          topic_id: true,
+          subject_id: true,
+        },
+      });
+
+      // -----------------------------
+      // INSERT exam_subject_configs ✅
+      // -----------------------------
+      await tx.exam_subject_configs.createMany({
+        data: topics.map((t) => ({
+          exam_id: exam.exam_id,
+          subject_id: t.subject_id,
+          topic_id: t.topic_id,
+          question_count: topicCounts[t.topic_id],
+        })),
+      });
+
+      // -----------------------------
+      // PREPARE exam_questions
+      // -----------------------------
+      let questionOrder = 1;
+      const examQuestionsData: any[] = [];
+
+      for (const [topicIdStr, count] of Object.entries(topicCounts)) {
+        const topicId = Number(topicIdStr);
+        if (count <= 0) continue;
+
+        const allQuestions = await tx.questions.findMany({
+          where: { topic_id: topicId },
+          select: {
+            question_id: true,
+            marks: true,
+            negative_marks: true,
+          },
         });
 
-        if (!topic) {
-          throw new Error(`Topic not found: ${topicId}`);
+        if (allQuestions.length < count) {
+          throw new Error(`Not enough questions for topic ID ${topicId}`);
         }
 
-        return {
-          exam_id: exam.exam_id,
-          subject_id: topic.subject_id,
-          topic_id: Number(topicId),
-          question_count: count,
-        };
-      })
-    );
+        const selectedQuestions = shuffleArray(allQuestions).slice(0, count);
 
-    await prisma.exam_subject_configs.createMany({
-      data: configs,
+        for (const q of selectedQuestions) {
+          examQuestionsData.push({
+            exam_id: exam.exam_id,
+            question_id: q.question_id,
+            question_order: questionOrder++,
+            assigned_marks: q.marks,
+            assigned_negative: q.negative_marks,
+          });
+
+          totalMarks += Number(q.marks); // ✅ Add question marks to total
+        }
+      }
+
+      // ---- Insert exam_questions ----
+      await tx.exam_questions.createMany({
+        data: examQuestionsData,
+      });
+
+      // ---- Update total_marks in exams table ----
+      await tx.exams.update({
+        where: { exam_id: exam.exam_id },
+        data: { total_marks: totalMarks },
+      });
+
+      return exam;
     });
 
+    // -----------------------------
+    // SUCCESS RESPONSE
+    // -----------------------------
     return NextResponse.json({
       success: true,
-      message: "Exam created successfully",
+      message: "Exam created with random questions and total marks calculated",
       examId: exam.exam_id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating exam:", error);
+
     return NextResponse.json(
-      { success: false, message: "Failed to create exam" },
+      {
+        success: false,
+        message: error.message || "Failed to create exam",
+      },
       { status: 500 }
     );
   }
-}
-
-/* ===========================
-  DELETE: Delete exam
-=========================== */
-export async function DELETE(req: Request) {
- try {
-   const body = await req.json();
-   const { examId }: { examId: number } = body;
-
-   if (!examId) {
-     return NextResponse.json(
-       { success: false, message: "Exam ID is required" },
-       { status: 400 }
-     );
-   }
-
-   // Check if exam exists
-   const exam = await prisma.exams.findUnique({
-     where: { exam_id: examId },
-   });
-
-   if (!exam) {
-     return NextResponse.json(
-       { success: false, message: "Exam not found" },
-       { status: 404 }
-     );
-   }
-
-   // Delete the exam (cascade will handle related records)
-   await prisma.exams.delete({
-     where: { exam_id: examId },
-   });
-
-   return NextResponse.json({
-     success: true,
-     message: "Exam deleted successfully",
-   });
- } catch (error) {
-   console.error("Error deleting exam:", error);
-   return NextResponse.json(
-     { success: false, message: "Failed to delete exam" },
-     { status: 500 }
-   );
- }
 }

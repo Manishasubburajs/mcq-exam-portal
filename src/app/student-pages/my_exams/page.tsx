@@ -115,8 +115,8 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
             meta.examType === "practice"
               ? "#3b82f6"
               : meta.examType === "mock"
-              ? "#f59e0b"
-              : "#ef4444",
+                ? "#f59e0b"
+                : "#ef4444",
           color: "#fff",
           borderRadius: "12px",
           padding: "4px 10px",
@@ -311,7 +311,7 @@ export default function MyExamsPage() {
           },
         });
         const data = await response.json();
-        console.log(data,"data from api call");
+        console.log(data, "data from api call");
         if (data.success) {
           setAvailableExams(data.data);
         }
@@ -325,35 +325,10 @@ export default function MyExamsPage() {
     fetchExams();
   }, [router]);
 
-  console.log("availableExams",availableExams);
+  console.log("availableExams", availableExams);
 
-  const startExam = async (examId: number) => {
-    try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
-
-      const res = await fetch("/api/students/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ examId }),
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        alert(data.message); // mock/live limit message
-        return;
-      }
-
-      router.push(
-        `/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`
-      );
-    } catch (err) {
-      alert("Failed to start exam");
-    }
+  const startExam = (examId: number) => {
+    router.push(`/student-pages/exam_taking?examId=${examId}`);
   };
 
   return (
@@ -425,10 +400,10 @@ export default function MyExamsPage() {
                     title={exam.title}
                     subject={exam.subject}
                     meta={{
-                      duration: exam.duration.toString(),
-                      questions: exam.questions.toString(),
-                      due: exam.due,
-                      points: exam.points,
+                      duration: exam.duration ?? 0,
+                      questions: exam.questions ?? 0,
+                      due: exam.due ?? "",
+                      points: exam.points ?? 0,
                       examType: exam.examType,
                     }}
                     onStart={() => startExam(exam.id)}

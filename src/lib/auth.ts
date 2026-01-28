@@ -1,21 +1,22 @@
-// lib/auth.ts
-import { prisma } from "./db";
 import jwt from "jsonwebtoken";
 
-export async function getUserFromToken(req: Request) {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
+export function logout() {
+  console.log("Logging out user..."); // ✅ debug
+  localStorage.removeItem("token");
+  localStorage.removeItem("username");
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("username");
+  globalThis.location.href = "/";
+}
 
-  const token = authHeader.split(" ")[1];
-  if (!process.env.JWT_SECRET) return null;
-
+export function verifyToken(token: string) {
+  console.log("Verifying token:", token); // ✅ debug
   try {
-    const decoded: any = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await prisma.users.findUnique({
-      where: { user_id: decoded.userId },
-    });
-    return user;
-  } catch {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number; role: string };
+    console.log("Decoded token:", decoded); // ✅ debug
+    return decoded;
+  } catch (error) {
+    console.error("Token verification failed:", error); // ✅ debug
     return null;
   }
 }
