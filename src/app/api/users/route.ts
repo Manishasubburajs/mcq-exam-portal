@@ -181,6 +181,31 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ Prisma unique constraint error
+    if (error.code === "P2002") {
+      const target = error.meta?.target;
+
+      let message = "Already exists";
+
+      if (Array.isArray(target)) {
+        if (target.includes("username")) {
+          message = "Username already exists";
+        } else if (target.includes("email")) {
+          message = "Email already exists";
+        }
+      } else if (typeof target === "string") {
+        if (target.includes("username")) {
+          message = "Username already exists";
+        } else if (target.includes("email")) {
+          message = "Email already exists";
+        }
+      }
+        return NextResponse.json(
+        { success: false, error: message },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: "Error creating user" },
       { status: 500 }

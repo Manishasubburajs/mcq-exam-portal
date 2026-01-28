@@ -24,27 +24,34 @@ export async function POST(req: Request) {
     if (!email || !username || !password || !firstName || !lastName) {
       return NextResponse.json(
         { error: "Please fill in all required fields." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedUsername = username.trim();
 
-    // Check if email or username already exists
-    const existingUser = await prisma.users.findFirst({
-      where: {
-        OR: [
-          { email: trimmedEmail },
-          { username: trimmedUsername },
-        ],
-      },
+    // Check if email already exists
+    const emailExists = await prisma.users.findUnique({
+      where: { email: trimmedEmail },
     });
 
-    if (existingUser) {
+    // Check if username already exists
+    const usernameExists = await prisma.users.findUnique({
+      where: { username: trimmedUsername },
+    });
+
+    if (emailExists) {
       return NextResponse.json(
-        { error: "User already exists" },
-        { status: 409 }
+        { error: "Email already registered" },
+        { status: 409 },
+      );
+    }
+
+    if (usernameExists) {
+      return NextResponse.json(
+        { error: "Username already taken" },
+        { status: 409 },
       );
     }
 
@@ -74,13 +81,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { message: "Registration successful!", userId: newUser.user_id },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Registration Error:", error);
     return NextResponse.json(
       { error: "Something went wrong. Please try again later." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
