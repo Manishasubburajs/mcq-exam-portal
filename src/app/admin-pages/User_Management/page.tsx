@@ -15,7 +15,6 @@ import {
   TableRow,
   Paper,
   Chip,
-  Avatar,
   IconButton,
   CircularProgress,
   Pagination,
@@ -27,12 +26,11 @@ import {
   Tooltip,
   useMediaQuery,
 } from "@mui/material";
-import { Edit, Delete, VpnKey, Download, PersonAdd } from "@mui/icons-material";
+import { Edit, PersonAdd } from "@mui/icons-material";
 import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
 import AddUserModal from "../../components/AddUserModal";
 import EditUserModal from "../../components/EditUserModal";
-import ConfirmDeleteDialog from "@/app/components/ConfirmDeleteModal";
 
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
@@ -54,15 +52,12 @@ const UserManagement: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
   const [tabIndex, setTabIndex] = useState(0);
   const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [classFilter, setClassFilter] = useState("");
 
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [editUserOpen, setEditUserOpen] = useState(false);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -77,6 +72,7 @@ const UserManagement: React.FC = () => {
     const controller = new AbortController();
 
     const fetchUsers = async () => {
+      setLoading(true);
       try {
         const res = await fetch("/api/users", { signal: controller.signal });
         const data = await res.json();
@@ -105,61 +101,37 @@ const UserManagement: React.FC = () => {
   }, []);
 
   // Filter users by tab + search + filters
-  useEffect(() => {
-    const getRoleByTabIndex = (index: number): string => {
-      switch (index) {
-        case 0:
-          return "student";
-        case 1:
-          return "teacher";
-        case 2:
-          return "admin";
-        default:
-          return "student";
-      }
-    };
+  const filteredUsers = React.useMemo(() => {
+    const roleMap = [
+      "student",
+      // "teacher",
+      "admin",
+    ];
+    const role = roleMap[tabIndex];
 
-    const role = getRoleByTabIndex(tabIndex);
-    const filtered = users.filter((user) => {
-      const fullName = `${user.first_name} ${user.last_name}`;
+    return users.filter((user) => {
+      const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+      const searchValue = search.toLowerCase();
+
       const matchesSearch =
-        fullName.toLowerCase().includes(search.toLowerCase()) ||
-        user.email.toLowerCase().includes(search.toLowerCase());
+        fullName.includes(searchValue) ||
+        user.email.toLowerCase().includes(searchValue) ||
+        user.user_id.toString().includes(searchValue);
 
       const matchesStatus = !statusFilter || user.status === statusFilter;
-
-      const getUserClass = (user: User): string => {
-        if (!user.grade && !user.section) return "";
-        return `${user.grade || ""}${user.section ? " - " + user.section : ""}`;
-      };
-
-      const userClass = getUserClass(user);
-      const matchesClass = !classFilter || userClass === classFilter;
-
       const matchesTab = user.role === role;
 
-      return matchesSearch && matchesStatus && matchesClass && matchesTab;
+      return matchesSearch && matchesStatus && matchesTab;
     });
-    setFilteredUsers(filtered);
-  }, [users, tabIndex, search, statusFilter, classFilter]);
+  }, [users, tabIndex, search, statusFilter]);
 
   // Paginate
   const startIndex = (currentPage - 1) * usersPerPage;
   const paginatedUsers = filteredUsers.slice(
     startIndex,
-    startIndex + usersPerPage
+    startIndex + usersPerPage,
   );
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-
-  // Unique class/group list
-  const getUserClass = (user: User): string => {
-    if (!user.grade && !user.section) return "";
-    return `${user.grade || ""}${user.section ? " - " + user.section : ""}`;
-  };
-
-  const classGroups = Array.from(
-    new Set(users.filter((u) => u.grade || u.section).map(getUserClass))
-  );
 
   // Color helpers
   const getRoleColor = (role: string) => {
@@ -181,45 +153,15 @@ const UserManagement: React.FC = () => {
         return "success";
       case "inactive":
         return "error";
-      case "pending":
-        return "warning";
       default:
         return "default";
     }
   };
 
-  // Delete handler
-  const handleDeleteUser = async (user: User) => {
-    try {
-      const res = await fetch("/api/users", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: user.user_id }),
-      });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        // Update the users list immediately
-        setUsers((prev) => prev.filter((u) => u.user_id !== user.user_id));
-        
-        // Show success message
-        alert(`✅ User "${user.first_name} ${user.last_name}" has been deleted successfully.`);
-      } else {
-        // Show error message
-        alert(`❌ Failed to delete user: ${data.error || "Unknown error"}`);
-        console.error("Delete failed:", data.error);
-      }
-    } catch (err) {
-      const errorMessage = "Network error or server unavailable";
-      alert(`❌ ${errorMessage}`);
-      console.error("Error deleting user:", err);
-    } finally {
-      // Always close the confirm dialog
-      setConfirmDeleteOpen(false);
-      setSelectedUser(null);
-    }
-  };
+  // Reset pagination when filters/search/tab change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, tabIndex]);
 
   return (
     <Box
@@ -259,88 +201,28 @@ const UserManagement: React.FC = () => {
         {/* Filters Section */}
         <Paper
           elevation={1}
-          sx={{ padding: "20px", marginBottom: "25px", borderRadius: "10px" }}
+          sx={{
+            mt: 4,
+            padding: "20px",
+            marginBottom: "25px",
+            borderRadius: "10px",
+          }}
         >
-          <Typography
-            variant="h6"
-            sx={{ marginBottom: "15px", color: "text.primary" }}
-          >
-            Filter Users
-          </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 2,
-            }}
-          >
-            <TextField
-              label="Search"
-              variant="outlined"
-              size="small"
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <FormControl size="small">
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="">All Statuses</MenuItem>
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl size="small">
-              <InputLabel>Class/Group</InputLabel>
-              <Select
-                value={classFilter}
-                label="Class/Group"
-                onChange={(e) => setClassFilter(e.target.value)}
-              >
-                <MenuItem value="">All Classes</MenuItem>
-                {classGroups.map((cg) => (
-                  <MenuItem key={cg} value={cg}>
-                    {cg}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
+          {/* Header */}
           <Box
             sx={{
               display: "flex",
-              justifyContent: "flex-end",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+              flexWrap: "wrap",
               gap: 2,
-              marginTop: "15px",
             }}
           >
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={() => {
-                setSearch("");
-                setStatusFilter("");
-                setClassFilter("");
-              }}
-            >
-              Reset Filters
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => {}}
-              sx={{
-                background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                "&:hover": { opacity: 0.9 },
-              }}
-            >
-              Apply Filters
-            </Button>
+            <Typography variant="h6" color="text.primary">
+              Filter Users
+            </Typography>
+
             <Button
               variant="contained"
               color="success"
@@ -348,6 +230,50 @@ const UserManagement: React.FC = () => {
               onClick={() => setAddUserOpen(true)}
             >
               Add New User
+            </Button>
+          </Box>
+
+          {/* Filters */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 2,
+            }}
+          >
+            <TextField
+              label="Search"
+              size="small"
+              placeholder="Search by ID, name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <FormControl size="small">
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="">All Status</MenuItem>
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Reset */}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("");
+              }}
+            >
+              Reset Filters
             </Button>
           </Box>
         </Paper>
@@ -372,11 +298,11 @@ const UserManagement: React.FC = () => {
                 users.filter((u) => u.role === "student").length
               })`}
             />
-            <Tab
+            {/* <Tab
               label={`Teachers (${
                 users.filter((u) => u.role === "teacher").length
               })`}
-            />
+            /> */}
             <Tab
               label={`Administrators (${
                 users.filter((u) => u.role === "admin").length
@@ -407,167 +333,113 @@ const UserManagement: React.FC = () => {
                     case 0:
                       return "All Students";
                     case 1:
-                      return "All Teachers";
-                    case 2:
+                      //   return "All Teachers";
+                      // case 2:
                       return "All Administrators";
                     default:
                       return "All Users";
                   }
                 })()}
               </Typography>
-              {/* <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<Download />}
-              >
-                Export Users
-              </Button> */}
             </Box>
           </Box>
 
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", p: 5 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
+          <>
             <TableContainer>
               <Table>
                 <TableHead sx={{ backgroundColor: "grey.50" }}>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: "bold" }}>User</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>User ID</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Email</TableCell>
                     <TableCell sx={{ fontWeight: "bold" }}>Role</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>
-                      Class/Group
-                    </TableCell>
                     <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>
-                      Last Login
-                    </TableCell>
                     <TableCell sx={{ fontWeight: "bold" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
 
                 <TableBody>
-                  {paginatedUsers.map((user) => {
-                    const fullName = `${user.first_name} ${user.last_name}`;
-                    const getDisplayClass = (user: User): string => {
-                      if (!user.grade && !user.section) return "-";
-                      return `${user.grade || ""}${
-                        user.section ? " - " + user.section : ""
-                      }`;
-                    };
-
-                    const classGroup = getDisplayClass(user);
-
-                    return (
-                      <TableRow key={user.user_id} hover>
-                        <TableCell>
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <Avatar sx={{ mr: 2 }}>
-                              {user.first_name.charAt(0)}
-                            </Avatar>
-                            <Box>
-                              <Typography sx={{ fontWeight: 500 }}>
-                                {fullName}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                {user.email}
-                              </Typography>
+                  {loading && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ p: 5 }}>
+                        <CircularProgress />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!loading && paginatedUsers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ p: 5 }}>
+                        No users found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {!loading &&
+                    paginatedUsers.map((user) => {
+                      const fullName = `${user.first_name} ${user.last_name}`;
+                      return (
+                        <TableRow key={user.user_id} hover>
+                          <TableCell>{user.user_id}</TableCell>
+                          <TableCell>{fullName}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                user.role.charAt(0).toUpperCase() +
+                                user.role.slice(1)
+                              }
+                              color={getRoleColor(user.role)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                user.status.charAt(0).toUpperCase() +
+                                user.status.slice(1)
+                              }
+                              color={getStatusColor(user.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: "flex", gap: 1 }}>
+                              <Tooltip title="Edit User" arrow>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setEditUserOpen(true);
+                                  }}
+                                >
+                                  <Edit />
+                                </IconButton>
+                              </Tooltip>
                             </Box>
-                          </Box>
-                        </TableCell>
-
-                        <TableCell>
-                          <Chip
-                            label={
-                              user.role.charAt(0).toUpperCase() +
-                              user.role.slice(1)
-                            }
-                            color={getRoleColor(user.role)}
-                            size="small"
-                          />
-                        </TableCell>
-
-                        <TableCell>{classGroup}</TableCell>
-
-                        <TableCell>
-                          <Chip
-                            label={
-                              user.status.charAt(0).toUpperCase() +
-                              user.status.slice(1)
-                            }
-                            color={getStatusColor(user.status)}
-                            size="small"
-                          />
-                        </TableCell>
-
-                        <TableCell>-</TableCell>
-
-                        <TableCell>
-                          <Box sx={{ display: "flex", gap: 1 }}>
-                            <Tooltip title="Edit User" arrow>
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setEditUserOpen(true);
-                                }}
-                              >
-                                <Edit />
-                              </IconButton>
-                            </Tooltip>
-
-                            <Tooltip title="Reset Password" arrow>
-                              <IconButton
-                                size="small"
-                                color="warning"
-                                onClick={() => {
-                                  alert(
-                                    `Password reset email sent to ${fullName}`
-                                  );
-                                }}
-                              >
-                                <VpnKey />
-                              </IconButton>
-                            </Tooltip>
-
-                            <Tooltip title="Delete User" arrow>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setConfirmDeleteOpen(true);
-                                }}
-                              >
-                                <Delete />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                 </TableBody>
               </Table>
             </TableContainer>
-          )}
-
-          {/* Pagination */}
-          <Box
-            sx={{ display: "flex", justifyContent: "center", padding: "20px" }}
-          >
-            <Pagination
-              count={totalPages}
-              page={currentPage}
-              onChange={(event, page) => setCurrentPage(page)}
-              color="primary"
-            />
-          </Box>
+            {/* Pagination */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                padding: "20px",
+              }}
+            >
+              <Pagination
+                disabled={loading}
+                count={totalPages}
+                page={currentPage}
+                onChange={(event, page) => setCurrentPage(page)}
+                color="primary"
+              />
+            </Box>
+          </>
         </Paper>
       </Box>
 
@@ -581,8 +453,8 @@ const UserManagement: React.FC = () => {
             case 0:
               return "student";
             case 1:
-              return "teacher";
-            case 2:
+              //   return "teacher";
+              // case 2:
               return "admin";
             default:
               return "student";
@@ -602,22 +474,13 @@ const UserManagement: React.FC = () => {
             section: updated.student_details?.section || "",
             department: updated.department || "",
           };
-          
+
           setUsers((prev) =>
-            prev.map((u) => (u.user_id === updated.user_id ? normalizedUser : u))
+            prev.map((u) =>
+              u.user_id === updated.user_id ? normalizedUser : u,
+            ),
           );
         }}
-      />
-
-      <ConfirmDeleteDialog
-        open={confirmDeleteOpen}
-        onClose={() => setConfirmDeleteOpen(false)}
-        userName={
-          selectedUser
-            ? `${selectedUser.first_name} ${selectedUser.last_name}`
-            : ""
-        }
-        onConfirm={() => handleDeleteUser(selectedUser as User)}
       />
     </Box>
   );
