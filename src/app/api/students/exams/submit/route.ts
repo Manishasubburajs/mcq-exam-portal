@@ -1,8 +1,7 @@
-// app/api/students/exams/submit/route.ts
-
 import { prisma } from "@/lib/db";
 import { verifyToken } from "@/utils/auth";
 import { NextResponse } from "next/server";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const MARK_PER_Q = 2;
 const NEGATIVE = 0.66;
@@ -12,16 +11,14 @@ export async function POST(req: Request) {
   try {
     // ---------------- AUTH ----------------
     const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-
+    const decoded = verifyToken(authHeader.substring(7));
     if (!decoded || decoded.role !== "student") {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -31,129 +28,117 @@ export async function POST(req: Request) {
 
     const studentId = decoded.userId;
 
-    // ---------------- REQUEST BODY ----------------
+    // ---------------- BODY ----------------
     const {
-      attemptId,
-      answers,
-      questionTimes,
-      totalTimeTaken,
+      examId,
+      answers = {},
+      questionTimes = {},
+      totalTimeTaken = 0,
     } = await req.json();
 
-    // ---------------- VERIFY ATTEMPT ----------------
-    const attempt = await prisma.student_exam_attempts.findFirst({
-      where: {
-        attempt_id: Number(attemptId),
-        student_id: studentId,
-        status: "in_progress",
-      },
-    });
-
-    if (!attempt) {
+    if (!examId) {
       return NextResponse.json(
-        { success: false, message: "No active attempt found" },
-        { status: 404 }
+        { success: false, message: "examId required" },
+        { status: 400 }
       );
     }
 
-    // ---------------- SAVE ANSWERS ----------------
-    const savePromises = Object.entries(answers).map(
-      ([questionId, selectedAnswer]) => {
-        const timeTaken = questionTimes?.[questionId] || 0;
+    // ---------------- TOTAL QUESTIONS ----------------
+    const totalQuestions = await prisma.exam_questions.count({
+      where: { exam_id: Number(examId) },
+    });
 
-        return prisma.student_answers.upsert({
-          where: {
-            attempt_id_question_id: {
-              attempt_id: Number(attemptId),
-              question_id: Number(questionId),
-            },
-          },
-          update: {
-            selected_answer: selectedAnswer as string,
-            time_taken_seconds: timeTaken,
-          },
-          create: {
-            attempt_id: Number(attemptId),
+    if (totalQuestions === 0) {
+      return NextResponse.json(
+        { success: false, message: "No questions found for exam" },
+        { status: 400 }
+      );
+    }
+
+    // ---------------- CREATE ATTEMPT (ONLY NOW) ----------------
+    const attempt = await prisma.student_exam_attempts.create({
+      data: {
+        exam_id: Number(examId),
+        student_id: studentId,
+        status: "completed",
+        start_time: new Date(),
+        end_time: new Date(),
+        total_time_seconds: totalTimeTaken,
+      },
+    });
+
+    const attemptId = attempt.attempt_id;
+
+    // ---------------- SAVE ANSWERS ----------------
+    await Promise.all(
+      Object.entries(answers).map(([questionId, selectedAnswer]) =>
+        prisma.student_answers.create({
+          data: {
+            attempt_id: attemptId,
             question_id: Number(questionId),
             selected_answer: selectedAnswer as string,
-            time_taken_seconds: timeTaken,
+            time_taken_seconds: questionTimes[questionId] || 0,
           },
-        });
-      }
+        })
+      )
     );
 
-    await Promise.all(savePromises);
-
-    // ---------------- FETCH ANSWERS ----------------
+    // ---------------- FETCH ANSWERS WITH CORRECT KEY ----------------
     const savedAnswers = await prisma.student_answers.findMany({
-      where: { attempt_id: Number(attemptId) },
+      where: { attempt_id: attemptId },
       include: {
-        question: {
-          select: { correct_answer: true },
-        },
+        question: { select: { correct_answer: true } },
       },
     });
 
     // ---------------- EVALUATION ----------------
     let correct = 0;
     let wrong = 0;
-    let unanswered = 0;
-    let totalScore = 0;
 
     savedAnswers.forEach(ans => {
-      if (!ans.selected_answer) {
-        unanswered++;
-        return;
-      }
-
       if (ans.selected_answer === ans.question.correct_answer) {
         correct++;
-        totalScore += MARK_PER_Q;
-      } else {
+      } else if (ans.selected_answer) {
         wrong++;
-        totalScore -= NEGATIVE;
       }
     });
 
-    // UPSC safety: no negative total
-    totalScore = Math.max(0, totalScore);
+    const answeredCount = savedAnswers.length;
+    const unanswered = totalQuestions - answeredCount;
 
-    // ---------------- PASS / FAIL LOGIC ----------------
-    const totalQuestions = savedAnswers.length;
+    let score = correct * MARK_PER_Q - wrong * NEGATIVE;
+    score = Math.max(0, score);
+
     const totalMarks = totalQuestions * MARK_PER_Q;
     const passMark = (totalMarks * PASS_PERCENTAGE) / 100;
+    const result = score >= passMark ? "pass" : "fail";
 
-    const resultStatus =
-      totalScore >= passMark ? "pass" : "fail";
-
-    // ---------------- UPDATE ATTEMPT ----------------
+    // ---------------- UPDATE ATTEMPT RESULT ----------------
     await prisma.student_exam_attempts.update({
-      where: { attempt_id: Number(attemptId) },
+      where: { attempt_id: attemptId },
       data: {
-        status: "completed",
-        end_time: new Date(),
-        total_time_seconds: totalTimeTaken,
-        score: totalScore,
+        score: new Decimal(score),
         correct_answers: correct,
         wrong_answers: wrong,
         unanswered,
-        result_status: resultStatus,
       },
     });
 
     // ---------------- RESPONSE ----------------
     return NextResponse.json({
       success: true,
+      attemptId,
       correct,
       wrong,
       unanswered,
-      score: totalScore,
+      score,
       totalMarks,
       passMark,
-      result: resultStatus,
+      result,
     });
 
-  } catch (error) {
-    console.error("Submit exam error:", error);
+  } catch (err) {
+    console.error("Submit exam error:", err);
     return NextResponse.json(
       { success: false, message: "Submit failed" },
       { status: 500 }

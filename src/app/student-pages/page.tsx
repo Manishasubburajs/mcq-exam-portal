@@ -920,6 +920,95 @@ export default function StudentDashboard() {
           </Box>
         </Card>
       </Box>
+
+       {/* Upcoming Exams */}
+      <Box sx={{ mb: 3.75 }}>
+        <Card
+          sx={{
+            background: CARD_BG,
+            borderRadius: 2.5,
+            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+            p: 3.125,
+            transition: "all 0.3s ease",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2.5,
+              pb: 1.875,
+              borderBottom: `2px solid #f0f0f0`,
+              flexDirection: isMobile ? "column" : "row",
+            }}
+          >
+            <Typography
+              sx={{ fontWeight: 700, color: "#2c3e50", fontSize: 20 }}
+            >
+              Upcoming Live Exams
+            </Typography>
+            <Button
+              variant="outlined"
+              color="secondary"
+              sx={{
+                padding: "10px 20px",
+                fontSize: "16px",
+                fontWeight: 600,
+                borderRadius: 2,
+                mt: isMobile ? 1 : 0,
+                background: "transparent",
+              }}
+              onClick={() => router.push("/student-pages/exam-history")}
+            >
+              View All
+            </Button>
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 2.5,
+              alignItems: "stretch",
+            }}
+          >
+            {loading ? (
+              <Typography>Loading completed exams...</Typography>
+            ) : completedExams.length > 0 ? (
+              completedExams.slice(0, 3).map((exam: any) => (
+                <Box
+                  key={exam.attemptId}
+                  sx={{ flex: { xs: "1 1 100%", sm: "1 1 300px" } }}
+                >
+                  <CompletedExamCard
+                    exam={{
+                      title: exam.title,
+                      subject: exam.subject,
+                      scorePercentage: Math.round(
+                        (parseInt(exam.score) / parseInt(exam.points)) * 100,
+                      ),
+                      completionDate: exam.completedAt,
+                      duration: exam.duration ?? 0,
+
+                      questions: exam.questions.toString(),
+                      scoreFraction: `${parseInt(exam.score)}/${parseInt(exam.points)}`,
+                      examType: exam.examType,
+                    }}
+                    onView={() =>
+                      router.push(
+                        `/student-pages/exam_res_rev?attemptId=${exam.attemptId}`,
+                      )
+                    }
+                  />
+                </Box>
+              ))
+            ) : (
+              <Typography>No completed exams yet.</Typography>
+            )}
+          </Box>
+        </Card>
+      </Box>
     </Box>
   );
 }

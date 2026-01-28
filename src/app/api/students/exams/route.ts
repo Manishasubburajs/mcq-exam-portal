@@ -4,6 +4,26 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyToken } from "@/utils/auth";
 
+// Helper to determine exam state
+function getExamState(exam: any) {
+  // Practice & Mock exams are always available
+  if (exam.exam_type === "practice" || exam.exam_type === "mock") {
+    return "available";
+  }
+
+  const now = new Date();
+
+  if (exam.scheduled_start && now < exam.scheduled_start) {
+    return "upcoming";
+  }
+
+  if (exam.scheduled_end && now > exam.scheduled_end) {
+    return "expired";
+  }
+
+  return "available";
+}
+
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get("authorization");
@@ -28,7 +48,7 @@ export async function GET(req: Request) {
     const examId = searchParams.get("id");
 
     /* ======================================================
-       SINGLE EXAM DETAILS (START EXAM)
+       SINGLE EXAM META (START EXAM)
     ====================================================== */
     if (examId) {
       const examIdNum = Number(examId);
@@ -41,16 +61,7 @@ export async function GET(req: Request) {
         include: {
           assignment: {
             include: {
-              exam: {
-                include: {
-                  exam_subject_configs: {
-                    include: {
-                      subject: true,
-                      topic: true,
-                    },
-                  },
-                },
-              },
+              exam: true,
             },
           },
         },
@@ -65,120 +76,64 @@ export async function GET(req: Request) {
 
       const exam = assignment.assignment.exam;
 
-      /* ✅ FIX: collect ALL subjects (unique) */
-      const subjects = [
-        ...new Set(
-          exam.exam_subject_configs.map(
-            (c) => c.subject.subject_name
-          )
-        ),
-      ];
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: exam.exam_id,
+          title: exam.exam_title,
+          duration: exam.time_limit_minutes,
 
-      /* ------------------ QUESTIONS ------------------ */
-      let allQuestions: any[] = [];
+          // ✅ UI EXPECTS THIS
+          questions: exam.question_count,
 
-      for (const cfg of exam.exam_subject_configs) {
-        if (!cfg.topic_id) continue;
+          examType: exam.exam_type,
+          shuffleQuestions: assignment.assignment.shuffle_questions,
+          state: getExamState(exam),
+          startDate: exam.scheduled_start,
+          endDate: exam.scheduled_end,
 
-        const topicQuestions = await prisma.questions.findMany({
-          where: { topic_id: cfg.topic_id },
-        });
-
-        const shuffled = topicQuestions.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, cfg.question_count);
-
-        allQuestions.push(
-          ...selected.map((q) => ({
-            id: q.question_id,
-            text: q.question_text,
-            options: [
-              { id: "A", text: q.option_a },
-              { id: "B", text: q.option_b },
-              { id: "C", text: q.option_c },
-              { id: "D", text: q.option_d },
-            ].filter((o) => o.text),
-            correctAnswer: q.correct_answer,
-          }))
-        );
-      }
-
-      const examData = {
-        id: exam.exam_id,
-        title: exam.exam_title,
-        subject: subjects.join(", "), // ✅ FIXED
-        duration: exam.time_limit_minutes,
-        totalQuestions: exam.question_count,
-        questions: allQuestions.sort(() => 0.5 - Math.random()),
-        examType: exam.exam_type,
-        points: Number(exam.total_marks || 0),
-      };
-
-      return NextResponse.json({ success: true, data: examData });
+          // ✅ FROM total_marks
+          points: String(exam.total_marks ?? 0),
+        },
+      });
     }
 
     /* ======================================================
-       AVAILABLE EXAMS LIST
+       AVAILABLE EXAMS LIST (My Exams page)
     ====================================================== */
     const assignedExams = await prisma.exam_assignment_students.findMany({
       where: { student_id: studentId },
       include: {
         assignment: {
           include: {
-            exam: {
-              include: {
-                exam_subject_configs: {
-                  include: { subject: true },
-                },
-              },
-            },
+            exam: true,
           },
         },
       },
     });
 
-    const availableExamsMap = new Map<number, any>();
-
-    for (const a of assignedExams) {
+    const exams = assignedExams.map((a) => {
       const exam = a.assignment.exam;
-      if (availableExamsMap.has(exam.exam_id)) continue;
 
-      const completed = await prisma.student_exam_attempts.findFirst({
-        where: {
-          student_id: studentId,
-          exam_id: exam.exam_id,
-          status: "completed",
-        },
-      });
-
-      if (completed) continue;
-
-      /* ✅ FIX: MULTIPLE SUBJECTS */
-      const subjects = [
-        ...new Set(
-          exam.exam_subject_configs.map(
-            (c) => c.subject.subject_name
-          )
-        ),
-      ];
-
-      availableExamsMap.set(exam.exam_id, {
+      return {
         id: exam.exam_id,
         title: exam.exam_title,
-        subject: subjects.join(", "), // ✅ FIXED
         duration: exam.time_limit_minutes,
-        questions: exam.question_count,
-        due: exam.scheduled_end
-          ? exam.scheduled_end.toISOString().split("T")[0]
-          : "No due date",
-        points: String(exam.total_marks || 0),
-        examType: exam.exam_type,
-      });
-    }
 
-    return NextResponse.json({
-      success: true,
-      data: Array.from(availableExamsMap.values()),
+        // ✅ UI EXPECTS `questions`
+        questions: exam.question_count,
+
+        examType: exam.exam_type,
+        state: getExamState(exam),
+        startDate: exam.scheduled_start,
+        endDate: exam.scheduled_end,
+
+        // ✅ DISPLAY EXACT DB VALUE
+        points: String(exam.total_marks ?? 0),
+      };
     });
+
+    return NextResponse.json({ success: true, data: exams });
   } catch (error) {
     console.error("Error fetching student exams:", error);
     return NextResponse.json(
