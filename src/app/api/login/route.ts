@@ -32,6 +32,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check if user is active
+    if (user.status !== "active") {
+      return NextResponse.json(
+        { error: "Account not active. Please contact admin." },
+        { status: 403 } // Forbidden
+      );
+    }
+
     // Compare password
     const isPasswordValid = await bcrypt.compare(
       password,

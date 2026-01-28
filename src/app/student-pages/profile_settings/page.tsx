@@ -31,7 +31,7 @@ const personalInformationSchema = yup.object({
     .email("Enter a valid email address")
     .matches(
       /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
-      "Enter a valid email with proper domain"
+      "Enter a valid email with proper domain",
     ),
   birthDate: yup.string().required("Date of birth is required"),
   gender: yup.string().required("Gender is required"),
@@ -67,7 +67,7 @@ const accountSettingsSchema = yup.object({
           /[0-9]/.test(value) &&
           /[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/?]/.test(value)
         );
-      }
+      },
     ),
 
   confirmPassword: yup.string().when("newPassword", {
@@ -75,7 +75,7 @@ const accountSettingsSchema = yup.object({
     then: (schema) =>
       schema
         .required("Confirm password is required")
-        .oneOf([yup.ref("newPassword")], "Passwords do not match"),
+        .oneOf([yup.ref("newPassword")], "Passwords must match"),
     otherwise: (schema) => schema.notRequired(),
   }),
 });
@@ -108,10 +108,31 @@ const PersonalInformationTab = ({
     message: "",
     severity: "success" as "success" | "error",
   });
+
+  const validatePersonalField = async (
+    field: string,
+    value: any,
+    updatedInfo: any,
+  ) => {
+    try {
+      await personalInformationSchema.validateAt(field, updatedInfo);
+      setErrors((prev: any) => ({ ...prev, [field]: "" }));
+    } catch (err: any) {
+      setErrors((prev: any) => ({ ...prev, [field]: err.message }));
+    }
+  };
+
   const handlePersonalInfoChange =
-    (field: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setPersonalInfo({ ...personalInfo, [field]: e.target.value });
+    async (field: string, value: string) =>
+    {
+      const updatedInfo = {
+        ...personalInfo,
+        [field]: value,
+      };
+
+      setPersonalInfo(updatedInfo);
+
+      await validatePersonalField(field, value, updatedInfo);
     };
 
   const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
@@ -221,7 +242,7 @@ const PersonalInformationTab = ({
                   fullWidth
                   label="First Name"
                   value={personalInfo.firstName}
-                  onChange={handlePersonalInfoChange("firstName")}
+                  onChange={(e) => handlePersonalInfoChange("firstName", e.target.value)}
                   size={isMobile ? "small" : "medium"}
                   error={!!errors.firstName}
                   helperText={errors.firstName}
@@ -232,7 +253,7 @@ const PersonalInformationTab = ({
                   fullWidth
                   label="Last Name"
                   value={personalInfo.lastName}
-                  onChange={handlePersonalInfoChange("lastName")}
+                  onChange={(e) => handlePersonalInfoChange("lastName", e.target.value)}
                   size={isMobile ? "small" : "medium"}
                   error={!!errors.lastName}
                   helperText={errors.lastName}
@@ -245,7 +266,7 @@ const PersonalInformationTab = ({
               type="email"
               value={personalInfo.email}
               disabled
-              onChange={handlePersonalInfoChange("email")}
+              onChange={(e) => handlePersonalInfoChange("email", e.target.value)}
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.email}
@@ -266,7 +287,7 @@ const PersonalInformationTab = ({
                   label="Date of Birth"
                   type="date"
                   value={personalInfo.birthDate}
-                  onChange={handlePersonalInfoChange("birthDate")}
+                  onChange={(e) => handlePersonalInfoChange("birthDate", e.target.value)}
                   size={isMobile ? "small" : "medium"}
                   error={!!errors.birthDate}
                   helperText={errors.birthDate}
@@ -277,19 +298,12 @@ const PersonalInformationTab = ({
                   <InputLabel>Gender</InputLabel>
                   <Select
                     value={personalInfo.gender}
-                    onChange={(e) =>
-                      handlePersonalInfoChange("gender")({
-                        target: { value: e.target.value },
-                      } as any)
-                    }
+                    onChange={(e) => handlePersonalInfoChange("gender", e.target.value)}
                     error={!!errors.gender}
                   >
                     <MenuItem value="male">Male</MenuItem>
                     <MenuItem value="female">Female</MenuItem>
                     <MenuItem value="other">Other</MenuItem>
-                    <MenuItem value="prefer-not-to-say">
-                      Prefer not to say
-                    </MenuItem>
                   </Select>
                   {errors.gender && (
                     <Typography variant="caption" color="error">
@@ -303,7 +317,7 @@ const PersonalInformationTab = ({
               fullWidth
               label="School / College Name"
               value={personalInfo.school}
-              onChange={handlePersonalInfoChange("school")}
+              onChange={(e) => handlePersonalInfoChange("school", e.target.value)}
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.school}
@@ -321,7 +335,7 @@ const PersonalInformationTab = ({
                 fullWidth
                 label="Grade / Department"
                 value={personalInfo.grade}
-                onChange={handlePersonalInfoChange("grade")}
+                onChange={(e) => handlePersonalInfoChange("grade", e.target.value)}
                 size={isMobile ? "small" : "medium"}
                 error={!!errors.grade}
                 helperText={errors.grade}
@@ -330,7 +344,7 @@ const PersonalInformationTab = ({
                 fullWidth
                 label="Section (Optional)"
                 value={personalInfo.section}
-                onChange={handlePersonalInfoChange("section")}
+                onChange={(e) => handlePersonalInfoChange("section", e.target.value)}
                 size={isMobile ? "small" : "medium"}
               />
             </Box>
@@ -389,6 +403,34 @@ const AccountSettingsTab = ({
     message: "",
     severity: "success" as "success" | "error" | "info",
   });
+
+    const validateAccountField = async (
+    field: string,
+    value: any,
+    updatedSettings: any,
+  ) => {
+    try {
+      await accountSettingsSchema.validateAt(field, updatedSettings);
+      setErrors((prev: any) => ({ ...prev, [field]: "" }));
+    } catch (err: any) {
+      setErrors((prev: any) => ({ ...prev, [field]: err.message }));
+    }
+  };
+
+  const handleAccountChange =
+  (field: string) =>
+  async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+
+    const updatedSettings = {
+      ...accountSettings,
+      [field]: value,
+    };
+
+    setAccountSettings(updatedSettings);
+
+    await validateAccountField(field, value, updatedSettings);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -486,7 +528,7 @@ const AccountSettingsTab = ({
               message: errorMessages.join(" "),
             });
           },
-          successMessages.length > 0 ? 1200 : 0
+          successMessages.length > 0 ? 1200 : 0,
         );
       }
 
@@ -581,7 +623,7 @@ const AccountSettingsTab = ({
               label="Current Password"
               type={showCurrent ? "text" : "password"}
               value={accountSettings.currentPassword}
-              onChange={handleChange("currentPassword")}
+              onChange={handleAccountChange("currentPassword")}
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.currentPassword}
@@ -601,7 +643,7 @@ const AccountSettingsTab = ({
               label="New Password"
               type={showNew ? "text" : "password"}
               value={accountSettings.newPassword}
-              onChange={handleChange("newPassword")}
+              onChange={handleAccountChange("newPassword")}
               sx={{ mb: 1 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.newPassword}
@@ -625,7 +667,7 @@ const AccountSettingsTab = ({
               label="Confirm New Password"
               type={showConfirm ? "text" : "password"}
               value={accountSettings.confirmPassword}
-              onChange={handleChange("confirmPassword")}
+              onChange={handleAccountChange("confirmPassword")}
               sx={{ mb: 3 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.confirmPassword}
