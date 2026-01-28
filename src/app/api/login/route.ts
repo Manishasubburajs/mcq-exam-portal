@@ -61,8 +61,8 @@ export async function POST(req: Request) {
       { expiresIn: "8h" }
     );
 
-    // Extract username from email
-    const username = normalizedEmail.split("@")[0];
+    // Get username from database
+    const username = user.username;
 
     // Safe log
     console.log("User login:", {

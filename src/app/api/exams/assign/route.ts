@@ -4,7 +4,13 @@ import { prisma } from "@/lib/db";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { examId, studentIds, assignedBy, mode = "same" } = body;
+
+    const {
+      examId,
+      studentIds = [],
+      assignedBy,
+      shuffleEnabled = false, // from UI checkbox
+    } = body;
 
     if (!examId) {
       return NextResponse.json(
@@ -13,8 +19,10 @@ export async function POST(req: Request) {
       );
     }
 
+    const mode = shuffleEnabled ? "shuffle" : "same";
+
     /* -------------------------------------------------
-       1️⃣ CHECK if assignment already exists
+       1️⃣ CHECK existing assignment
     ------------------------------------------------- */
     let assignment = await prisma.exam_assignments.findFirst({
       where: { exam_id: examId },
@@ -28,11 +36,11 @@ export async function POST(req: Request) {
         data: {
           exam_id: examId,
           assigned_by: assignedBy,
-          mode,
+          mode, // ✅ REQUIRED FIELD
         },
       });
     } else {
-      await prisma.exam_assignments.update({
+      assignment = await prisma.exam_assignments.update({
         where: { id: assignment.id },
         data: {
           assigned_by: assignedBy,
@@ -42,16 +50,16 @@ export async function POST(req: Request) {
     }
 
     /* -------------------------------------------------
-       3️⃣ DELETE old students for this exam
+       3️⃣ DELETE old student mappings
     ------------------------------------------------- */
     await prisma.exam_assignment_students.deleteMany({
       where: { assignment_id: assignment.id },
     });
 
     /* -------------------------------------------------
-       4️⃣ INSERT current selected students
+       4️⃣ INSERT selected students
     ------------------------------------------------- */
-    if (studentIds && studentIds.length > 0) {
+    if (studentIds.length > 0) {
       await prisma.exam_assignment_students.createMany({
         data: studentIds.map((studentId: number) => ({
           assignment_id: assignment.id,
@@ -63,6 +71,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Exam assignment updated successfully",
+      mode,
     });
   } catch (error) {
     console.error("Assign exam error:", error);

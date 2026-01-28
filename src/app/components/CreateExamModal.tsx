@@ -17,15 +17,12 @@ import {
   Radio,
   Checkbox,
   Divider,
-  Select,
-  MenuItem,
-  CircularProgress
+  CircularProgress,
 } from "@mui/material";
 import { useState, useMemo, useEffect } from "react";
 import * as Yup from "yup";
 
 type ExamType = "practice" | "mock" | "live";
-type QuestionMode = "same" | "shuffle" | "random";
 
 interface Topic {
   topic_id: number;
@@ -39,17 +36,6 @@ interface Subject {
   topics: Topic[];
 }
 
-interface Subject {
-  subject_id: number;
-  subject_name: string;
-  topics: Topic[];
-}
-
-interface Topic {
-  topic_id: number;
-  topic_name: string;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -57,19 +43,27 @@ interface Props {
 }
 
 export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
+  // Helper to format local datetime for input
+  const toDatetimeLocal = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+  };
+
   const resetForm = () => {
     setActiveStep(0);
     setExamTitle("");
     setDescription("");
     setExamType("practice");
     setDuration(60);
-    setQuestionMode("random");
     setStartTime("");
     setEndTime("");
     setSelectedSubjects([]);
     setTopicCounts({});
     setTopicErrors({});
     setFormErrors({});
+    setDateErrors({});
   };
 
   const [activeStep, setActiveStep] = useState(0);
@@ -81,7 +75,6 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
   // STEP 2: Rules
   const [duration, setDuration] = useState(60);
-  const [questionMode, setQuestionMode] = useState<QuestionMode>("random");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -91,6 +84,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   const [topicCounts, setTopicCounts] = useState<Record<number, number>>({});
   const [topicErrors, setTopicErrors] = useState<Record<number, string>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
   const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   const steps = useMemo(() => {
@@ -103,10 +97,10 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
   const totalQuestions = Object.values(topicCounts).reduce(
     (sum, v) => sum + (Number(v) || 0),
-    0
+    0,
   );
 
-  // Fetch subjects + topics + counts when modal opens
+  // Fetch subjects when modal opens
   useEffect(() => {
     if (!open) return;
     setLoadingSubjects(true);
@@ -117,7 +111,6 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       .finally(() => setLoadingSubjects(false));
   }, [open]);
 
-
   // Toggle Subject
   const toggleSubject = (id: number) => {
     if (isPractice) {
@@ -126,12 +119,11 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       setTopicErrors({});
     } else {
       setSelectedSubjects((prev) =>
-        prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+        prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
       );
     }
   };
 
-  // Handle topic input change
   const handleTopicChange = (topicId: number, value: number, max: number) => {
     let error = "";
     if (value < 1) error = "Must be at least 1";
@@ -140,24 +132,73 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     setTopicCounts((prev) => ({ ...prev, [topicId]: value }));
   };
 
-  // Yup validation schema
+  const validateGeneralInfo = async () => {
+    try {
+      await Yup.object({
+        examTitle: Yup.string().required("Exam title is required"),
+        description: Yup.string(),
+      }).validate({ examTitle, description }, { abortEarly: false });
+      setFormErrors({});
+    } catch (err: any) {
+      const errors: Record<string, string> = {};
+      err.inner?.forEach((e: any) => {
+        if (e.path === "examTitle") errors.examTitle = e.message;
+        else if (e.path === "description") errors.description = e.message;
+      });
+      setFormErrors(errors);
+    }
+  };
+
+  const validateDates = () => {
+    const errors: Record<string, string> = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!startTime) {
+      errors.startTime = "Start date is required";
+    } else {
+      const startDate = new Date(startTime);
+      if (startDate < today) {
+        errors.startTime = "Start date must be today or later";
+      }
+    }
+
+    if (!endTime) {
+      errors.endTime = "End date is required";
+    } else if (startTime) {
+      const startDate = new Date(startTime);
+      const endDate = new Date(endTime);
+      if (endDate < startDate) {
+        errors.endTime = "End date must be on or after start date";
+      }
+    }
+
+    setDateErrors(errors);
+  };
+
   const getValidationSchema = () =>
     Yup.object({
       examTitle: Yup.string().required("Exam title is required"),
       description: Yup.string(),
       topicCounts: Yup.object(
-        selectedSubjects.reduce((acc, subjectId) => {
-          const subj = subjects.find((s) => s.subject_id === subjectId);
-          subj?.topics.forEach((topic) => {
-            if (topic.question_count > 0) {
-              acc[topic.topic_id] = Yup.number()
-                .required("Required")
-                .min(1, "Must be at least 1")
-                .max(topic.question_count, `Cannot exceed ${topic.question_count}`);
-            }
-          });
-          return acc;
-        }, {} as Record<number, Yup.NumberSchema>)
+        selectedSubjects.reduce(
+          (acc, subjectId) => {
+            const subj = subjects.find((s) => s.subject_id === subjectId);
+            subj?.topics.forEach((topic) => {
+              if (topic.question_count > 0) {
+                acc[topic.topic_id] = Yup.number()
+                  .required("Required")
+                  .min(1, "Must be at least 1")
+                  .max(
+                    topic.question_count,
+                    `Cannot exceed ${topic.question_count}`,
+                  );
+              }
+            });
+            return acc;
+          },
+          {} as Record<number, Yup.NumberSchema>,
+        ),
       ),
     });
 
@@ -169,7 +210,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       try {
         await schema.validate(
           { examTitle, description, topicCounts },
-          { abortEarly: false }
+          { abortEarly: false },
         );
         setTopicErrors({});
         setFormErrors({});
@@ -199,7 +240,6 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       description,
       examType,
       duration,
-      questionMode,
       startTime,
       endTime,
       topicCounts,
@@ -227,7 +267,6 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   };
 
   const renderStepContent = () => {
-
     switch (steps[activeStep]) {
       case "General Info":
         return (
@@ -236,7 +275,10 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
               label="Exam Title"
               required
               value={examTitle}
-              onChange={(e) => setExamTitle(e.target.value)}
+              onChange={(e) => {
+                setExamTitle(e.target.value);
+                validateGeneralInfo();
+              }}
               error={!!formErrors.examTitle}
               helperText={formErrors.examTitle}
             />
@@ -245,7 +287,10 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
               multiline
               rows={3}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                validateGeneralInfo();
+              }}
               error={!!formErrors.description}
               helperText={formErrors.description}
             />
@@ -257,11 +302,13 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                 const type = e.target.value as ExamType;
                 setExamType(type);
                 setActiveStep(0);
-                if (type === "practice") setQuestionMode("random");
-                if (type === "live") setQuestionMode("same");
               }}
             >
-              <FormControlLabel value="practice" control={<Radio />} label="Practice" />
+              <FormControlLabel
+                value="practice"
+                control={<Radio />}
+                label="Practice"
+              />
               <FormControlLabel value="mock" control={<Radio />} label="Mock" />
               <FormControlLabel value="live" control={<Radio />} label="Live" />
             </RadioGroup>
@@ -277,35 +324,31 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
             />
-            {examType === "mock" && (
-              <>
-                <Typography fontWeight={600}>Question Pattern</Typography>
-                <Select
-                  value={questionMode}
-                  onChange={(e) => setQuestionMode(e.target.value as QuestionMode)}
-                >
-                  <MenuItem value="same">Same</MenuItem>
-                  <MenuItem value="shuffle">Shuffle</MenuItem>
-                  <MenuItem value="random">Random</MenuItem>
-                </Select>
-              </>
-            )}
             {examType === "live" && (
               <>
-                <Typography fontWeight={600}>Question Pattern: SAME (Locked)</Typography>
                 <TextField
-                  label="Start Time"
-                  type="datetime-local"
+                  label="Start Date"
+                  type="date"
                   InputLabelProps={{ shrink: true }}
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    validateDates();
+                  }}
+                  error={!!dateErrors.startTime}
+                  helperText={dateErrors.startTime}
                 />
                 <TextField
-                  label="End Time"
-                  type="datetime-local"
+                  label="End Date"
+                  type="date"
                   InputLabelProps={{ shrink: true }}
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    validateDates();
+                  }}
+                  error={!!dateErrors.endTime}
+                  helperText={dateErrors.endTime}
                 />
               </>
             )}
@@ -354,7 +397,11 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                               mb={1}
                             >
                               <Typography>{topic.topic_name}</Typography>
-                              <Typography color={disabled ? "text.disabled" : "text.primary"}>
+                              <Typography
+                                color={
+                                  disabled ? "text.disabled" : "text.primary"
+                                }
+                              >
                                 Available: {topic.question_count}
                               </Typography>
                               <TextField
@@ -368,10 +415,13 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                                   handleTopicChange(
                                     topic.topic_id,
                                     Number(e.target.value),
-                                    topic.question_count
+                                    topic.question_count,
                                   )
                                 }
-                                inputProps={{ min: 0, max: topic.question_count }}
+                                inputProps={{
+                                  min: 0,
+                                  max: topic.question_count,
+                                }}
                               />
                             </Box>
                           );
@@ -383,26 +433,52 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                 );
               })
             )}
-              <Typography fontWeight={700} mt={2}>
-                Total Questions: {totalQuestions}
-              </Typography>
-            </Box>
-          );
+            <Typography fontWeight={700} mt={2}>
+              Total Questions: {totalQuestions}
+            </Typography>
+          </Box>
+        );
 
       case "Review":
         return (
           <Box>
-            <Typography><b>Title:</b> {examTitle}</Typography>
-            <Typography><b>Type:</b> {examType}</Typography>
-            <Typography><b>Pattern:</b> {questionMode}</Typography>
-            <Typography><b>Total Questions:</b> {totalQuestions}</Typography>
+            <Typography sx={{ mb: 1 }}>
+              <b>Title:</b> {examTitle}
+            </Typography>
+            <Typography sx={{ mb: 1 }}>
+              <b>Type:</b> {examType}
+            </Typography>
+            <Typography sx={{ mb: 1 }}>
+              <b>Duration:</b> {duration} minutes
+            </Typography>
+            <Typography sx={{ mb: 1 }}>
+              <b>Total Questions:</b> {totalQuestions}
+            </Typography>
+            {examType === "live" && (
+              <>
+                <Typography>
+                  <b>Start Date:</b> {startTime || "Not set"}
+                </Typography>
+                <Typography>
+                  <b>End Date:</b> {endTime || "Not set"}
+                </Typography>
+              </>
+            )}
           </Box>
         );
     }
   };
 
   return (
-    <Dialog open={open} onClose={() => { resetForm(); onClose(); }} maxWidth="md" fullWidth>
+    <Dialog
+      open={open}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
+      maxWidth="md"
+      fullWidth
+    >
       <DialogTitle>Create New Exam</DialogTitle>
       <DialogContent>
         <Stepper activeStep={activeStep} sx={{ mb: 3 }}>

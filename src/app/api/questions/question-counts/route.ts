@@ -1,27 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-/**
- * GET /api/questions/subject-topics-counts
- * Returns:
- * [
- *   {
- *     subject_id,
- *     subject_name,
- *     topics: [
- *       { topic_id, topic_name, question_count }
- *     ]
- *   }
- * ]
- */
 export async function GET() {
   try {
-    // Fetch all subjects with topics and questions
     const subjects = await prisma.subjects.findMany({
       include: {
         topics: {
           include: {
-            questions: true,
+            _count: {
+              select: {
+                questions: true,
+              },
+            },
           },
         },
       },
@@ -34,7 +24,7 @@ export async function GET() {
       topics: subj.topics.map((topic) => ({
         topic_id: topic.topic_id,
         topic_name: topic.topic_name,
-        question_count: topic.questions.length,
+        question_count: topic._count.questions,
       })),
     }));
 

@@ -29,7 +29,7 @@ const ExamContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const examId = searchParams.get("examId");
-  const attemptId = searchParams.get("attemptId");
+  // const attemptId = searchParams.get("attemptId");
 
   const { sidebarOpen } = useSidebar();
   const isDesktop = useMediaQuery("(min-width:1024px)");
@@ -42,7 +42,7 @@ const ExamContent: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(
-    new Set()
+    new Set(),
   );
   const [timeLeft, setTimeLeft] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -55,14 +55,14 @@ const ExamContent: React.FC = () => {
   const submittingRef = useRef(false);
 
   useEffect(() => {
-    if (!examId || !attemptId) {
-      setError("No exam ID or attempt ID provided");
+    if (!examId) {
+      setError("No exam ID provided");
       setLoading(false);
       return;
     }
 
     // Initialize violation count
-    const stored = sessionStorage.getItem(`violation_${attemptId}`);
+    const stored = sessionStorage.getItem(`violation_${examId}`);
     setViolationCount(stored ? parseInt(stored, 10) : 0);
 
     const fetchExam = async () => {
@@ -75,10 +75,8 @@ const ExamContent: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`/api/students/exams?id=${examId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await fetch(`/api/students/exams/take?id=${examId}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const data = await response.json();
@@ -99,7 +97,7 @@ const ExamContent: React.FC = () => {
     };
 
     fetchExam();
-  }, [examId, attemptId]);
+  }, [examId]);
 
   // Timer effect
   useEffect(() => {
@@ -146,7 +144,8 @@ const ExamContent: React.FC = () => {
     const handleViolation = () => {
       const newCount = violationCount + 1;
       setViolationCount(newCount);
-      sessionStorage.setItem(`violation_${attemptId}`, newCount.toString());
+      // Use examId instead of attemptId
+      sessionStorage.setItem(`violation_${examId}`, newCount.toString());
       setShowLiveWarning(true);
       if (newCount > 1) {
         setTimeout(() => submitExam(true), 1500);
@@ -170,13 +169,13 @@ const ExamContent: React.FC = () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [examData, violationCount, attemptId]);
+  }, [examData, violationCount, examId]); // ✅ replace attemptId with examId
 
   // Check for auto submit flag
   useEffect(() => {
-    const autoSubmit = sessionStorage.getItem('autoSubmit');
-    if (autoSubmit === 'true') {
-      sessionStorage.removeItem('autoSubmit');
+    const autoSubmit = sessionStorage.getItem("autoSubmit");
+    if (autoSubmit === "true") {
+      sessionStorage.removeItem("autoSubmit");
       setShowLiveWarning(true);
       setTimeout(() => submitExam(true), 1500);
     }
@@ -282,11 +281,16 @@ const ExamContent: React.FC = () => {
 
     saveQuestionTime();
 
+    const totalTimeTaken =
+      examData?.examType === "practice"
+        ? Object.values(questionTimeMap.current).reduce((sum, t) => sum + t, 0)
+        : examData!.duration * 60 - timeLeft;
+
     const payload = {
-      attemptId,
+      examId,
       answers: userAnswers,
       questionTimes: questionTimeMap.current,
-      totalTimeTaken: examData!.duration * 60 - timeLeft,
+      totalTimeTaken,
       examType: examData?.examType,
       autoSubmitted,
     };
@@ -318,8 +322,10 @@ const ExamContent: React.FC = () => {
         return;
       }
 
+      // ✅ NEW attemptId comes from backend
+      const newAttemptId = data.attemptId;
       // ✅ Success → redirect
-      router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
+      router.push(`/student-pages/exam_res_rev?attemptId=${newAttemptId}`);
     } catch (err) {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;
@@ -400,9 +406,12 @@ const ExamContent: React.FC = () => {
               minutes • {examData!.points || 200} points
             </p>
           </div>
-          <div className={`${styles.timer} ${getTimerClass()}`}>
-            <i className="fas fa-clock"></i> <span>{formatTime(timeLeft)}</span>
-          </div>
+          {examData.examType !== "practice" && (
+            <div className={`${styles.timer} ${getTimerClass()}`}>
+              <i className="fas fa-clock"></i>{" "}
+              <span>{formatTime(timeLeft)}</span>
+            </div>
+          )}
         </div>
 
         <div className={styles.examContent}>
@@ -428,7 +437,7 @@ const ExamContent: React.FC = () => {
             <div className={styles.questionGrid}>
               {Array.from(
                 { length: examData?.totalQuestions || 0 },
-                (_, i) => i + 1
+                (_, i) => i + 1,
               ).map((num) => {
                 const status = getQuestionStatus(num);
                 return (
@@ -485,8 +494,14 @@ const ExamContent: React.FC = () => {
               <ul className={styles.instructionsList}>
                 <li>Select only one answer for each question.</li>
                 <li>You may flag questions for review before submitting.</li>
-                <li>The exam will be automatically submitted when the timer expires.</li>
-                <li>Do not switch to another tab or window during the exam; doing so will result in automatic submission.</li>
+                <li>
+                  The exam will be automatically submitted when the timer
+                  expires.
+                </li>
+                <li>
+                  Do not switch to another tab or window during the exam; doing
+                  so will result in automatic submission.
+                </li>
                 <li>Once submitted, you cannot return to the exam.</li>
               </ul>
             </div>
@@ -542,8 +557,8 @@ const ExamContent: React.FC = () => {
                       aria-label="Multiple choice options"
                     >
                       {currentQ.options.map((option) => {
-                      const isSelected =
-                        userAnswers[currentQ.id] === option.id;
+                        const isSelected =
+                          userAnswers[currentQ.id] === option.id;
                         return (
                           <li key={option.id}>
                             <button

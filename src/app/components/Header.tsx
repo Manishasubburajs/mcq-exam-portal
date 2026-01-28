@@ -28,8 +28,11 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
     mobileQuery.addEventListener('change', handleMobileChange);
     desktopQuery.addEventListener('change', handleDesktopChange);
 
-    // Always show "Administrator" for admin pages
-    setUsername("Administrator");
+    // Get username from localStorage or sessionStorage
+    const storedUsername = localStorage.getItem("username") || sessionStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
 
     return () => {
       mobileQuery.removeEventListener('change', handleMobileChange);
