@@ -110,11 +110,10 @@ const UserManagement: React.FC = () => {
     const role = roleMap[tabIndex];
 
     return users.filter((user) => {
-      const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
       const searchValue = search.toLowerCase();
 
       const matchesSearch =
-        fullName.includes(searchValue) ||
+        user.username.toLowerCase().includes(searchValue) ||
         user.email.toLowerCase().includes(searchValue) ||
         user.user_id.toString().includes(searchValue);
 
@@ -244,7 +243,7 @@ const UserManagement: React.FC = () => {
             <TextField
               label="Search"
               size="small"
-              placeholder="Search by ID, name or email..."
+              placeholder="Search by ID, username or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -350,7 +349,7 @@ const UserManagement: React.FC = () => {
                 <TableHead sx={{ backgroundColor: "grey.50" }}>
                   <TableRow>
                     <TableCell sx={{ fontWeight: "bold" }}>User ID</TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Username</TableCell>
                     <TableCell sx={{ fontWeight: "bold" }}>Email</TableCell>
                     <TableCell sx={{ fontWeight: "bold" }}>Role</TableCell>
                     <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
@@ -375,11 +374,10 @@ const UserManagement: React.FC = () => {
                   )}
                   {!loading &&
                     paginatedUsers.map((user) => {
-                      const fullName = `${user.first_name} ${user.last_name}`;
                       return (
                         <TableRow key={user.user_id} hover>
                           <TableCell>{user.user_id}</TableCell>
-                          <TableCell>{fullName}</TableCell>
+                          <TableCell>{user.username}</TableCell>
                           <TableCell>{user.email}</TableCell>
                           <TableCell>
                             <Chip
