@@ -174,7 +174,9 @@ export async function PUT(req: Request) {
 
       // 3️⃣ Delete removed topics ONLY if they have no questions
       for (const existing of existingTopics) {
-        const stillExists = topics.find((t: any) => t.topic_id === existing.topic_id);
+        const stillExists = topics.find(
+          (t: any) => t.topic_id === existing.topic_id,
+        );
         if (!stillExists && existing._count.questions === 0) {
           await tx.topics.delete({
             where: { topic_id: existing.topic_id },
@@ -206,15 +208,22 @@ export async function PUT(req: Request) {
       success: true,
       message: "Subject updated successfully",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ PUT /subjects error:", error);
+
+    if (error.code === "P2002") {
+      return NextResponse.json(
+        { success: false, message: "Subject name already exists" },
+        { status: 400 },
+      );
+    }
+
     return NextResponse.json(
       { success: false, message: "Failed to update subject" },
       { status: 500 },
     );
   }
 }
-
 
 // ----------------------
 // DELETE - Delete subject + topics
