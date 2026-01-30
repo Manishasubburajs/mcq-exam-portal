@@ -464,9 +464,7 @@ const SubjectDetails: React.FC = () => {
       }
     } catch (error) {
       showSnackbar("Error", "Network error or server unavailable", "error");
-    } finally {
-      setDeleteDialog({ open: false, subjectId: null, subjectName: "" });
-    }
+    } 
   };
 
   return (
