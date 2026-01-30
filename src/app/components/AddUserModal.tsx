@@ -165,7 +165,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
           ? Object.values(data.validationErrors).join(", ")
           : data.error || "Unknown error";
         setSnackbarSeverity("error");
-        setSnackbarMessage(`❌ ${backendErrors}`);
+        setSnackbarMessage(`${backendErrors}`);
         setSnackbarOpen(true);
         return;
       }
@@ -178,7 +178,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
       setSnackbarSeverity("success");
       setSnackbarMessage(
-        `✅ ${newUser.first_name} ${newUser.last_name} created successfully!`,
+        `${newUser.first_name} ${newUser.last_name} created successfully!`,
       );
       setSnackbarOpen(true);
       onUserAdded(normalizedUser);
@@ -191,7 +191,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         });
         setErrors(newErrors);
       } else {
-        alert("❌ Network or server error. Try again.");
+        alert("Network or server error. Try again.");
       }
     }
   };
@@ -422,7 +422,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
@@ -430,6 +430,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
           onClose={() => setSnackbarOpen(false)}
           severity={snackbarSeverity}
           sx={{ width: "100%" }}
+          variant="filled"
         >
           {snackbarMessage}
         </Alert>

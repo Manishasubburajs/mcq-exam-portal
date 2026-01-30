@@ -22,10 +22,14 @@ import {
   Chip,
   useMediaQuery,
   Tooltip,
+  Alert,
+  Snackbar,
+  AlertTitle,
 } from "@mui/material";
 import { Edit, Delete, Add, Close } from "@mui/icons-material";
 import dynamic from "next/dynamic";
 import * as yup from "yup";
+import { styled } from "@mui/material/styles";
 
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 import Sidebar from "../../components/Sidebar";
@@ -68,15 +72,58 @@ const createSubjectSchema = yup.object({
   subject_name: yup.string().required("Subject name is required"),
   topics: yup
     .array()
-    .of(yup.string().trim())
+    .of(yup.string().trim().required("Topic name is required"))
     .test(
       "at-least-one-topic",
       "Enter at least one topic",
       (topics) =>
         Array.isArray(topics) &&
         topics.some((topic) => topic && topic.trim() !== ""),
-    ),
+    )
+    .test("no-duplicates", "Duplicate topics are not allowed", (topics) => {
+      if (!topics) return true;
+      const cleaned = topics
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => t !== "");
+      return new Set(cleaned).size === cleaned.length;
+    }),
 });
+
+const editSubjectSchema = yup.object({
+  subject_name: yup.string().required("Subject name is required"),
+  topics: yup
+    .array()
+    .of(
+      yup.object({
+        topic_name: yup.string().trim().required("Topic name is required"),
+      }),
+    )
+    .test(
+      "at-least-one-topic",
+      "Enter at least one topic",
+      (topics) =>
+        Array.isArray(topics) &&
+        topics.some((t) => t.topic_name && t.topic_name.trim() !== ""),
+    )
+    .test("no-duplicates", "Duplicate topics are not allowed", (topics) => {
+      if (!topics) return true;
+
+      const cleaned = topics
+        .map((t) => t.topic_name.trim().toLowerCase())
+        .filter((t) => t !== "");
+
+      return new Set(cleaned).size === cleaned.length;
+    }),
+});
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  "& .MuiDialogContent-root": {
+    padding: theme.spacing(3),
+  },
+  "& .MuiDialogActions-root": {
+    padding: theme.spacing(2),
+  },
+}));
 
 const SubjectDetails: React.FC = () => {
   const isDesktop = useMediaQuery("(min-width:769px)");
@@ -96,6 +143,33 @@ const SubjectDetails: React.FC = () => {
     subject_name: "",
     topics: [],
   });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    title: "",
+    message: "",
+    severity: "success" as "success" | "error" | "warning",
+  });
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    subjectId: number | null;
+    subjectName: string;
+  }>({
+    open: false,
+    subjectId: null,
+    subjectName: "",
+  });
+
+  const showSnackbar = (
+    title: string,
+    message: string,
+    severity: "success" | "error" | "warning" = "success",
+  ) => {
+    setSnackbar({ open: true, title, message, severity });
+  };
+
+  const closeSnackbar = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
 
   const subjectHasLockedTopics = editFormData.topics.some(
     (t) => (t.questionCount ?? 0) > 0,
@@ -124,6 +198,23 @@ const SubjectDetails: React.FC = () => {
     fetchSubjects();
   }, []);
 
+  useEffect(() => {
+    if (createModalOpen) {
+      resetForm();
+    }
+  }, [createModalOpen]);
+
+  const closeCreateModal = () => {
+    setCreateModalOpen(false);
+    resetForm();
+  };
+
+  const onCloseEditModal = () => {
+    setEditModalOpen(false);
+    setSelectedSubject(null);
+    setErrors({});
+  };
+
   // Reset form
   const resetForm = () => {
     setFormData({
@@ -133,9 +224,46 @@ const SubjectDetails: React.FC = () => {
     setErrors({});
   };
 
-  // Handle form changes
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  // validate create form
+  const validateForm = async (data: CreateSubjectForm) => {
+    try {
+      await createSubjectSchema.validate(data, { abortEarly: false });
+      setErrors({});
+    } catch (err: any) {
+      const newErrors: any = {};
+
+      err.inner.forEach((e: any) => {
+        if (e.path === "subject_name") newErrors.subject_name = e.message;
+        else if (e.path === "topics") newErrors.topics = e.message;
+        else if (e.path?.startsWith("topics")) {
+          const index = e.path.match(/\d+/)?.[0];
+          newErrors[`topic_${index}`] = e.message;
+        }
+      });
+
+      setErrors(newErrors);
+    }
+  };
+
+  // Validate edit form
+  const validateEditForm = async (data: EditSubjectForm) => {
+    try {
+      await editSubjectSchema.validate(data, { abortEarly: false });
+      setErrors({});
+    } catch (err: any) {
+      const newErrors: any = {};
+
+      err.inner.forEach((e: any) => {
+        if (e.path === "subject_name") newErrors.subject_name = e.message;
+        else if (e.path === "topics") newErrors.topics = e.message;
+        else if (e.path?.includes("topic_name")) {
+          const index = e.path.match(/\d+/)?.[0];
+          newErrors[`edit_topic_${index}`] = e.message;
+        }
+      });
+
+      setErrors(newErrors);
+    }
   };
 
   // Add new topic field
@@ -144,35 +272,44 @@ const SubjectDetails: React.FC = () => {
       ...prev,
       topics: [...prev.topics, ""],
     }));
+
+    // remove global topics error when adding new row
+    setErrors((prev: any) => {
+      const newErrors = { ...prev };
+      delete newErrors.topics;
+      return newErrors;
+    });
   };
 
-  // Remove topic field
-  const removeTopic = (index: number) => {
-    if (formData.topics.length > 1) {
-      setFormData((prev) => ({
-        ...prev,
-        topics: prev.topics.filter((_, i) => i !== index),
-      }));
-    }
-  };
-
-  // Update topic value
   const updateTopic = (index: number, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      topics: prev.topics.map((topic, i) => (i === index ? value : topic)),
-    }));
+    const updatedTopics = formData.topics.map((t, i) =>
+      i === index ? value : t,
+    );
+
+    const newData = { ...formData, topics: updatedTopics };
+    setFormData(newData);
+    validateForm(newData);
   };
 
-  // Handle form submission
+  const removeTopic = (index: number) => {
+    const updatedTopics = formData.topics.filter((_, i) => i !== index);
+
+    const newData = { ...formData, topics: updatedTopics };
+    setFormData(newData);
+    validateForm(newData);
+  };
+
   const handleSubmit = async () => {
     try {
       setCreating(true);
 
-      // Validate form
+      // Validate form using Yup
       await createSubjectSchema.validate(formData, { abortEarly: false });
+
+      // Clear previous errors
       setErrors({});
 
+      // Call your API
       const res = await fetch("/api/subjects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -182,10 +319,10 @@ const SubjectDetails: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        alert("✅ Subject created successfully!");
+        showSnackbar("Success", "Subject created successfully!", "success");
         setCreateModalOpen(false);
         resetForm();
-        fetchSubjects(); // Refresh the list
+        fetchSubjects(); // Refresh list
       } else {
         if (data.errors) {
           const newErrors: any = {};
@@ -195,19 +332,27 @@ const SubjectDetails: React.FC = () => {
           });
           setErrors(newErrors);
         } else {
-          alert(`❌ Error: ${data.message || "Failed to create subject"}`);
+          showSnackbar(
+            "Error",
+            `Error: ${data.message || "Failed to create subject"}`,
+            "error",
+          );
         }
       }
     } catch (err: any) {
-      // Handle validation errors
-      const newErrors: any = {};
-      if (err.inner) {
+      // Handle Yup errors
+      if (err.inner && err.inner.length > 0) {
+        const newErrors: any = {};
         err.inner.forEach((e: any) => {
           if (e.path === "subject_name") newErrors.subject_name = e.message;
-          if (e.path === "topics") newErrors.topics = e.message;
+          else if (e.path === "topics") newErrors.topics = e.message;
+          else if (e.path?.startsWith("topics")) {
+            const index = e.path.match(/\d+/)?.[0];
+            if (index !== undefined) newErrors[`topic_${index}`] = e.message;
+          }
         });
+        setErrors(newErrors);
       }
-      setErrors(newErrors);
     } finally {
       setCreating(false);
     }
@@ -236,6 +381,12 @@ const SubjectDetails: React.FC = () => {
     try {
       setCreating(true);
 
+      await editSubjectSchema.validate(editFormData, { abortEarly: false });
+
+      // Clear previous errors
+      setErrors({});
+
+      // build payload after validation
       const payload = {
         subject_name: editFormData.subject_name,
         topics: editFormData.topics
@@ -245,8 +396,6 @@ const SubjectDetails: React.FC = () => {
             topic_name: t.topic_name,
           })),
       };
-
-      console.log("PUT payload:", payload);
 
       const res = await fetch(
         `/api/subjects?id=${selectedSubject.subject_id}`,
@@ -258,49 +407,64 @@ const SubjectDetails: React.FC = () => {
       );
 
       const data = await res.json();
-      console.log("PUT response:", data);
 
       if (data.success) {
-        alert("✅ Subject updated successfully!");
+        showSnackbar("Success", "Subject updated successfully!", "success");
         setEditModalOpen(false);
         setSelectedSubject(null);
         setErrors({});
         fetchSubjects();
       } else {
-        alert(data.message || "Failed to update subject");
+        showSnackbar(
+          "Error",
+          data.message || "Failed to update subject",
+          "error",
+        );
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      if (err.inner && err.inner.length > 0) {
+        const newErrors: any = {};
+
+        err.inner.forEach((e: any) => {
+          if (e.path === "subject_name") newErrors.subject_name = e.message;
+          else if (e.path === "topics") newErrors.topics = e.message;
+          else if (e.path?.includes("topic_name")) {
+            const index = e.path.match(/\d+/)?.[0];
+            newErrors[`edit_topic_${index}`] = e.message;
+          }
+        });
+
+        setErrors(newErrors);
+      }
     } finally {
       setCreating(false);
     }
   };
 
   // Handle delete subject
-  const handleDelete = async (subjectId: number, subjectName: string) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${subjectName}"? This will also delete all its topics.`,
-      )
-    ) {
-      try {
-        const res = await fetch(`/api/subjects?id=${subjectId}`, {
-          method: "DELETE",
-        });
+  const confirmDelete = async () => {
+    if (!deleteDialog.subjectId) return;
 
-        const data = await res.json();
+    try {
+      const res = await fetch(`/api/subjects?id=${deleteDialog.subjectId}`, {
+        method: "DELETE",
+      });
 
-        if (data.success) {
-          alert("✅ Subject deleted successfully!");
-          fetchSubjects(); // Refresh the list
-        } else {
-          alert(`❌ Error: ${data.message || "Failed to delete subject"}`);
-        }
-      } catch (error) {
-        console.error("Error deleting subject:", error);
-        alert("❌ Network error or server unavailable");
+      const data = await res.json();
+
+      if (data.success) {
+        showSnackbar("Subject", "Subject deleted successfully!", "success");
+        fetchSubjects();
+      } else {
+        showSnackbar(
+          "Error",
+          data.message || "Failed to delete subject",
+          "error",
+        );
       }
-    }
+    } catch (error) {
+      showSnackbar("Error", "Network error or server unavailable", "error");
+    } 
   };
 
   return (
@@ -444,10 +608,11 @@ const SubjectDetails: React.FC = () => {
                                   color="error"
                                   disabled={!subject.canDelete}
                                   onClick={() =>
-                                    handleDelete(
-                                      subject.subject_id,
-                                      subject.subject_name,
-                                    )
+                                    setDeleteDialog({
+                                      open: true,
+                                      subjectId: subject.subject_id,
+                                      subjectName: subject.subject_name,
+                                    })
                                   }
                                 >
                                   <Delete />
@@ -475,25 +640,42 @@ const SubjectDetails: React.FC = () => {
       </Box>
 
       {/* Create Subject Modal */}
-      <Dialog
+      <StyledDialog
         open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+        onClose={closeCreateModal}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
+        {/* Header */}
+        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
           Create Subject / Topic
+          <IconButton
+            aria-label="close"
+            onClick={closeCreateModal}
+            sx={(theme) => ({
+              position: "absolute",
+              right: 12,
+              top: 12,
+              color: theme.palette.grey[500],
+            })}
+          >
+            <Close />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ mt: 1 }}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 1 }}>
+
+        {/* Body */}
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Subject Name */}
             <TextField
               fullWidth
               label="Subject Name"
               value={formData.subject_name}
-              onChange={(e) =>
-                handleInputChange("subject_name", e.target.value)
-              }
+              onChange={(e) => {
+                const newData = { ...formData, subject_name: e.target.value };
+                setFormData(newData);
+                validateForm(newData);
+              }}
               error={!!errors.subject_name}
               helperText={errors.subject_name}
               placeholder="e.g., Mathematics, Science, History"
@@ -501,7 +683,7 @@ const SubjectDetails: React.FC = () => {
 
             {/* Topics */}
             <Box>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 500 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
                 Topic(s):
               </Typography>
 
@@ -514,6 +696,8 @@ const SubjectDetails: React.FC = () => {
                     value={topic}
                     onChange={(e) => updateTopic(index, e.target.value)}
                     placeholder="Enter topic name"
+                    error={!!errors[`topic_${index}`]}
+                    helperText={errors[`topic_${index}`]}
                   />
                   {formData.topics.length > 1 && (
                     <IconButton
@@ -550,8 +734,9 @@ const SubjectDetails: React.FC = () => {
             </Box>
           </Box>
         </DialogContent>
+
         <DialogActions>
-          <Button onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+          <Button onClick={closeCreateModal}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
@@ -564,32 +749,47 @@ const SubjectDetails: React.FC = () => {
             {creating ? "Saving..." : "Save"}
           </Button>
         </DialogActions>
-      </Dialog>
+      </StyledDialog>
 
       {/* Edit Subject Modal */}
-      {/* Edit Subject Modal */}
-      <Dialog
+      <StyledDialog
         open={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
+        onClose={onCloseEditModal}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>Edit Subject / Topic</DialogTitle>
+        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
+          Edit Subject / Topic
+          <IconButton
+            aria-label="close"
+            onClick={onCloseEditModal}
+            sx={(theme) => ({
+              position: "absolute",
+              right: 12,
+              top: 12,
+              color: theme.palette.grey[500],
+            })}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
 
-        <DialogContent sx={{ mt: 1 }}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 1 }}>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Subject Name */}
             <TextField
               fullWidth
               label="Subject Name"
               value={editFormData.subject_name}
               disabled={subjectHasLockedTopics}
-              onChange={(e) =>
-                setEditFormData((prev) => ({
-                  ...prev,
+              onChange={(e) => {
+                const newData = {
+                  ...editFormData,
                   subject_name: e.target.value,
-                }))
-              }
+                };
+                setEditFormData(newData);
+                validateEditForm(newData);
+              }}
               helperText={
                 subjectHasLockedTopics
                   ? "Subject name cannot be changed because questions exist"
@@ -619,21 +819,20 @@ const SubjectDetails: React.FC = () => {
                       value={topic.topic_name}
                       disabled={isLocked}
                       onChange={(e) => {
-                        if (isLocked) return;
-
-                        setEditFormData((prev) => ({
-                          ...prev,
-                          topics: prev.topics.map((t, i) =>
-                            i === index
-                              ? { ...t, topic_name: e.target.value }
-                              : t,
-                          ),
-                        }));
+                        const upadted = editFormData.topics.map((t, i) =>
+                          i === index
+                            ? { ...t, topic_name: e.target.value }
+                            : t,
+                        );
+                        const newData = { ...editFormData, topics: upadted };
+                        setEditFormData(newData);
+                        validateEditForm(newData);
                       }}
+                      error={!isLocked && !!errors[`edit_topic_${index}`]}
                       helperText={
                         isLocked
                           ? "Cannot edit topic: questions exist"
-                          : undefined
+                          : errors[`edit_topic_${index}`]
                       }
                     />
 
@@ -642,12 +841,19 @@ const SubjectDetails: React.FC = () => {
                         color="error"
                         size="small"
                         title="Remove Topic"
-                        onClick={() =>
-                          setEditFormData((prev) => ({
-                            ...prev,
-                            topics: prev.topics.filter((_, i) => i !== index),
-                          }))
-                        }
+                        onClick={() => {
+                          let updated = editFormData.topics.filter(
+                            (_, i) => i !== index,
+                          );
+
+                          if (updated.length === 0) {
+                            updated = [{ topic_name: "" }];
+                          }
+
+                          const newData = { ...editFormData, topics: updated };
+                          setEditFormData(newData);
+                          validateEditForm(newData);
+                        }}
                       >
                         <Close />
                       </IconButton>
@@ -655,21 +861,6 @@ const SubjectDetails: React.FC = () => {
                   </Box>
                 );
               })}
-
-              <Button
-                startIcon={<Add />}
-                onClick={() =>
-                  setEditFormData((prev) => ({
-                    ...prev,
-                    topics: [...prev.topics, { topic_name: "" }],
-                  }))
-                }
-                size="small"
-                sx={{ mt: 1 }}
-                variant="outlined"
-              >
-                Add Topic
-              </Button>
 
               {errors.topics && (
                 <Typography
@@ -680,12 +871,35 @@ const SubjectDetails: React.FC = () => {
                   {errors.topics}
                 </Typography>
               )}
+
+              <Button
+                startIcon={<Add />}
+                onClick={() => {
+                  const newData = {
+                    ...editFormData,
+                    topics: [...editFormData.topics, { topic_name: "" }],
+                  };
+                  setEditFormData(newData);
+
+                  // remove global topics error
+                  setErrors((prev: any) => {
+                    const newErrors = { ...prev };
+                    delete newErrors.topics;
+                    return newErrors;
+                  });
+                }}
+                size="small"
+                sx={{ mt: 1 }}
+                variant="outlined"
+              >
+                Add Topic
+              </Button>
             </Box>
           </Box>
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
+          <Button onClick={onCloseEditModal}>Cancel</Button>
 
           <Button
             variant="contained"
@@ -699,7 +913,71 @@ const SubjectDetails: React.FC = () => {
             {creating ? "Updating..." : "Update"}
           </Button>
         </DialogActions>
-      </Dialog>
+      </StyledDialog>
+
+      <StyledDialog
+        open={deleteDialog.open}
+        onClose={() =>
+          setDeleteDialog({ open: false, subjectId: null, subjectName: "" })
+        }
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
+          Confirm Delete
+          <IconButton
+            aria-label="close"
+            onClick={() =>
+              setDeleteDialog({ open: false, subjectId: null, subjectName: "" })
+            }
+            sx={(theme) => ({
+              position: "absolute",
+              right: 12,
+              top: 12,
+              color: theme.palette.grey[500],
+            })}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <Typography>
+            Are you sure you want to delete <b>{deleteDialog.subjectName}</b>?{" "}
+            This will also delete all its topics.
+          </Typography>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() =>
+              setDeleteDialog({ open: false, subjectId: null, subjectName: "" })
+            }
+          >
+            Cancel
+          </Button>
+
+          <Button variant="contained" color="error" onClick={confirmDelete}>
+            Delete
+          </Button>
+        </DialogActions>
+      </StyledDialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={closeSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={closeSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
