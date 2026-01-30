@@ -244,10 +244,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           label="Email"
           type="email"
           value={editUser.email}
-          onChange={(e) => handleChange("email", e.target.value)}
-          error={!!errors.email}
-          helperText={errors.email}
           fullWidth
+          disabled
+          sx={{ backgroundColor: "#f9f9f9" }}
         />
 
         <FormControl fullWidth>
@@ -355,7 +354,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       {/* Success Snackbar */}
       <Snackbar
         open={successOpen}
-        autoHideDuration={3000}
+        autoHideDuration={6000}
         onClose={() => setSuccessOpen(false)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
@@ -363,6 +362,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           onClose={() => setSuccessOpen(false)}
           severity="success"
           sx={{ width: "100%" }}
+          variant="filled"
         >
           User updated successfully!
         </Alert>
@@ -371,7 +371,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       {/* Error Snackbar */}
       <Snackbar
         open={errorOpen}
-        autoHideDuration={4000}
+        autoHideDuration={6000}
         onClose={() => setErrorOpen(false)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
@@ -379,6 +379,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           onClose={() => setErrorOpen(false)}
           severity="error"
           sx={{ width: "100%" }}
+          variant="filled"
         >
           {errorMessage}
         </Alert>
