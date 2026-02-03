@@ -1,7 +1,5 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Typography,
@@ -31,7 +29,6 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
-  FormLabel,
   Alert,
   Snackbar,
 } from "@mui/material";
@@ -43,6 +40,7 @@ import {
   Search as SearchIcon,
   Download as DownloadIcon,
   Upload as UploadIcon,
+  Close,
 } from "@mui/icons-material";
 import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
@@ -50,7 +48,6 @@ import Sidebar from "../../components/Sidebar";
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
 export default function QuestionBankPage() {
-  const router = useRouter();
   const isDesktop = useMediaQuery("(min-width:769px)");
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
 
@@ -112,6 +109,8 @@ export default function QuestionBankPage() {
     [key: string]: string;
   }>({});
 
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
@@ -163,7 +162,6 @@ export default function QuestionBankPage() {
     try {
       const res = await fetch("/api/questions");
       const data = await res.json();
-      console.log("QUESTIONS FROM API 👉", data);
       if (Array.isArray(data)) {
         setQuestions(data);
       } else {
@@ -176,7 +174,6 @@ export default function QuestionBankPage() {
     }
     setLoading(false);
   };
-console.log("QUESTIONS fetch FROM after API 👉", questions);
   useEffect(() => {
     fetchSubjects();
     fetchQuestions();
@@ -224,11 +221,6 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
     Biology: { bg: "#e8f5e9", text: "#1b5e20" },
   };
 
-  const getSubjectColor = (subject: string) =>
-    subjectColors[subject]?.bg || "#f5f7fa";
-  const getSubjectTextColor = (subject: string) =>
-    subjectColors[subject]?.text || "#2c3e50";
-
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty?.toLowerCase()) {
       case "easy":
@@ -275,14 +267,6 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
     setIsEditMode(false);
     setUploadTypeSelection("select");
     setAddQuestionModalOpen(true);
-  };
-
-  const handleUploadTypeSelect = (type: "individual" | "bulk") => {
-    setUploadTypeSelection(type);
-    setBulkQuestions([]);
-    setBulkValidationErrors([]);
-    setShowBulkPreview(false);
-    setBulkFile(null);
   };
 
   const handleEditQuestion = (q: any) => {
@@ -343,6 +327,32 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
     if (newQuestion.subject_id === 0) {
       errors.subject_id = "Subject is required";
     }
+
+    if (
+      newQuestion.subject_id &&
+      (!newQuestion.topic_id || newQuestion.topic_id === 0)
+    ) {
+      errors.topic_id = "Topic is required";
+    }
+
+    // **New: Check for duplicate options**
+    const options = [
+      { key: "option_a", value: newQuestion.option_a },
+      { key: "option_b", value: newQuestion.option_b },
+      { key: "option_c", value: newQuestion.option_c },
+      { key: "option_d", value: newQuestion.option_d },
+    ];
+
+    const seen: Record<string, string> = {};
+    options.forEach((opt) => {
+      if (opt.value && seen[opt.value]) {
+        // mark both as duplicate
+        errors[opt.key] = "Option must be unique";
+        errors[seen[opt.value]] = "Option must be unique";
+      } else if (opt.value) {
+        seen[opt.value] = opt.key;
+      }
+    });
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -421,9 +431,56 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
     setViewModalOpen(true);
   };
 
-  // ===============================
+  const validateField = (name: string, value: any) => {
+    switch (name) {
+      case "subject_id":
+        return value && value !== 0 ? "" : "Subject is required";
+      case "topic_id":
+        return value && value !== 0 ? "" : "Topic is required";
+      case "question_text":
+        return value.trim() ? "" : "Question text is required";
+      case "option_a":
+        return value.trim() ? "" : "Option A is required";
+      case "option_b":
+        return value.trim() ? "" : "Option B is required";
+      case "option_c":
+        return value.trim() ? "" : "Option C is required";
+      case "option_d":
+        return value.trim() ? "" : "Option D is required";
+      case "correct_answer":
+        return value ? "" : "Please select the correct answer";
+      default:
+        return "";
+    }
+  };
+
+  const validateUniqueOptions = (question: any) => {
+    const errors: Record<string, string> = {};
+
+    const options = [
+      { key: "option_a", value: question.option_a.trim() },
+      { key: "option_b", value: question.option_b.trim() },
+      { key: "option_c", value: question.option_c.trim() },
+      { key: "option_d", value: question.option_d.trim() },
+    ];
+
+    const seen: Record<string, string> = {};
+
+    options.forEach((opt) => {
+      if (!opt.value) return;
+
+      if (seen[opt.value]) {
+        errors[opt.key] = "Option must be unique";
+        errors[seen[opt.value]] = "Option must be unique";
+      } else {
+        seen[opt.value] = opt.key;
+      }
+    });
+
+    return errors;
+  };
+
   // FILTER SUBJECT HANDLER (TABLE)
-  // ===============================
   const handleFilterSubjectChange = (subjectId: number) => {
     setSelectedSubjectId(subjectId);
     setSelectedTopicId(0);
@@ -437,9 +494,7 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
     setShowTable(true);
   };
 
-  // ===============================
   // FORM SUBJECT HANDLER (MODAL)
-  // ===============================
   const handleFormSubjectChange = (subjectId: number) => {
     setNewQuestion((prev) => ({
       ...prev,
@@ -748,6 +803,46 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
       console.error("Error fetching topics for bulk upload:", err);
       setBulkTopics([]);
       showSnackbar("Failed to load topics", "error");
+    }
+  };
+
+  const handleBackFromUpload = () => {
+    if (uploadTypeSelection === "individual") {
+      setNewQuestion({
+        question_id: 0,
+        question_text: "",
+        option_a: "",
+        option_b: "",
+        option_c: "",
+        option_d: "",
+        correct_answer: "",
+        points: 2,
+        subject_id: 0,
+        topic_id: 0,
+        difficulty: "Medium",
+      });
+      setValidationErrors({});
+      setTopics([]);
+    }
+
+    if (uploadTypeSelection === "bulk") {
+      setBulkQuestions([]);
+      setBulkValidationErrors([]);
+      setShowBulkPreview(false);
+      setBulkFile(null);
+      setBulkSelectedSubjectId(0);
+      setBulkSelectedTopicId(0);
+      setBulkTopics([]);
+    }
+
+    setUploadTypeSelection("select");
+  };
+
+  const resetBulkUpload = () => {
+    setBulkFile(null);
+
+    if (bulkFileInputRef.current) {
+      bulkFileInputRef.current.value = "";
     }
   };
 
@@ -1287,8 +1382,21 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
         >
           <DialogTitle>
             {isEditMode ? "Edit Question" : "Add New Questions"}
+
+            <IconButton
+              aria-label="close"
+              onClick={handleCloseAddModal}
+              sx={(theme) => ({
+                position: "absolute",
+                right: 12,
+                top: 12,
+                color: theme.palette.grey[500],
+              })}
+            >
+              <Close />
+            </IconButton>
           </DialogTitle>
-          <DialogContent dividers sx={{ minHeight: "500px" }}>
+          <DialogContent dividers sx={{ minHeight: "50vh" }}>
             {uploadTypeSelection === "select" && !isEditMode && (
               <Box sx={{ p: 2 }}>
                 <Typography variant="body1" sx={{ mb: 3 }}>
@@ -1343,12 +1451,30 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                 </Typography>
 
                 <FormControl fullWidth margin="dense">
-                  <InputLabel>Select Subject</InputLabel>
+                  <InputLabel id="subject-select-label">
+                    Select Subject
+                  </InputLabel>
                   <Select
+                    labelId="subject-select-label"
                     value={newQuestion.subject_id}
                     onChange={(e) => {
-                      const subjectId = Number(e.target.value);
-                      handleFormSubjectChange(subjectId);
+                      const value = Number(e.target.value);
+
+                      // Update question
+                      setNewQuestion((prev) => ({
+                        ...prev,
+                        subject_id: value,
+                        topic_id: 0, // reset topic
+                      }));
+
+                      // Validate immediately
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        subject_id: validateField("subject_id", value),
+                        topic_id: "", // clear topic error when subject changes
+                      }));
+
+                      fetchTopicsForSubject(value);
                     }}
                   >
                     <MenuItem value={0}>Select Subject</MenuItem>
@@ -1369,12 +1495,17 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                   <InputLabel>Select Topic</InputLabel>
                   <Select
                     value={newQuestion.topic_id || 0}
-                    onChange={(e) =>
-                      setNewQuestion({
-                        ...newQuestion,
-                        topic_id: Number(e.target.value),
-                      })
-                    }
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+
+                      setNewQuestion((prev) => ({ ...prev, topic_id: value }));
+
+                      // Validate immediately
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        topic_id: validateField("topic_id", value),
+                      }));
+                    }}
                     disabled={!newQuestion.subject_id}
                   >
                     <MenuItem value={0}>Select Topic</MenuItem>
@@ -1384,6 +1515,11 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                       </MenuItem>
                     ))}
                   </Select>
+                  {validationErrors.topic_id && (
+                    <Typography color="error" variant="caption">
+                      {validationErrors.topic_id}
+                    </Typography>
+                  )}
                 </FormControl>
 
                 <TextField
@@ -1398,10 +1534,13 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                       ...newQuestion,
                       question_text: e.target.value,
                     });
-                    setValidationErrors({
-                      ...validationErrors,
-                      question_text: "",
-                    });
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      question_text: validateField(
+                        "question_text",
+                        e.target.value,
+                      ),
+                    }));
                   }}
                   error={!!validationErrors.question_text}
                   helperText={validationErrors.question_text}
@@ -1413,11 +1552,29 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                   margin="dense"
                   value={newQuestion.option_a}
                   onChange={(e) => {
-                    setNewQuestion({
+                    const value = e.target.value;
+
+                    const updatedQuestion = {
                       ...newQuestion,
-                      option_a: e.target.value,
-                    });
-                    setValidationErrors({ ...validationErrors, option_a: "" });
+                      option_a: value,
+                    };
+
+                    setNewQuestion(updatedQuestion);
+
+                    // Required validation
+                    const fieldError = validateField("option_a", value);
+
+                    // Recalculate duplicate errors
+                    const duplicateErrors =
+                      validateUniqueOptions(updatedQuestion);
+
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      option_a: duplicateErrors.option_a || fieldError,
+                      option_b: duplicateErrors.option_b || "",
+                      option_c: duplicateErrors.option_c || "",
+                      option_d: duplicateErrors.option_d || "",
+                    }));
                   }}
                   error={!!validationErrors.option_a}
                   helperText={validationErrors.option_a}
@@ -1428,11 +1585,29 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                   margin="dense"
                   value={newQuestion.option_b}
                   onChange={(e) => {
-                    setNewQuestion({
+                    const value = e.target.value;
+
+                    const updatedQuestion = {
                       ...newQuestion,
-                      option_b: e.target.value,
-                    });
-                    setValidationErrors({ ...validationErrors, option_b: "" });
+                      option_b: value,
+                    };
+
+                    setNewQuestion(updatedQuestion);
+
+                    // Required validation
+                    let fieldError = validateField("option_b", value);
+
+                    // Duplicate validation
+                    const duplicateErrors =
+                      validateUniqueOptions(updatedQuestion);
+
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      option_a: duplicateErrors.option_a || "",
+                      option_b: duplicateErrors.option_b || fieldError,
+                      option_c: duplicateErrors.option_c || "",
+                      option_d: duplicateErrors.option_d || "",
+                    }));
                   }}
                   error={!!validationErrors.option_b}
                   helperText={validationErrors.option_b}
@@ -1443,11 +1618,29 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                   margin="dense"
                   value={newQuestion.option_c}
                   onChange={(e) => {
-                    setNewQuestion({
+                    const value = e.target.value;
+
+                    const updatedQuestion = {
                       ...newQuestion,
-                      option_c: e.target.value,
-                    });
-                    setValidationErrors({ ...validationErrors, option_c: "" });
+                      option_c: value,
+                    };
+
+                    setNewQuestion(updatedQuestion);
+
+                    // Required validation
+                    let fieldError = validateField("option_c", value);
+
+                    // Duplicate validation
+                    const duplicateErrors =
+                      validateUniqueOptions(updatedQuestion);
+
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      option_a: duplicateErrors.option_a || "",
+                      option_b: duplicateErrors.option_b || "",
+                      option_c: duplicateErrors.option_c || fieldError,
+                      option_d: duplicateErrors.option_d || "",
+                    }));
                   }}
                   error={!!validationErrors.option_c}
                   helperText={validationErrors.option_c}
@@ -1458,11 +1651,29 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                   margin="dense"
                   value={newQuestion.option_d}
                   onChange={(e) => {
-                    setNewQuestion({
+                    const value = e.target.value;
+
+                    const updatedQuestion = {
                       ...newQuestion,
-                      option_d: e.target.value,
-                    });
-                    setValidationErrors({ ...validationErrors, option_d: "" });
+                      option_d: value,
+                    };
+
+                    setNewQuestion(updatedQuestion);
+
+                    // Required validation
+                    let fieldError = validateField("option_d", value);
+
+                    // Duplicate validation
+                    const duplicateErrors =
+                      validateUniqueOptions(updatedQuestion);
+
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      option_a: duplicateErrors.option_a || "",
+                      option_b: duplicateErrors.option_b || "",
+                      option_c: duplicateErrors.option_c || "",
+                      option_d: duplicateErrors.option_d || fieldError,
+                    }));
                   }}
                   error={!!validationErrors.option_d}
                   helperText={validationErrors.option_d}
@@ -1481,10 +1692,13 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                         ...newQuestion,
                         correct_answer: e.target.value,
                       });
-                      setValidationErrors({
-                        ...validationErrors,
-                        correct_answer: "",
-                      });
+                      setValidationErrors((prev) => ({
+                        ...prev,
+                        correct_answer: validateField(
+                          "correct_answer",
+                          e.target.value,
+                        ),
+                      }));
                     }}
                   >
                     <MenuItem value="A">A: {newQuestion.option_a}</MenuItem>
@@ -1530,8 +1744,16 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
 
             {uploadTypeSelection === "bulk" && (
               <Box sx={{ p: 2 }}>
-                <Typography variant="h6" sx={{ mb: 3 }}>
+                <Typography variant="h6">
                   Bulk Upload Questions
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 3 }}
+                >
+                  (Select a subject and topic before uploading questions in bulk.)
                 </Typography>
 
                 {/* Subject Selection */}
@@ -1614,26 +1836,38 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                 {/* File Upload */}
                 <Box sx={{ mb: 2 }}>
                   <input
+                    ref={bulkFileInputRef}
                     type="file"
                     accept=".csv"
                     onChange={handleFileUpload}
                     style={{ display: "none" }}
                     id="bulk-upload-input"
                   />
-                  <label htmlFor="bulk-upload-input">
-                    <Button
-                      variant="contained"
-                      component="span"
-                      startIcon={<UploadIcon />}
-                      sx={{
-                        background:
-                          "linear-gradient(to right, #6a11cb, #2575fc)",
-                        "&:hover": { opacity: 0.9 },
-                      }}
-                    >
-                      Choose File
-                    </Button>
-                  </label>
+                  <Tooltip
+                    title={
+                      !bulkSelectedSubjectId
+                        ? "Please select a subject to enable file upload"
+                        : !bulkSelectedTopicId
+                          ? "Please select a topic to enable file upload"
+                          : "Upload file"
+                    }
+                    arrow
+                  >
+                    <span>
+                      <label htmlFor="bulk-upload-input">
+                        <Button
+                          variant="contained"
+                          component="span"
+                          startIcon={<UploadIcon />}
+                          disabled={
+                            !bulkSelectedSubjectId || !bulkSelectedTopicId
+                          }
+                        >
+                          Choose File
+                        </Button>
+                      </label>
+                    </span>
+                  </Tooltip>
                 </Box>
 
                 {bulkFile && (
@@ -1643,7 +1877,7 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                 )}
 
                 {/* Subject/Topic validation message */}
-                {!bulkSelectedSubjectId && (
+                {/* {!bulkSelectedSubjectId && (
                   <Alert severity="warning" sx={{ mb: 2 }}>
                     Please select a subject to continue with bulk upload.
                   </Alert>
@@ -1653,7 +1887,7 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
                   <Alert severity="warning" sx={{ mb: 2 }}>
                     Please select a topic to continue with bulk upload.
                   </Alert>
-                )}
+                )} */}
 
                 {/* Preview Table */}
                 {showBulkPreview && (
@@ -1736,67 +1970,63 @@ console.log("QUESTIONS fetch FROM after API 👉", questions);
               </Box>
             )}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseAddModal}>Cancel</Button>
-
-            {uploadTypeSelection === "select" && (
-              <Button
-                variant="contained"
-                disabled={
-                  !uploadTypeSelection || uploadTypeSelection === "select"
-                }
-                onClick={() => {
-                  // This will be handled by radio selection
-                }}
-              >
-                Continue
-              </Button>
-            )}
-
-            {uploadTypeSelection === "individual" && (
-              <Button
-                variant="contained"
-                onClick={handleSaveQuestion}
-                sx={{
-                  background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                  "&:hover": { opacity: 0.9 },
-                }}
-              >
-                {isEditMode ? "Update Question" : "Save Question"}
-              </Button>
-            )}
-
-            {uploadTypeSelection === "bulk" && !showBulkPreview && (
-              <Button
-                variant="outlined"
-                onClick={() => setUploadTypeSelection("select")}
-              >
-                Back
-              </Button>
-            )}
-
-            {uploadTypeSelection === "bulk" && showBulkPreview && (
-              <>
-                <Button
-                  variant="outlined"
-                  onClick={() => setShowBulkPreview(false)}
-                >
-                  Back to Upload
+          <DialogActions
+            sx={{ display: "flex", justifyContent: "space-between" }}
+          >
+            <Box sx={{ display: "flex", gap: 2 }}>
+              {(uploadTypeSelection === "individual" ||
+                (uploadTypeSelection === "bulk" && !showBulkPreview)) && (
+                <Button variant="outlined" onClick={handleBackFromUpload}>
+                  Back
                 </Button>
-                {bulkQuestions.length > 0 && (
+              )}
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button variant="outlined" onClick={handleCloseAddModal}>
+                cancel
+              </Button>
+
+              {uploadTypeSelection === "individual" && (
+                <Button
+                  variant="contained"
+                  onClick={handleSaveQuestion}
+                  sx={{
+                    background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                    "&:hover": { opacity: 0.9 },
+                  }}
+                >
+                  {isEditMode ? "Update Question" : "Save Question"}
+                </Button>
+              )}
+
+              {uploadTypeSelection === "bulk" && showBulkPreview && (
+                <>
                   <Button
-                    variant="contained"
-                    onClick={handleBulkSubmit}
-                    sx={{
-                      background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                      "&:hover": { opacity: 0.9 },
+                    variant="outlined"
+                    onClick={() => {
+                      setShowBulkPreview(false);
+                      resetBulkUpload();
                     }}
                   >
-                    Submit {bulkQuestions.length} Questions
+                    Back to Upload
                   </Button>
-                )}
-              </>
-            )}
+                  {bulkQuestions.length > 0 && (
+                    <Button
+                      variant="contained"
+                      onClick={handleBulkSubmit}
+                      sx={{
+                        background:
+                          "linear-gradient(to right, #6a11cb, #2575fc)",
+                        "&:hover": { opacity: 0.9 },
+                      }}
+                    >
+                      Submit {bulkQuestions.length} Questions
+                    </Button>
+                  )}
+                </>
+              )}
+            </Box>
           </DialogActions>
         </Dialog>
 
