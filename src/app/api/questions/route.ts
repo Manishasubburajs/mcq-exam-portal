@@ -236,42 +236,59 @@ export async function PUT(req: Request) {
 }
 
 // ============================
-// DELETE — delete question (LOCKED)
+// DELETE — bulk delete questions (LOCKED)
 // ============================
 export async function DELETE(req: Request) {
   try {
-    const { id } = await req.json();
+    const body = await req.json();
+    const { id, ids } = body;
 
-    if (!id) {
+    // Normalize to array
+    const questionIds: number[] = ids ? ids : id ? [id] : [];
+
+    if (questionIds.length === 0) {
       return NextResponse.json(
-        { error: "Question ID is required" },
+        { error: "Question ID(s) are required" },
         { status: 400 },
       );
     }
 
-    // 🔒 CHECK EXAM USAGE
-    const examCount = await prisma.exam_questions.count({
-      where: { question_id: id },
+    // 🔒 CHECK EXAM USAGE FOR ANY QUESTION
+    const usedQuestions = await prisma.exam_questions.findMany({
+      where: {
+        question_id: { in: questionIds },
+      },
+      select: {
+        question_id: true,
+      },
     });
 
-    if (examCount > 0) {
+    if (usedQuestions.length > 0) {
       return NextResponse.json(
-        { error: "Cannot delete question. It is already used in an exam." },
+        {
+          error:
+            "Some questions cannot be deleted because they are used in exams",
+          blockedIds: usedQuestions.map((q) => q.question_id),
+        },
         { status: 400 },
       );
     }
 
-    await prisma.questions.delete({
-      where: { question_id: id },
+    // ✅ BULK DELETE
+    await prisma.questions.deleteMany({
+      where: {
+        question_id: { in: questionIds },
+      },
     });
 
     return NextResponse.json({
-      message: "Question deleted successfully",
+      message: "Questions deleted successfully",
+      deletedCount: questionIds.length,
     });
   } catch (error) {
     console.error("DELETE /api/questions error:", error);
     return NextResponse.json(
-      { error: "Failed to delete question" },
+      { error: "Failed to delete questions" },
       { status: 500 },
     );
   }

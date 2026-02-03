@@ -31,6 +31,8 @@ import {
   FormControlLabel,
   Alert,
   Snackbar,
+  Checkbox,
+  styled,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -46,6 +48,15 @@ import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
 
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
+
+const StyledDialog = styled(Dialog)(({ theme }) => ({
+  "& .MuiDialogContent-root": {
+    padding: theme.spacing(3),
+  },
+  "& .MuiDialogActions-root": {
+    padding: theme.spacing(2),
+  },
+}));
 
 export default function QuestionBankPage() {
   const isDesktop = useMediaQuery("(min-width:769px)");
@@ -108,6 +119,42 @@ export default function QuestionBankPage() {
   const [validationErrors, setValidationErrors] = useState<{
     [key: string]: string;
   }>({});
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    ids: number[];
+  }>({
+    open: false,
+    ids: [],
+  });
+
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const visibleDeletableIds = filteredQuestions
+    .filter((q) => q.canDelete)
+    .map((q) => q.question_id);
+
+  const selectedVisibleIds = selectedIds.filter((id) =>
+    visibleDeletableIds.includes(id),
+  );
+
+  const handleRowSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allDeletableIds = filteredQuestions
+        .filter((q) => q.canDelete)
+        .map((q) => q.question_id);
+
+      setSelectedIds(allDeletableIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
 
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -405,24 +452,35 @@ export default function QuestionBankPage() {
     }
   };
 
-  const handleDeleteQuestion = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this question?")) return;
+  const confirmDeleteQuestions = async () => {
+    const ids = deleteDialog.ids;
+    if (!ids.length) return;
+
     try {
       const res = await fetch("/api/questions", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ ids }),
       });
+
       const data = await res.json();
+
       if (res.ok) {
-        showSnackbar("Question deleted successfully", "success");
+        showSnackbar(
+          `${ids.length} question(s) deleted successfully`,
+          "success",
+        );
+
+        setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
         fetchQuestions();
       } else {
-        showSnackbar(data.error || "Failed to delete question", "error");
+        showSnackbar(data.error || "Failed to delete questions", "error");
       }
-    } catch (err) {
-      console.error(err);
-      showSnackbar("Failed to delete question", "error");
+    } catch (error) {
+      console.error(error);
+      showSnackbar("Something went wrong while deleting", "error");
+    } finally {
+      setDeleteDialog({ open: false, ids: [] });
     }
   };
 
@@ -700,7 +758,7 @@ export default function QuestionBankPage() {
 
       if (data.success) {
         showSnackbar(
-          `✅ Successfully uploaded ${questionsWithIds.length} questions!`,
+          `Successfully uploaded ${questionsWithIds.length} questions!`,
           "success",
         );
         setAddQuestionModalOpen(false);
@@ -711,10 +769,10 @@ export default function QuestionBankPage() {
         setUploadTypeSelection(null);
         fetchQuestions();
       } else {
-        showSnackbar(`❌ ${data.error || "Bulk upload failed"}`, "error");
+        showSnackbar(`${data.error || "Bulk upload failed"}`, "error");
       }
     } catch (error: any) {
-      showSnackbar(`❌ Error: ${error.message}`, "error");
+      showSnackbar(`Error: ${error.message}`, "error");
     }
   };
 
@@ -845,6 +903,11 @@ export default function QuestionBankPage() {
       bulkFileInputRef.current.value = "";
     }
   };
+
+  useEffect(() => {
+    // Reset selection when subject or topic changes
+    setSelectedIds([]);
+  }, [selectedSubjectId, selectedTopicId]);
 
   return (
     <Box
@@ -1016,6 +1079,76 @@ export default function QuestionBankPage() {
                   <Table>
                     <TableHead>
                       <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
+                        <TableCell sx={{ fontWeight: "bold" }}>
+                          <Box
+                            sx={{ display: "flex", flexDirection: "column" }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <Checkbox
+                                size="small"
+                                checked={
+                                  visibleDeletableIds.length > 0 &&
+                                  visibleDeletableIds.every((id) =>
+                                    selectedIds.includes(id),
+                                  )
+                                }
+                                indeterminate={
+                                  selectedVisibleIds.length > 0 &&
+                                  selectedVisibleIds.length <
+                                    visibleDeletableIds.length
+                                }
+                                onChange={(e) =>
+                                  handleSelectAll(e.target.checked)
+                                }
+                              />
+
+                              {selectedIds.filter((id) =>
+                                filteredQuestions.some(
+                                  (q) => q.question_id === id,
+                                ),
+                              ).length > 0 && (
+                                <Tooltip title="Delete selected questions">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() =>
+                                      // handleDeleteQuestions(selectedVisibleIds)
+                                      setDeleteDialog({
+                                        open: true,
+                                        ids: selectedVisibleIds,
+                                      })
+                                    }
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Box>
+                            {/* Selected count */}
+                            {selectedIds.length > 0 && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ ml: 1.5 }}
+                              >
+                                {
+                                  selectedIds.filter((id) =>
+                                    filteredQuestions.some(
+                                      (q) => q.question_id === id,
+                                    ),
+                                  ).length
+                                }{" "}
+                                selected
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>S.No</TableCell>
                         <TableCell sx={{ fontWeight: "bold" }}>
                           Questions
@@ -1032,6 +1165,30 @@ export default function QuestionBankPage() {
                       {paginatedQuestions.length > 0 ? (
                         paginatedQuestions.map((q, index) => (
                           <TableRow key={q.question_id} hover>
+                            <TableCell>
+                              {/* Delete */}
+                              <Tooltip
+                                title={
+                                  q.canDelete
+                                    ? "Delete Question"
+                                    : "Cannot delete: question already used in exam"
+                                }
+                                arrow
+                              >
+                                <span>
+                                  <Checkbox
+                                    size="small"
+                                    disabled={!q.canDelete}
+                                    checked={selectedIds.includes(
+                                      q.question_id,
+                                    )}
+                                    onChange={() =>
+                                      handleRowSelect(q.question_id)
+                                    }
+                                  />
+                                </span>
+                              </Tooltip>
+                            </TableCell>
                             <TableCell>
                               {(currentPage - 1) * itemsPerPage + index + 1}
                             </TableCell>
@@ -1078,28 +1235,6 @@ export default function QuestionBankPage() {
                                       onClick={() => handleEditQuestion(q)}
                                     >
                                       <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  </span>
-                                </Tooltip>
-                                {/* Delete */}
-                                <Tooltip
-                                  title={
-                                    q.canDelete
-                                      ? "Delete Question"
-                                      : "Cannot delete: question already used in exam"
-                                  }
-                                  arrow
-                                >
-                                  <span>
-                                    <IconButton
-                                      size="small"
-                                      color="error"
-                                      disabled={!q.canDelete}
-                                      onClick={() =>
-                                        handleDeleteQuestion(q.question_id)
-                                      }
-                                    >
-                                      <DeleteIcon fontSize="small" />
                                     </IconButton>
                                   </span>
                                 </Tooltip>
@@ -1744,16 +1879,15 @@ export default function QuestionBankPage() {
 
             {uploadTypeSelection === "bulk" && (
               <Box sx={{ p: 2 }}>
-                <Typography variant="h6">
-                  Bulk Upload Questions
-                </Typography>
+                <Typography variant="h6">Bulk Upload Questions</Typography>
 
                 <Typography
                   variant="body2"
                   color="text.secondary"
                   sx={{ mb: 3 }}
                 >
-                  (Select a subject and topic before uploading questions in bulk.)
+                  (Select a subject and topic before uploading questions in
+                  bulk.)
                 </Typography>
 
                 {/* Subject Selection */}
@@ -2029,6 +2163,62 @@ export default function QuestionBankPage() {
             </Box>
           </DialogActions>
         </Dialog>
+
+        <StyledDialog
+          open={deleteDialog.open}
+          onClose={() => setDeleteDialog({ open: false, ids: [] })}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
+            Confirm Delete
+            <IconButton
+              aria-label="close"
+              onClick={() =>
+                setDeleteDialog({
+                  open: false,
+                  ids: [],
+                })
+              }
+              sx={(theme) => ({
+                position: "absolute",
+                right: 12,
+                top: 12,
+                color: theme.palette.grey[500],
+              })}
+            >
+              <Close />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent dividers>
+            <Typography>
+              Are you sure you want to delete <b>{deleteDialog.ids.length}</b>{" "}
+              selected question(s)?{" "}
+            </Typography>
+          </DialogContent>
+
+          <DialogActions>
+            <Button
+              onClick={() =>
+                setDeleteDialog({
+                  open: false,
+                  ids: [],
+                })
+              }
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="contained"
+              color="error"
+              onClick={confirmDeleteQuestions}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </StyledDialog>
 
         {/* Snackbar for notifications */}
         <Snackbar
