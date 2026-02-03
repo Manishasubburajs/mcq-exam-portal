@@ -13,8 +13,7 @@ export async function GET() {
       },
       select: {
         user_id: true,
-        first_name: true,
-        last_name: true,
+        username: true,
         email: true,
       },
       orderBy: {
