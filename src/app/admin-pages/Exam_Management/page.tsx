@@ -59,6 +59,14 @@ import AssignExamModal from "../../components/AssignExamModal";
 
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
+interface ExamSubject {
+  subject_id: number;
+  subject_name: string;
+  topic_id: number;
+  topic_name: string | null;
+  question_count: number;
+}
+
 interface Exam {
   id: number;
   exam_name: string;
@@ -75,6 +83,7 @@ interface Exam {
   // 🔒 permission flags
   canEdit?: boolean;
   canDelete?: boolean;
+  subjects: ExamSubject[];
 }
 
 const ExamManagement: React.FC = () => {
@@ -242,15 +251,17 @@ const ExamManagement: React.FC = () => {
     let filtered = allExams;
 
     // Filter by subject
-    if (selectedSubjectId) {
-      filtered = filtered.filter(
-        (exam) => exam.subject_id === selectedSubjectId,
+    if (selectedSubjectId && selectedSubjectId !== 0) {
+      filtered = filtered.filter((exam) =>
+        exam.subjects.some((sub) => sub.subject_id === selectedSubjectId),
       );
     }
 
     // Filter by topic
-    if (selectedTopicId) {
-      filtered = filtered.filter((exam) => exam.topic_id === selectedTopicId);
+    if (selectedTopicId && selectedTopicId !== 0) {
+      filtered = filtered.filter((exam) =>
+        exam.subjects.some((sub) => sub.topic_id === selectedTopicId),
+      );
     }
 
     // Filter by search term
@@ -258,8 +269,12 @@ const ExamManagement: React.FC = () => {
       filtered = filtered.filter(
         (exam) =>
           exam.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          exam.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          exam.topic_name?.toLowerCase().includes(searchTerm.toLowerCase()),
+          exam.subjects.some((sub) =>
+            sub.subject_name.toLowerCase().includes(searchTerm.toLowerCase()),
+          ) ||
+          exam.subjects.some((sub) =>
+            sub.topic_name?.toLowerCase().includes(searchTerm.toLowerCase()),
+          ),
       );
     }
 
@@ -489,7 +504,7 @@ const ExamManagement: React.FC = () => {
               <TextField
                 fullWidth
                 label="Search Exams"
-                placeholder="Search by exam name, subject, or topic..."
+                placeholder="Search by exam title..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -545,7 +560,7 @@ const ExamManagement: React.FC = () => {
             <Button variant="outlined" color="secondary" onClick={handleReset}>
               Reset Filters
             </Button>
-            <Button
+            {/* <Button
               variant="contained"
               onClick={handleSearch}
               sx={{
@@ -554,7 +569,7 @@ const ExamManagement: React.FC = () => {
               }}
             >
               Search
-            </Button>
+            </Button> */}
           </Box>
         </Paper>
 
