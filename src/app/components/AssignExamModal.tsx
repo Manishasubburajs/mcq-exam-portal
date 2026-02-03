@@ -27,8 +27,7 @@ interface Props {
 
 interface Student {
   user_id: number;
-  first_name: string;
-  last_name: string;
+  username: string;
   email: string;
 }
 
@@ -172,7 +171,7 @@ export default function AssignExamModal({ open, onClose, examId }: Props) {
                     <Checkbox checked={checked.has(s.user_id)} />
                   </ListItemIcon>
                   <ListItemText
-                    primary={`${s.first_name} ${s.last_name}`}
+                    primary={s.username}
                     secondary={s.email}
                   />
                 </ListItemButton>

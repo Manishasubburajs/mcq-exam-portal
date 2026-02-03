@@ -145,7 +145,6 @@ const SubjectDetails: React.FC = () => {
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
-    title: "",
     message: "",
     severity: "success" as "success" | "error" | "warning",
   });
@@ -160,11 +159,10 @@ const SubjectDetails: React.FC = () => {
   });
 
   const showSnackbar = (
-    title: string,
     message: string,
     severity: "success" | "error" | "warning" = "success",
   ) => {
-    setSnackbar({ open: true, title, message, severity });
+    setSnackbar({ open: true, message, severity });
   };
 
   const closeSnackbar = () => {
@@ -245,6 +243,47 @@ const SubjectDetails: React.FC = () => {
     }
   };
 
+  const validateCreateField = async (
+    field: "subject_name" | "topics",
+    value: any,
+    index?: number,
+  ) => {
+    try {
+      if (field === "subject_name") {
+        await createSubjectSchema.validateAt("subject_name", {
+          ...formData,
+          subject_name: value,
+        });
+
+        setErrors((prev: any) => {
+          const { subject_name, ...rest } = prev;
+          return rest;
+        });
+      }
+
+      if (field === "topics" && index !== undefined) {
+        if (!value.trim()) {
+          setErrors((prev: any) => ({
+            ...prev,
+            [`topic_${index}`]: "Topic name is required",
+          }));
+        } else {
+          setErrors((prev: any) => {
+            const { [`topic_${index}`]: _, ...rest } = prev;
+            return rest;
+          });
+        }
+      }
+    } catch (err: any) {
+      if (field === "subject_name") {
+        setErrors((prev: any) => ({
+          ...prev,
+          subject_name: err.message,
+        }));
+      }
+    }
+  };
+
   // Validate edit form
   const validateEditForm = async (data: EditSubjectForm) => {
     try {
@@ -275,20 +314,75 @@ const SubjectDetails: React.FC = () => {
 
     // remove global topics error when adding new row
     setErrors((prev: any) => {
-      const newErrors = { ...prev };
-      delete newErrors.topics;
-      return newErrors;
+      if (prev.topics === "Enter at least one topic") {
+        const { topics, ...rest } = prev;
+        return rest;
+      }
+      return prev;
     });
   };
 
-  const updateTopic = (index: number, value: string) => {
-    const updatedTopics = formData.topics.map((t, i) =>
-      i === index ? value : t,
-    );
+  const checkDuplicateTopics = (topics: string[]) => {
+    const cleaned = topics
+      .map((t) => t.trim().toLowerCase())
+      .filter((t) => t !== "");
 
-    const newData = { ...formData, topics: updatedTopics };
-    setFormData(newData);
-    validateForm(newData);
+    return new Set(cleaned).size !== cleaned.length;
+  };
+
+  const checkDuplicateEditTopics = (topics: EditTopic[]) => {
+    const cleaned = topics
+      .map((t) => t.topic_name.trim().toLowerCase())
+      .filter((t) => t !== "");
+
+    return new Set(cleaned).size !== cleaned.length;
+  };
+
+  const updateTopic = (index: number, value: string) => {
+    setFormData((prev) => {
+      const updatedTopics = prev.topics.map((t, i) =>
+        i === index ? value : t,
+      );
+
+      // 1️⃣ Required validation (field-level)
+      if (!value.trim()) {
+        setErrors((prevErr: any) => ({
+          ...prevErr,
+          [`topic_${index}`]: "Topic name is required",
+        }));
+      } else {
+        setErrors((prevErr: any) => {
+          const { [`topic_${index}`]: _, ...rest } = prevErr;
+          return rest;
+        });
+      }
+
+      // 2️⃣ Clear "Enter at least one topic"
+      if (updatedTopics.some((t) => t.trim() !== "")) {
+        setErrors((prevErr: any) => {
+          const { topics, ...rest } = prevErr;
+          return rest;
+        });
+      }
+
+      // 3️⃣ DUPLICATE CHECK (array-level handled manually)
+      if (checkDuplicateTopics(updatedTopics)) {
+        setErrors((prevErr: any) => ({
+          ...prevErr,
+          topics: "Duplicate topics are not allowed",
+        }));
+      } else {
+        setErrors((prevErr: any) => {
+          const { topics, ...rest } = prevErr;
+          return rest;
+        });
+      }
+
+      return {
+        ...prev,
+        topics: updatedTopics,
+      };
+    });
   };
 
   const removeTopic = (index: number) => {
@@ -319,7 +413,7 @@ const SubjectDetails: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        showSnackbar("Success", "Subject created successfully!", "success");
+        showSnackbar("Subject created successfully!", "success");
         setCreateModalOpen(false);
         resetForm();
         fetchSubjects(); // Refresh list
@@ -333,7 +427,6 @@ const SubjectDetails: React.FC = () => {
           setErrors(newErrors);
         } else {
           showSnackbar(
-            "Error",
             `Error: ${data.message || "Failed to create subject"}`,
             "error",
           );
@@ -409,14 +502,13 @@ const SubjectDetails: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        showSnackbar("Success", "Subject updated successfully!", "success");
+        showSnackbar("Subject updated successfully!", "success");
         setEditModalOpen(false);
         setSelectedSubject(null);
         setErrors({});
         fetchSubjects();
       } else {
         showSnackbar(
-          "Error",
           data.message || "Failed to update subject",
           "error",
         );
@@ -453,18 +545,18 @@ const SubjectDetails: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        showSnackbar("Subject", "Subject deleted successfully!", "success");
+        setDeleteDialog({ open: false, subjectId: null, subjectName: "" });
+        showSnackbar("Subject deleted successfully!", "success");
         fetchSubjects();
       } else {
         showSnackbar(
-          "Error",
           data.message || "Failed to delete subject",
           "error",
         );
       }
     } catch (error) {
-      showSnackbar("Error", "Network error or server unavailable", "error");
-    } 
+      showSnackbar("Network error or server unavailable", "error");
+    }
   };
 
   return (
@@ -672,9 +764,11 @@ const SubjectDetails: React.FC = () => {
               label="Subject Name"
               value={formData.subject_name}
               onChange={(e) => {
-                const newData = { ...formData, subject_name: e.target.value };
-                setFormData(newData);
-                validateForm(newData);
+                setFormData((prev) => ({
+                  ...prev,
+                  subject_name: e.target.value,
+                }));
+                validateCreateField("subject_name", e.target.value);
               }}
               error={!!errors.subject_name}
               helperText={errors.subject_name}
@@ -819,14 +913,57 @@ const SubjectDetails: React.FC = () => {
                       value={topic.topic_name}
                       disabled={isLocked}
                       onChange={(e) => {
-                        const upadted = editFormData.topics.map((t, i) =>
-                          i === index
-                            ? { ...t, topic_name: e.target.value }
-                            : t,
-                        );
-                        const newData = { ...editFormData, topics: upadted };
-                        setEditFormData(newData);
-                        validateEditForm(newData);
+                        const value = e.target.value;
+
+                        setEditFormData((prev) => {
+                          const updatedTopics = prev.topics.map((t, i) =>
+                            i === index ? { ...t, topic_name: value } : t,
+                          );
+
+                          // 1️⃣ Required validation
+                          if (!value.trim()) {
+                            setErrors((prevErr: any) => ({
+                              ...prevErr,
+                              [`edit_topic_${index}`]: "Topic name is required",
+                            }));
+                          } else {
+                            setErrors((prevErr: any) => {
+                              const { [`edit_topic_${index}`]: _, ...rest } =
+                                prevErr;
+                              return rest;
+                            });
+                          }
+
+                          // 2️⃣ Clear "Enter at least one topic"
+                          if (
+                            updatedTopics.some(
+                              (t) => t.topic_name.trim() !== "",
+                            )
+                          ) {
+                            setErrors((prevErr: any) => {
+                              const { topics, ...rest } = prevErr;
+                              return rest;
+                            });
+                          }
+
+                          // 3️⃣ Duplicate validation (EDIT)
+                          if (checkDuplicateEditTopics(updatedTopics)) {
+                            setErrors((prevErr: any) => ({
+                              ...prevErr,
+                              topics: "Duplicate topics are not allowed",
+                            }));
+                          } else {
+                            setErrors((prevErr: any) => {
+                              const { topics, ...rest } = prevErr;
+                              return rest;
+                            });
+                          }
+
+                          return {
+                            ...prev,
+                            topics: updatedTopics,
+                          };
+                        });
                       }}
                       error={!isLocked && !!errors[`edit_topic_${index}`]}
                       helperText={
@@ -883,9 +1020,11 @@ const SubjectDetails: React.FC = () => {
 
                   // remove global topics error
                   setErrors((prev: any) => {
-                    const newErrors = { ...prev };
-                    delete newErrors.topics;
-                    return newErrors;
+                    if (prev.topics === "Enter at least one topic") {
+                      const { topics, ...rest } = prev;
+                      return rest;
+                    }
+                    return prev;
                   });
                 }}
                 size="small"
