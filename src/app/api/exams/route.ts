@@ -21,26 +21,48 @@ export async function GET() {
             exam_assignments: true,
           },
         },
+        exam_assignments: {
+          include: {
+            students: true,
+          },
+        },
       },
     });
 
     const transformedExams = exams.map((exam) => {
-      const isAssigned = exam._count.exam_assignments > 0;
+      // Check if any students are assigned
+      const hasAssignedStudents = exam.exam_assignments.some(
+        (assignment) => assignment.students.length > 0,
+      );
+
+      let status = exam.is_active ? "active" : "inactive";
+
+      if (exam.exam_type === "live" && exam.scheduled_end) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const endDate = new Date(exam.scheduled_end);
+        endDate.setHours(0, 0, 0, 0);
+
+        if (endDate < today) {
+          status = "inactive";
+        }
+      }
 
       return {
         id: exam.exam_id,
         exam_name: exam.exam_title,
         exam_type: exam.exam_type,
-        status: exam.is_active ? "active" : "inactive",
+        status,
         questions_count: exam.question_count,
         total_marks: Number(exam.total_marks),
         duration_minutes: exam.time_limit_minutes,
         created_at: exam.created_at.toISOString(),
         scheduled_start: exam.scheduled_start?.toISOString() || null,
         scheduled_end: exam.scheduled_end?.toISOString() || null,
-        
-        canEdit: !isAssigned,
-        canDelete: !isAssigned,
+
+        canEdit: !hasAssignedStudents,
+        canDelete: !hasAssignedStudents,
 
         subjects: exam.exam_subject_configs.map((cfg) => ({
           subject_id: cfg.subject_id,
