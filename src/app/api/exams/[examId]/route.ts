@@ -104,15 +104,30 @@ export async function PUT(
     }
 
     /* 🔒 LOCK: Check if exam already assigned */
-    const assignedCount = await prisma.exam_assignments.count({
-      where: { exam_id: examId },
+    // const assignedCount = await prisma.exam_assignments.count({
+    //   where: { exam_id: examId },
+    // });
+
+    const assignedStudents = await prisma.exam_assignment_students.count({
+      where: {
+        assignment: {
+          exam_id: examId,
+        },
+      },
     });
 
-    if (assignedCount > 0) {
+    const startedAttempts = await prisma.student_exam_attempts.count({
+      where: {
+        exam_id: examId,
+      },
+    });
+
+    if (assignedStudents > 0 || startedAttempts > 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Cannot edit exam. Exam is already assigned to students.",
+          message:
+            "Cannot edit exam. Students assigned or attempts already started.",
         },
         { status: 409 },
       );
@@ -211,19 +226,28 @@ export async function DELETE(
   try {
     const examId = parseInt(params.examId);
 
-    // Check if exam is assigned
-    const assignedCount = await prisma.exam_assignments.count({
+    // Fetch all assignments for this exam
+    const assignments = await prisma.exam_assignments.findMany({
       where: { exam_id: examId },
+      select: { id: true },
     });
 
-    if (assignedCount > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Cannot delete exam. Exam is already assigned to students.",
-        },
-        { status: 409 },
-      );
+    if (assignments.length > 0) {
+      // Count all students assigned across these assignments
+      const studentCount = await prisma.exam_assignment_students.count({
+        where: { assignment_id: { in: assignments.map((a) => a.id) } },
+      });
+
+      if (studentCount > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Cannot delete exam. Exam is already assigned to students.",
+          },
+          { status: 409 },
+        );
+      }
     }
 
     // Delete configs first
