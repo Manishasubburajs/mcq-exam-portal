@@ -28,6 +28,7 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
+  Snackbar,
 } from "@mui/material";
 import { Grid } from "@mui/material";
 import {
@@ -162,6 +163,16 @@ const ExamManagement: React.FC = () => {
     requireID: true,
   });
 
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error" | "warning" | "info",
+  });
+
+  const handleSnackbarClose = () => {
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   useEffect(() => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
@@ -279,7 +290,6 @@ const ExamManagement: React.FC = () => {
     }
 
     setFilteredExams(filtered);
-    setCurrentPage(1);
   }, [allExams, selectedSubjectId, selectedTopicId, searchTerm]);
 
   const getStatusColor = (status: string) => {
@@ -310,15 +320,12 @@ const ExamManagement: React.FC = () => {
     }
   };
 
-  const handleSearch = () => {
-    // Search is automatically handled by useEffect
-  };
-
   const handleReset = () => {
     setSelectedSubjectId(0);
     setSelectedTopicId(0);
     setSearchTerm("");
     setTopics([]);
+    setCurrentPage(1);
   };
 
   const handleSubjectChange = (subjectId: number) => {
@@ -417,16 +424,28 @@ const ExamManagement: React.FC = () => {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        alert("Exam deleted successfully");
+        setSnackbar({
+          open: true,
+          message: "Exam deleted successfully",
+          severity: "success",
+        });
         fetchExams(); // refresh list
         setDeleteModalOpen(false);
         setSelectedExam(null);
       } else {
-        alert(data.message || "Error deleting exam");
+        setSnackbar({
+          open: true,
+          message: data.message || "Error deleting exam",
+          severity: "error",
+        });
       }
     } catch (err) {
       console.error("Error deleting exam:", err);
-      alert("Error deleting exam");
+      setSnackbar({
+        open: true,
+        message: "Error deleting exam",
+        severity: "error",
+      });
     }
   };
 
@@ -434,6 +453,25 @@ const ExamManagement: React.FC = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  const handleAssignmentUpdate = (examId: number, assignedCount: number) => {
+    setAllExams((prev) =>
+      prev.map((exam) =>
+        exam.id === examId
+          ? {
+              ...exam,
+              canEdit: assignedCount === 0,
+              canDelete: assignedCount === 0,
+            }
+          : exam,
+      ),
+    );
+  };
+
+  // ✅ Reset to page 1 only when filter/search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSubjectId, selectedTopicId, searchTerm]);
 
   return (
     <Box
@@ -494,6 +532,7 @@ const ExamManagement: React.FC = () => {
                 background: "linear-gradient(to right, #6a11cb, #2575fc)",
                 "&:hover": { opacity: 0.9 },
               }}
+              disabled={loading}
             >
               Create New Exam
             </Button>
@@ -794,9 +833,15 @@ const ExamManagement: React.FC = () => {
         {/* Delete Confirmation Modal */}
         <Dialog
           open={deleteModalOpen}
-          onClose={() => setDeleteModalOpen(false)}
+          onClose={(event, reason) => {
+            // Prevent closing when clicking outside or pressing Escape
+            if (reason === "backdropClick" || reason === "escapeKeyDown")
+              return;
+            setDeleteModalOpen(false);
+          }}
         >
           <DialogTitle>Confirm Deletion</DialogTitle>
+
           <DialogContent>
             <Typography>
               Are you sure you want to delete the exam "
@@ -819,10 +864,11 @@ const ExamManagement: React.FC = () => {
             open={assignModalOpen}
             onClose={() => setAssignModalOpen(false)}
             examId={assignExamId}
+            onSuccess={handleAssignmentUpdate}
           />
         )}
 
-        {selectedExam && (
+        {/* {selectedExam && ( */}
           <EditExamModal
             open={editModalOpen}
             onClose={() => {
@@ -836,13 +882,29 @@ const ExamManagement: React.FC = () => {
               setSelectedExam(null);
             }}
           />
-        )}
+        {/* )} */}
 
         <ExamDetailsModal
           open={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
           exam={selectedExamForView}
         />
+
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <Alert
+            onClose={handleSnackbarClose}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     </Box>
   );
