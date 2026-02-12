@@ -1988,18 +1988,25 @@ export default function QuestionBankPage() {
                     arrow
                   >
                     <span>
-                      <label htmlFor="bulk-upload-input">
+                      {bulkSelectedSubjectId && bulkSelectedTopicId ? (
+                        <label htmlFor="bulk-upload-input">
+                          <Button
+                            variant="contained"
+                            component="span"
+                            startIcon={<UploadIcon />}
+                          >
+                            Choose File
+                          </Button>
+                        </label>
+                      ) : (
                         <Button
                           variant="contained"
-                          component="span"
                           startIcon={<UploadIcon />}
-                          disabled={
-                            !bulkSelectedSubjectId || !bulkSelectedTopicId
-                          }
+                          disabled
                         >
                           Choose File
                         </Button>
-                      </label>
+                      )}
                     </span>
                   </Tooltip>
                 </Box>
