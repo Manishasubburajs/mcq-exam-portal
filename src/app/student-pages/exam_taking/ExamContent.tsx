@@ -137,8 +137,14 @@ const ExamContent: React.FC = () => {
   }, [examData, timeLeft]);
 
   // Use custom hook to prevent navigation within the application
-  usePreventNavigation(examData?.examType !== "practice", () => {
-    submitExam(true);
+  usePreventNavigation(examData?.examType !== "practice", (href) => {
+    // First, submit the exam
+    submitExam(true).then(() => {
+      // After submission, redirect to the requested page
+      if (href) {
+        router.push(href);
+      }
+    });
   });
 
   // Handle page unload and tab closure
@@ -358,7 +364,7 @@ const ExamContent: React.FC = () => {
     return "unanswered";
   };
 
-  const submitExam = async (autoSubmitted = false) => {
+  const submitExam = async (autoSubmitted = false): Promise<void> => {
     if (submittingRef.current) return;
     submittingRef.current = true;
 
