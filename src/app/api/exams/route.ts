@@ -114,12 +114,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // ⏱ Duration is REQUIRED only for mock & live
-    if ((examType === "mock" || examType === "live") && !duration) {
+    // ⏱ Duration is REQUIRED only for ALL exam types (practice, mock, live)
+    if (!duration || duration <= 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Duration is required for mock and live exams",
+          message: "Duration is required for all exam types",
         },
         { status: 400 },
       );
@@ -145,7 +145,7 @@ export async function POST(req: Request) {
           exam_title: examTitle,
           description,
           exam_type: examType,
-          time_limit_minutes: examType === "practice" ? null : duration,
+          time_limit_minutes: duration || null,
           scheduled_start:
             examType === "live" && startTime ? new Date(startTime) : null,
           scheduled_end:

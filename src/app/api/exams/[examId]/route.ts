@@ -145,11 +145,11 @@ export async function PUT(
     }
 
     /* ⏱ Duration rules */
-    if ((examType === "mock" || examType === "live") && !duration) {
+    if (!duration || duration <= 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Duration is required for mock and live exams",
+          message: "Duration is required for all exam types",
         },
         { status: 400 },
       );
@@ -172,8 +172,8 @@ export async function PUT(
           description,
           exam_type: examType,
 
-          // Practice → no timing
-          time_limit_minutes: examType === "practice" ? null : duration,
+          // For simplicity, we require duration for ALL exam types (practice, mock, live)
+          time_limit_minutes: duration || null,
 
           // Only LIVE exams have schedule
           scheduled_start:

@@ -132,7 +132,7 @@ export default function EditExamModal({
     setExamTitle("");
     setDescription("");
     setExamType("practice");
-    setDuration(60);
+    setDuration("" as any);
 
     setStartTime("");
     setEndTime("");
@@ -150,7 +150,7 @@ export default function EditExamModal({
   const [examType, setExamType] = useState<ExamType>("practice");
 
   // STEP 2: Rules
-  const [duration, setDuration] = useState(60);
+  const [duration, setDuration] = useState<number | "">("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -163,6 +163,7 @@ export default function EditExamModal({
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [existingExams, setExistingExams] = useState<any[]>([]);
   const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
+  const [isHydrated, setIsHydrated] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -180,11 +181,7 @@ export default function EditExamModal({
     });
   };
 
-  const steps = useMemo(() => {
-    return examType === "practice"
-      ? ["General Info", "Questions", "Review"]
-      : ["General Info", "Rules", "Questions", "Review"];
-  }, [examType]);
+  const steps = ["General Info", "Questions", "Rules", "Review"];
 
   const isPractice = examType === "practice";
 
@@ -239,6 +236,7 @@ export default function EditExamModal({
         counts[s.topic_id] = s.question_count;
       });
       setTopicCounts(counts);
+      setIsHydrated(true);
     }
   }, [open, isEdit, examData]);
 
@@ -708,6 +706,18 @@ export default function EditExamModal({
     });
   };
 
+  useEffect(() => {
+    if (examType !== "practice") return;
+    if (!isHydrated && isEdit) return;
+    const calculatedDuration = Math.ceil(totalQuestions * 1.2);
+
+    if (calculatedDuration > 0) {
+      setDuration(calculatedDuration);
+    } else {
+      setDuration(0);
+    }
+  }, [totalQuestions, examType, isHydrated]);
+
   const renderStepContent = () => {
     switch (steps[activeStep]) {
       case "General Info":
@@ -779,11 +789,19 @@ export default function EditExamModal({
         return (
           <Box display="flex" flexDirection="column" gap={2}>
             <TextField
-              label="Duration (minutes)"
+              label={
+                examType === "practice"
+                  ? "Duration (Auto Calculated)"
+                  : "Duration (minutes)"
+              }
               type="number"
               value={duration}
               onChange={handleDurationChange}
-              disabled={examType === "mock" || examType === "live"}
+              disabled={
+                examType === "mock" ||
+                examType === "live" ||
+                examType === "practice"
+              }
               error={!!formErrors.duration}
               helperText={formErrors.duration}
               inputProps={{
