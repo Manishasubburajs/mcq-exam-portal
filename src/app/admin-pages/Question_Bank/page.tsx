@@ -1053,7 +1053,7 @@ export default function QuestionBankPage() {
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <TextField
                   size="small"
-                  placeholder="Filter results..."
+                  placeholder="Search results..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   InputProps={{
