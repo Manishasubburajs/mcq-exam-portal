@@ -28,19 +28,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Exam not found" });
     }
 
-    const completedAttempts = await prisma.student_exam_attempts.count({
+    const existingAttempts = await prisma.student_exam_attempts.count({
       where: {
         student_id: user.userId,
-        exam_id: examId,
-        status: "completed"
+        exam_id: examId
       }
     });
 
-    if (exam.exam_type === "mock" && completedAttempts >= 2) {
+    const attemptNumber = existingAttempts + 1;
+
+    if (exam.exam_type === "mock" && existingAttempts >= 2) {
       return NextResponse.json({ success: false, message: "Mock exam limit reached" });
     }
 
-    if (exam.exam_type === "live" && completedAttempts >= 1) {
+    if (exam.exam_type === "live" && existingAttempts >= 1) {
       return NextResponse.json({ success: false, message: "Live exam already attempted" });
     }
 
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
       data: {
         student_id: user.userId,
         exam_id: examId,
+        attempt_number: attemptNumber,
         status: "in_progress", // ✅ correct enum value
         start_time: new Date() // ✅ matches your schema
       }

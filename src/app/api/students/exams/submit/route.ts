@@ -31,21 +31,49 @@ export async function POST(req: Request) {
     // ---------------- BODY ----------------
     const {
       examId,
+      attemptId,
       answers = {},
       questionTimes = {},
       totalTimeTaken = 0,
     } = await req.json();
 
-    if (!examId) {
+    if (!examId || !attemptId) {
       return NextResponse.json(
-        { success: false, message: "examId required" },
+        { success: false, message: "examId and attemptId required" },
+        { status: 400 }
+      );
+    }
+
+    const parsedExamId = Number(examId);
+    const parsedAttemptId = Number(attemptId);
+
+    if (isNaN(parsedExamId) || isNaN(parsedAttemptId)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid examId or attemptId" },
+        { status: 400 }
+      );
+    }
+
+    // ---------------- VALIDATE ATTEMPT ----------------
+    const attempt = await prisma.student_exam_attempts.findFirst({
+      where: {
+        attempt_id: parsedAttemptId,
+        student_id: studentId,
+        exam_id: parsedExamId,
+        status: "in_progress"
+      }
+    });
+
+    if (!attempt) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or completed attempt" },
         { status: 400 }
       );
     }
 
     // ---------------- TOTAL QUESTIONS ----------------
     const totalQuestions = await prisma.exam_questions.count({
-      where: { exam_id: Number(examId) },
+      where: { exam_id: parsedExamId },
     });
 
     if (totalQuestions === 0) {
@@ -55,26 +83,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // ---------------- CREATE ATTEMPT (ONLY NOW) ----------------
-    const attempt = await prisma.student_exam_attempts.create({
-      data: {
-        exam_id: Number(examId),
-        student_id: studentId,
-        status: "completed",
-        start_time: new Date(),
-        end_time: new Date(),
-        total_time_seconds: totalTimeTaken,
-      },
-    });
-
-    const attemptId = attempt.attempt_id;
-
     // ---------------- SAVE ANSWERS ----------------
     await Promise.all(
       Object.entries(answers).map(([questionId, selectedAnswer]) =>
         prisma.student_answers.create({
           data: {
-            attempt_id: attemptId,
+            attempt_id: parsedAttemptId,
             question_id: Number(questionId),
             selected_answer: selectedAnswer as string,
             time_taken_seconds: questionTimes[questionId] || 0,
@@ -85,7 +99,7 @@ export async function POST(req: Request) {
 
     // ---------------- FETCH ANSWERS WITH CORRECT KEY ----------------
     const savedAnswers = await prisma.student_answers.findMany({
-      where: { attempt_id: attemptId },
+      where: { attempt_id: parsedAttemptId },
       include: {
         question: { select: { correct_answer: true } },
       },
@@ -115,12 +129,15 @@ export async function POST(req: Request) {
 
     // ---------------- UPDATE ATTEMPT RESULT ----------------
     await prisma.student_exam_attempts.update({
-      where: { attempt_id: attemptId },
+      where: { attempt_id: parsedAttemptId },
       data: {
+        status: 'completed',
+        end_time: new Date(),
         score: new Decimal(score),
         correct_answers: correct,
         wrong_answers: wrong,
         unanswered,
+        total_time_seconds: totalTimeTaken,
       },
     });
 
@@ -139,8 +156,17 @@ export async function POST(req: Request) {
 
   } catch (err) {
     console.error("Submit exam error:", err);
+    // Log detailed error for debugging
+    if (err instanceof Error) {
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+    }
     return NextResponse.json(
-      { success: false, message: "Submit failed" },
+      { 
+        success: false, 
+        message: "Submit failed",
+        error: err instanceof Error ? err.message : "Unknown error"
+      },
       { status: 500 }
     );
   }

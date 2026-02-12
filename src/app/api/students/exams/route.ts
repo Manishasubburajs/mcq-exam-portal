@@ -112,26 +112,48 @@ export async function GET(req: Request) {
       },
     });
 
-    const exams = assignedExams.map((a) => {
-      const exam = a.assignment.exam;
-
-      return {
-        id: exam.exam_id,
-        title: exam.exam_title,
-        duration: exam.time_limit_minutes,
-
-        // ✅ UI EXPECTS `questions`
-        questions: exam.question_count,
-
-        examType: exam.exam_type,
-        state: getExamState(exam),
-        startDate: exam.scheduled_start,
-        endDate: exam.scheduled_end,
-
-        // ✅ DISPLAY EXACT DB VALUE
-        points: String(exam.total_marks ?? 0),
-      };
+    // Get all completed attempts for the student
+    const completedAttempts = await prisma.student_exam_attempts.findMany({
+      where: { 
+        student_id: studentId,
+        status: "completed"
+      },
+      select: { exam_id: true }
     });
+
+    const completedExamIds = new Set(completedAttempts.map(attempt => attempt.exam_id));
+
+    const exams = assignedExams
+      .filter(a => {
+        const exam = a.assignment.exam;
+        const state = getExamState(exam);
+        
+        // Only show upcoming or available exams that haven't been completed
+        const isUpcomingOrAvailable = state === "upcoming" || state === "available";
+        const notCompleted = !completedExamIds.has(exam.exam_id);
+        
+        return isUpcomingOrAvailable && notCompleted;
+      })
+      .map((a) => {
+        const exam = a.assignment.exam;
+
+        return {
+          id: exam.exam_id,
+          title: exam.exam_title,
+          duration: exam.time_limit_minutes,
+
+          // ✅ UI EXPECTS `questions`
+          questions: exam.question_count,
+
+          examType: exam.exam_type,
+          state: getExamState(exam),
+          startDate: exam.scheduled_start,
+          endDate: exam.scheduled_end,
+
+          // ✅ DISPLAY EXACT DB VALUE
+          points: String(exam.total_marks ?? 0),
+        };
+      });
 
     return NextResponse.json({ success: true, data: exams });
   } catch (error) {

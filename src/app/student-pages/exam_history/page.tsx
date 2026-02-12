@@ -53,6 +53,7 @@ interface ExamMeta {
   points: string | number;
   score: string | number;
   examType: "practice" | "mock" | "live";
+  attemptNumber?: number;
 }
 
 interface ExamCardProps {
@@ -221,6 +222,26 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }
             Score: {meta.score}/{meta.points}
           </Typography>
         </Box>
+        <Box
+          sx={{
+            flex: { xs: "1 0 100%", sm: "1 0 50%" },
+            mb: { xs: 0.75, sm: 1, md: 1.25 },
+            display: "flex",
+            alignItems: "center",
+            gap: { xs: 0.5, sm: 0.625 },
+          }}
+        >
+          <StarRateIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+          <Typography
+            variant="body2"
+            sx={{
+              color: TEXT_PRIMARY,
+              fontSize: { xs: 13, sm: 14 },
+            }}
+          >
+            Attempt: {meta.attemptNumber}
+          </Typography>
+        </Box>
       </Box>
       <Box
         sx={{
@@ -359,7 +380,7 @@ export default function ExamHistoryPage() {
     router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
   };
 
-  const takeExam = async (attemptId: number) => {
+  const takeExam = async (attemptId: number, examId: number) => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await fetch("/api/students/retake", {
@@ -372,9 +393,9 @@ export default function ExamHistoryPage() {
       });
       const data = await response.json();
       if (data.success) {
-        router.push("/student-pages/my_exams");
+        router.push(`/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`);
       } else {
-        alert(data.message || "Failed to enable retake");
+        alert(data.message || "Failed to create retake");
       }
     } catch (error) {
       console.error("Failed to retake exam:", error);
@@ -457,9 +478,10 @@ export default function ExamHistoryPage() {
                       points: exam.points,
                       score: exam.score,
                       examType: exam.examType,
+                      attemptNumber: exam.attemptNumber,
                     }}
                     onViewResults={() => viewResults(exam.attemptId)}
-                    onTakeExam={() => takeExam(exam.attemptId)}
+                    onTakeExam={() => takeExam(exam.attemptId, exam.examId)}
                     canRetake={exam.canRetake}
                   />
                 </Box>
