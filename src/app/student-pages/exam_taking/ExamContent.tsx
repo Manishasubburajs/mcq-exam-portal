@@ -137,6 +137,28 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [examData, timeLeft]);
 
+  // Handle page refresh
+  useEffect(() => {
+    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
+      if (examData?.examType !== "practice") {
+        e.preventDefault();
+        e.returnValue = '';
+        
+        // Auto-submit the exam
+        await submitExam(true);
+        
+        // Redirect to dashboard
+        window.location.href = "/student-pages";
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [examData]);
+
   // Use custom hook to prevent navigation within the application
   usePreventNavigation(examData?.examType !== "practice", (href) => {
     // First, submit the exam without showing a spinner
