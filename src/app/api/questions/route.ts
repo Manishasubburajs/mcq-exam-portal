@@ -9,43 +9,40 @@ export async function GET() {
     const questions = await prisma.questions.findMany({
       include: {
         subject: true,
+        _count: {
+          select: {
+            exam_questions: true,
+          },
+        },
       },
       orderBy: {
         created_at: "desc",
       },
     });
 
-    const formattedQuestions = await Promise.all(
-      questions.map(async (q) => {
-        // ✅ Count how many exams this specific question is used in
-        const examCount = await prisma.exam_questions.count({
-          where: {
-            question_id: q.question_id,
-          },
-        });
+    const formattedQuestions = questions.map((q) => {
+      const examCount = q._count.exam_questions;
 
-        return {
-          question_id: q.question_id,
-          question_text: q.question_text,
-          option_a: q.option_a,
-          option_b: q.option_b,
-          option_c: q.option_c,
-          option_d: q.option_d,
-          correct_answer: q.correct_answer,
-          points: q.marks,
-          difficulty: q.difficulty,
-          subject_id: q.subject_id,
-          subject_name: q.subject?.subject_name,
-          topic_id: q.topic_id,
-          created_at: q.created_at,
+      return {
+        question_id: q.question_id,
+        question_text: q.question_text,
+        option_a: q.option_a,
+        option_b: q.option_b,
+        option_c: q.option_c,
+        option_d: q.option_d,
+        correct_answer: q.correct_answer,
+        points: q.marks,
+        difficulty: q.difficulty,
+        subject_id: q.subject_id,
+        subject_name: q.subject?.subject_name,
+        topic_id: q.topic_id,
+        created_at: q.created_at,
 
-          // 🔐 LOCK FLAGS (USED BY FRONTEND)
-          examCount,
-          canEdit: examCount === 0,
-          canDelete: examCount === 0,
-        };
-      }),
-    );
+        examCount,
+        canEdit: examCount === 0,
+        canDelete: examCount === 0,
+      };
+    });
 
     return NextResponse.json(formattedQuestions);
   } catch (error) {

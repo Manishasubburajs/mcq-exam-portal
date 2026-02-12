@@ -79,7 +79,7 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0.5 : 2, flexWrap: 'wrap' }}>
-        <Button
+        {/* <Button
           variant="contained"
           onClick={handleNewExam}
           size={isMobile ? 'small' : 'medium'}
@@ -89,7 +89,7 @@ const Header: React.FC<Props> = ({ onMenuClick, title = "Admin Dashboard", sideb
           }}
         >
           New Exam
-        </Button>
+        </Button> */}
         {/* <Button variant="outlined" color="secondary" size={isMobile ? 'small' : 'medium'}>
           Export Data
         </Button> */}
