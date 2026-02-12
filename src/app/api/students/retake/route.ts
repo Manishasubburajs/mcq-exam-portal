@@ -31,33 +31,60 @@ export async function POST(req: Request) {
       );
     }
 
+    const parsedAttemptId = Number(attemptId);
+    if (isNaN(parsedAttemptId)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid attempt ID" },
+        { status: 400 }
+      );
+    }
+
     // Verify the attempt belongs to the student and is completed
-    const attempt = await prisma.student_exam_attempts.findFirst({
+    const originalAttempt = await prisma.student_exam_attempts.findFirst({
       where: {
-        attempt_id: attemptId,
+        attempt_id: parsedAttemptId,
         student_id: studentId,
         status: "completed",
       },
     });
 
-    if (!attempt) {
+    if (!originalAttempt) {
       return NextResponse.json(
         { success: false, message: "Attempt not found or not completed" },
         { status: 404 }
       );
     }
 
-    // Update status to expired so it's not counted as completed
-    await prisma.student_exam_attempts.update({
-      where: { attempt_id: attemptId },
-      data: { status: "expired" },
+    // Get existing attempt count for this exam and student
+    const existingAttempts = await prisma.student_exam_attempts.count({
+      where: {
+        student_id: studentId,
+        exam_id: originalAttempt.exam_id
+      }
     });
 
-    return NextResponse.json({ success: true, message: "Exam retake enabled" });
+    const attemptNumber = existingAttempts + 1;
+
+    // Create new attempt
+    const newAttempt = await prisma.student_exam_attempts.create({
+      data: {
+        student_id: studentId,
+        exam_id: originalAttempt.exam_id,
+        attempt_number: attemptNumber,
+        status: "in_progress",
+        start_time: new Date()
+      }
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "Exam retake created",
+      attemptId: newAttempt.attempt_id
+    });
   } catch (error) {
-    console.error("Error enabling retake:", error);
+    console.error("Error creating retake:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to enable retake" },
+      { success: false, message: "Failed to create retake" },
       { status: 500 }
     );
   }

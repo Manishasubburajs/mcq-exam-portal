@@ -327,8 +327,28 @@ export default function MyExamsPage() {
 
   console.log("availableExams", availableExams);
 
-  const startExam = (examId: number) => {
-    router.push(`/student-pages/exam_taking?examId=${examId}`);
+  const startExam = async (examId: number) => {
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await fetch("/api/students/start", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ examId })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        router.push(`/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`);
+      } else {
+        alert(data.message || "Failed to start exam");
+      }
+    } catch (error) {
+      console.error("Failed to start exam:", error);
+      alert("Failed to start exam");
+    }
   };
 
   return (

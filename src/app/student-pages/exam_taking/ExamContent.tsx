@@ -29,7 +29,7 @@ const ExamContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const examId = searchParams.get("examId");
-  // const attemptId = searchParams.get("attemptId");
+  const attemptId = searchParams.get("attemptId");
 
   const { sidebarOpen } = useSidebar();
   const isDesktop = useMediaQuery("(min-width:1024px)");
@@ -64,6 +64,24 @@ const ExamContent: React.FC = () => {
     // Initialize violation count
     const stored = sessionStorage.getItem(`violation_${examId}`);
     setViolationCount(stored ? parseInt(stored, 10) : 0);
+
+    // Check for stuck attempts on page load
+    const checkStuckAttempts = async () => {
+      try {
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const response = await fetch("/api/students/exams/check-stuck-attempts", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+        console.log("Check stuck attempts response:", data);
+      } catch (error) {
+        console.error("Error checking for stuck attempts:", error);
+      }
+    };
+
+    checkStuckAttempts();
 
     const fetchExam = async () => {
       try {
@@ -117,23 +135,45 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [examData, timeLeft]);
 
-  // Prevent right-click and leaving the page
+  // Handle page unload and tab closure
+  useEffect(() => {
+    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
+      // For normal page refresh or navigation away
+      if (examData?.examType !== "practice") {
+        e.preventDefault();
+        e.returnValue = ''; // Required for some browsers
+
+        // Attempt to submit exam in background
+        try {
+          sessionStorage.setItem("autoSubmit", "true");
+          sessionStorage.setItem(`exam_${examId}_userAnswers`, JSON.stringify(userAnswers));
+          sessionStorage.setItem(`exam_${examId}_questionTimes`, JSON.stringify(questionTimeMap.current));
+          // We can't await fetch here because browser will cancel it
+          submitExam(true);
+        } catch (error) {
+          console.error("Error submitting exam on unload:", error);
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [examData, userAnswers, questionTimeMap.current, examId]);
+
+  // Prevent right-click during exam
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       alert("Right-click is disabled during the exam.");
     };
 
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-
     document.addEventListener("contextmenu", handleContextMenu);
-    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
 
@@ -171,11 +211,32 @@ const ExamContent: React.FC = () => {
     };
   }, [examData, violationCount, examId]); // ✅ replace attemptId with examId
 
-  // Check for auto submit flag
+  // Auto-save answers periodically
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      sessionStorage.setItem(`exam_${examId}_userAnswers`, JSON.stringify(userAnswers));
+      sessionStorage.setItem(`exam_${examId}_questionTimes`, JSON.stringify(questionTimeMap.current));
+    }, 30000); // Save every 30 seconds
+
+    return () => {
+      clearInterval(autoSaveInterval);
+    };
+  }, [userAnswers, questionTimeMap.current, examId]);
+
+  // Check for auto submit flag and restore saved answers
   useEffect(() => {
     const autoSubmit = sessionStorage.getItem("autoSubmit");
     if (autoSubmit === "true") {
       sessionStorage.removeItem("autoSubmit");
+      // Restore saved answers and question times
+      const savedAnswers = sessionStorage.getItem(`exam_${examId}_userAnswers`);
+      const savedQuestionTimes = sessionStorage.getItem(`exam_${examId}_questionTimes`);
+      if (savedAnswers) {
+        setUserAnswers(JSON.parse(savedAnswers));
+      }
+      if (savedQuestionTimes) {
+        questionTimeMap.current = JSON.parse(savedQuestionTimes);
+      }
       setShowLiveWarning(true);
       setTimeout(() => submitExam(true), 1500);
     }
@@ -288,6 +349,7 @@ const ExamContent: React.FC = () => {
 
     const payload = {
       examId,
+      attemptId,
       answers: userAnswers,
       questionTimes: questionTimeMap.current,
       totalTimeTaken,
@@ -322,10 +384,12 @@ const ExamContent: React.FC = () => {
         return;
       }
 
-      // ✅ NEW attemptId comes from backend
-      const newAttemptId = data.attemptId;
+      // Clear saved data from sessionStorage
+      sessionStorage.removeItem(`exam_${examId}_userAnswers`);
+      sessionStorage.removeItem(`exam_${examId}_questionTimes`);
+
       // ✅ Success → redirect
-      router.push(`/student-pages/exam_res_rev?attemptId=${newAttemptId}`);
+      router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
     } catch (err) {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;

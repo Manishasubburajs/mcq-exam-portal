@@ -145,23 +145,23 @@ model student_details {
 }
 
 model student_exam_attempts {
-  attempt_id             Int                          @id @default(autoincrement())
-  student_id             Int
-  exam_id                Int
-  start_time             DateTime
-  end_time               DateTime?
-  total_time_seconds     Int?
-  score                  Decimal                      @default(0) @db.Decimal(12, 4)
-  correct_answers        Int                          @default(0)
-  wrong_answers          Int                          @default(0)
-  unanswered             Int                          @default(0)
-  status                 student_exam_attempts_status @default(in_progress)
-  student_answers        student_answers[]
-  exam                   exams                        @relation(fields: [exam_id], references: [exam_id])
-  student                users                        @relation(fields: [student_id], references: [user_id])
+  attempt_id            Int                          @id @default(autoincrement())
+  student_id            Int
+  exam_id               Int
+  attempt_number        Int                          @default(1)
+  start_time            DateTime
+  end_time              DateTime?
+  total_time_seconds    Int?
+  score                 Decimal                      @default(0) @db.Decimal(12, 4)
+  correct_answers       Int                          @default(0)
+  wrong_answers         Int                          @default(0)
+  unanswered            Int                          @default(0)
+  status                student_exam_attempts_status @default(in_progress)
+  student_answers       student_answers[]
+  exam                  exams                        @relation(fields: [exam_id], references: [exam_id])
+  student               users                        @relation(fields: [student_id], references: [user_id])
   student_exam_questions student_exam_questions[]
 
-  @@unique([student_id, exam_id])
   @@index([exam_id], map: "student_exam_attempts_exam_id_fkey")
 }
 

@@ -22,6 +22,30 @@ export async function GET(req: Request) {
     }
 
     const studentId = decoded.userId;
+    const { searchParams } = new URL(req.url);
+    const attemptId = searchParams.get("attemptId");
+
+    // If attemptId is provided, fetch single attempt
+    if (attemptId) {
+      const attempt = await prisma.student_exam_attempts.findFirst({
+        where: {
+          attempt_id: Number(attemptId),
+          student_id: studentId
+        },
+        include: {
+          exam: true
+        }
+      });
+
+      if (!attempt) {
+        return NextResponse.json(
+          { success: false, message: "Attempt not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ success: true, data: attempt });
+    }
 
     // Fetch completed attempts
     const attempts = await prisma.student_exam_attempts.findMany({
@@ -79,6 +103,7 @@ export async function GET(req: Request) {
         completedAt: attempt.end_time?.toISOString().split('T')[0] || "N/A",
         totalTimeSeconds: attempt.total_time_seconds,
         canRetake,
+        attemptNumber: attempt.attempt_number,
       };
     }));
 
