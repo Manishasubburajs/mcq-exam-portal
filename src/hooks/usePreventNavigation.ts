@@ -17,6 +17,7 @@ export const usePreventNavigation = (
       const confirmed = window.confirm("Do you want to leave the exam? Your current progress will be saved and the exam will be submitted automatically.");
       if (confirmed) {
         if (onNavigate) {
+          // Call onNavigate without returning to allow it to handle navigation
           onNavigate(href as string);
         } else {
           return originalPush.call(this, href, options);
@@ -28,6 +29,7 @@ export const usePreventNavigation = (
       const confirmed = window.confirm("Do you want to leave the exam? Your current progress will be saved and the exam will be submitted automatically.");
       if (confirmed) {
         if (onNavigate) {
+          // Call onNavigate without returning to allow it to handle navigation
           onNavigate(href as string);
         } else {
           return originalReplace.call(this, href, options);

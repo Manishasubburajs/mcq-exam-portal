@@ -143,7 +143,8 @@ const ExamContent: React.FC = () => {
     submitExam(true).then(() => {
       // After submission, redirect to the requested page
       if (href) {
-        router.push(href);
+        // Use window.location.replace to navigate directly
+        window.location.href = href;
       }
     });
   });
