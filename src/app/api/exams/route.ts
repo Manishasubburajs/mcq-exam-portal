@@ -36,17 +36,15 @@ export async function GET() {
       );
 
       let status = exam.is_active ? "active" : "inactive";
-
-      if (exam.exam_type === "live" && exam.scheduled_end) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const endDate = new Date(exam.scheduled_end);
-        endDate.setHours(0, 0, 0, 0);
-
-        if (endDate < today) {
-          status = "inactive";
-        }
+      if (
+        exam.exam_type === "live" &&
+        exam.scheduled_start &&
+        exam.scheduled_end
+      ) {
+        const now = new Date();
+        const end = new Date(exam.scheduled_end);
+        if (now > end) status = "inactive";
+        else status = "active";
       }
 
       return {
@@ -79,7 +77,7 @@ export async function GET() {
     console.error("Error fetching exams:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch exams" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -112,7 +110,7 @@ export async function POST(req: Request) {
     if (!examTitle || !examType || !topicCounts) {
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -123,7 +121,7 @@ export async function POST(req: Request) {
           success: false,
           message: "Duration is required for mock and live exams",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -132,7 +130,7 @@ export async function POST(req: Request) {
     // -----------------------------
     const totalQuestions = Object.values(topicCounts).reduce(
       (sum, v) => sum + Number(v),
-      0
+      0,
     );
 
     // -----------------------------
@@ -251,7 +249,7 @@ export async function POST(req: Request) {
         success: false,
         message: error.message || "Failed to create exam",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

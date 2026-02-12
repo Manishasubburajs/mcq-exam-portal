@@ -17,6 +17,7 @@ import {
   ListItem,
   ListItemText,
   Avatar,
+  IconButton,
 } from "@mui/material";
 import {
   Timer,
@@ -27,6 +28,7 @@ import {
   Subject as SubjectIcon,
   Topic,
 } from "@mui/icons-material";
+import CloseIcon from "@mui/icons-material/Close";
 
 interface ExamDetails {
   id: number;
@@ -92,104 +94,100 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={(event, reason) => {
+        // Prevent closing when clicking outside or pressing Escape
+        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        onClose();
+      }}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: 2 },
-      }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
-        <Box display="flex" alignItems="center" gap={2}>
-          <Avatar sx={{ bgcolor: "primary.main" }}>
-            {getExamTypeIcon(exam.exam_type)}
-          </Avatar>
-          <Box>
-            <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-              {exam.exam_name}
-            </Typography>
-            <Box display="flex" gap={1} mt={1}>
-              <Chip
-                label={
-                  exam.status.charAt(0).toUpperCase() + exam.status.slice(1)
-                }
-                color={getStatusColor(exam.status)}
-                size="small"
-              />
-              <Chip
-                label={
-                  exam.exam_type.charAt(0).toUpperCase() +
-                  exam.exam_type.slice(1)
-                }
-                color={getExamTypeColor(exam.exam_type)}
-                size="small"
-                icon={getExamTypeIcon(exam.exam_type)}
-              />
-            </Box>
-          </Box>
-        </Box>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        {exam.exam_name}
+        <IconButton onClick={onClose}>
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent dividers>
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="h6"
-            gutterBottom
-            color="primary"
-            sx={{ fontWeight: 600 }}
-          >
-            General Information
-          </Typography>
-          <Box sx={{ pl: 2 }}>
-            <Box sx={{ mb: 2 }}>
-              <Typography
-                variant="body1"
-                sx={{
-                  fontWeight: 500,
-                  color: "text.secondary",
-                  display: "inline",
-                }}
-              >
-                Duration:
+        <Typography fontWeight={700} mb={2}>
+          General Information
+        </Typography>
+
+        <Box overflow="hidden">
+          {/* ROW 1 */}
+          <Grid container p={2}>
+            <Grid size={{ xs: 6 }}>
+              <Typography variant="body2" color="text.secondary">
+                Type
               </Typography>
-              <Typography variant="body1" sx={{ ml: 1, fontWeight: 600 }}>
+              <Typography fontWeight={600}>
+                <Chip
+                  label={
+                    exam.exam_type.charAt(0).toUpperCase() +
+                    exam.exam_type.slice(1)
+                  }
+                  color={getExamTypeColor(exam.exam_type)}
+                  size="small"
+                  icon={getExamTypeIcon(exam.exam_type)}
+                />
+                {/* {exam.exam_type} */}
+              </Typography>
+            </Grid>
+
+            <Grid size={{ xs: 6 }}>
+              <Typography variant="body2" color="text.secondary">
+                Status
+              </Typography>
+              <Typography fontWeight={600}>
+                <Chip
+                  label={
+                    exam.status.charAt(0).toUpperCase() + exam.status.slice(1)
+                  }
+                  color={getStatusColor(exam.status)}
+                  size="small"
+                />
+              </Typography>
+            </Grid>
+          </Grid>
+
+          <Divider />
+
+          {/* ROW 2 */}
+          <Grid container p={2}>
+            <Grid size={{ xs: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                Duration
+              </Typography>
+              <Typography fontWeight={600}>
                 {exam.duration_minutes
-                  ? `${exam.duration_minutes} minutes`
-                  : "No time limit"}
+                  ? `${exam.duration_minutes} min`
+                  : "No Limit"}
               </Typography>
-            </Box>
-            <Box sx={{ mb: 2 }}>
-              <Typography
-                variant="body1"
-                sx={{
-                  fontWeight: 500,
-                  color: "text.secondary",
-                  display: "inline",
-                }}
-              >
-                Total Questions:
+            </Grid>
+
+            <Grid size={{ xs: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                Total Questions
               </Typography>
-              <Typography variant="body1" sx={{ ml: 1, fontWeight: 600 }}>
-                {exam.questions_count}
+              <Typography fontWeight={600}>{exam.questions_count}</Typography>
+            </Grid>
+
+            <Grid size={{ xs: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                Created At
               </Typography>
-            </Box>
-            <Box>
-              <Typography
-                variant="body1"
-                sx={{
-                  fontWeight: 500,
-                  color: "text.secondary",
-                  display: "inline",
-                }}
-              >
-                Created At:
+              <Typography fontWeight={600}>
+                {new Date(exam.created_at).toLocaleDateString()}
               </Typography>
-              <Typography variant="body1" sx={{ ml: 1, fontWeight: 600 }}>
-                {new Date(exam.created_at).toLocaleDateString()} at{" "}
-                {new Date(exam.created_at).toLocaleTimeString()}
-              </Typography>
-            </Box>
-          </Box>
+            </Grid>
+          </Grid>
         </Box>
 
         {exam.description && (
@@ -208,9 +206,10 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
           <>
             <Divider sx={{ my: 3 }} />
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" gutterBottom color="primary">
+              <Typography fontWeight={700} mb={2}>
                 Schedule
               </Typography>
+
               <Grid container spacing={2}>
                 {exam.scheduled_start && (
                   <Grid size={{ xs: 12, sm: 6 }}>
@@ -258,7 +257,7 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
 
         <Divider sx={{ my: 3 }} />
         <Box>
-          <Typography variant="h6" gutterBottom color="primary">
+          <Typography fontWeight={700} mb={2}>
             Subjects & Topics
           </Typography>
           <List>
@@ -267,7 +266,7 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
                 <ListItemText
                   primary={
                     <Box display="flex" alignItems="center" gap={1}>
-                      <SubjectIcon color="action" />
+                      <SubjectIcon color="primary" />
                       <Typography variant="subtitle1" fontWeight="medium">
                         {subject.subject_name}
                       </Typography>

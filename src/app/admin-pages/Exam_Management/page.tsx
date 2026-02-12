@@ -649,148 +649,174 @@ const ExamManagement: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     {paginatedExams.length > 0 ? (
-                      paginatedExams.map((exam) => (
-                        <TableRow key={exam.id} hover>
-                          <TableCell>
-                            <Typography
-                              variant="body1"
-                              sx={{ fontWeight: "medium" }}
-                            >
-                              {exam.exam_name}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={
-                                exam.exam_type.charAt(0).toUpperCase() +
-                                exam.exam_type.slice(1)
-                              }
-                              color={getExamTypeColor(exam.exam_type)}
-                              size="small"
-                              icon={
-                                exam.exam_type === "practice" ? (
-                                  <PlayArrow />
-                                ) : exam.exam_type === "mock" ? (
-                                  <Assessment />
-                                ) : (
-                                  <LiveTv />
-                                )
-                              }
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={
-                                exam.status.charAt(0).toUpperCase() +
-                                exam.status.slice(1)
-                              }
-                              color={getStatusColor(exam.status)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1,
-                              }}
-                            >
-                              <Timer sx={{ fontSize: 16 }} />
-                              <Typography variant="body2">
-                                {exam.duration_minutes
-                                  ? `${exam.duration_minutes} min`
-                                  : "-No Timer-"}
+                      paginatedExams.map((exam) => {
+                        const isLiveInactive =
+                          exam.exam_type === "live" &&
+                          exam.status === "inactive";
+
+                        return (
+                          <TableRow key={exam.id} hover>
+                            <TableCell>
+                              <Typography
+                                variant="body1"
+                                sx={{ fontWeight: "medium" }}
+                              >
+                                {exam.exam_name}
                               </Typography>
-                            </Box>
-                          </TableCell>
-
-                          <TableCell>
-                            <Stack direction="row" spacing={1}>
-                              {/* Assign */}
-                              <Tooltip title="Assign Exam" arrow>
-                                <IconButton
-                                  size="small"
-                                  color="info"
-                                  onClick={() => {
-                                    setAssignExamId(exam.id);
-                                    setAssignModalOpen(true);
-                                  }}
-                                >
-                                  <PersonAddAlt1Icon />
-                                </IconButton>
-                              </Tooltip>
-
-                              {/* Edit */}
-                              <Tooltip
-                                title={
-                                  exam.canEdit
-                                    ? "Edit Exam"
-                                    : "Cannot edit: exam already assigned to students"
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={
+                                  exam.exam_type.charAt(0).toUpperCase() +
+                                  exam.exam_type.slice(1)
                                 }
-                                arrow
-                              >
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    color="primary"
-                                    disabled={exam.canEdit === false}
-                                    onClick={() => handleEditClick(exam)}
-                                  >
-                                    <Edit />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-
-                              {/* View */}
-                              <Tooltip title="View Exam" arrow>
-                                <IconButton
-                                  size="small"
-                                  color="success"
-                                  onClick={() => handleViewClick(exam)}
-                                >
-                                  <Visibility />
-                                </IconButton>
-                              </Tooltip>
-
-                              {/* Delete */}
-                              <Tooltip
-                                title={
-                                  exam.canDelete
-                                    ? "Delete Exam"
-                                    : "Cannot delete: exam already assigned to students"
+                                color={getExamTypeColor(exam.exam_type)}
+                                size="small"
+                                icon={
+                                  exam.exam_type === "practice" ? (
+                                    <PlayArrow />
+                                  ) : exam.exam_type === "mock" ? (
+                                    <Assessment />
+                                  ) : (
+                                    <LiveTv />
+                                  )
                                 }
-                                arrow
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={
+                                  exam.status.charAt(0).toUpperCase() +
+                                  exam.status.slice(1)
+                                }
+                                color={getStatusColor(exam.status)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
                               >
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    disabled={exam.canDelete === false}
-                                    onClick={() => handleDeleteClick(exam)}
-                                  >
-                                    <Delete />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
+                                <Timer sx={{ fontSize: 16 }} />
+                                <Typography variant="body2">
+                                  {exam.duration_minutes
+                                    ? `${exam.duration_minutes} min`
+                                    : "-No Timer-"}
+                                </Typography>
+                              </Box>
+                            </TableCell>
 
-                              {/* Results */}
-                              {(exam.status === "completed" ||
-                                exam.status === "inactive") && (
-                                <Tooltip title="View Results" arrow>
+                            <TableCell>
+                              <Stack direction="row" spacing={1}>
+                                {/* Assign */}
+                                <Tooltip
+                                  title={
+                                    isLiveInactive
+                                      ? "Cannot assign: live exam is inactive"
+                                      : "Assign Exam"
+                                  }
+                                  arrow
+                                >
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="info"
+                                      disabled={isLiveInactive}
+                                      onClick={() => {
+                                        if (isLiveInactive) return;
+                                        setAssignExamId(exam.id);
+                                        setAssignModalOpen(true);
+                                      }}
+                                    >
+                                      <PersonAddAlt1Icon />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+
+                                {/* Edit */}
+                                <Tooltip
+                                  title={
+                                    isLiveInactive
+                                      ? "Cannot edit: live exam is inactive"
+                                      : exam.canEdit
+                                        ? "Edit Exam"
+                                        : "Cannot edit: exam already assigned to students"
+                                  }
+                                  arrow
+                                >
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="primary"
+                                      disabled={
+                                        exam.canEdit === false || isLiveInactive
+                                      }
+                                      onClick={() => handleEditClick(exam)}
+                                    >
+                                      <Edit />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+
+                                {/* View */}
+                                <Tooltip title="View Exam" arrow>
                                   <IconButton
                                     size="small"
-                                    color="warning"
-                                    onClick={() => handleResultsClick(exam)}
+                                    color="success"
+                                    onClick={() => handleViewClick(exam)}
                                   >
-                                    <BarChart />
+                                    <Visibility />
                                   </IconButton>
                                 </Tooltip>
-                              )}
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))
+
+                                {/* Delete */}
+                                <Tooltip
+                                  title={
+                                    isLiveInactive
+                                      ? "Cannot delete: live exam is inactive"
+                                      : exam.canDelete
+                                        ? "Delete Exam"
+                                        : "Cannot delete: exam already assigned to students"
+                                  }
+                                  arrow
+                                >
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      disabled={
+                                        exam.canDelete === false ||
+                                        isLiveInactive
+                                      }
+                                      onClick={() => handleDeleteClick(exam)}
+                                    >
+                                      <Delete />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+
+                                {/* Results */}
+                                {(exam.status === "completed" ||
+                                  exam.status === "inactive") && (
+                                  <Tooltip title="View Results" arrow>
+                                    <IconButton
+                                      size="small"
+                                      color="warning"
+                                      onClick={() => handleResultsClick(exam)}
+                                    >
+                                      <BarChart />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
@@ -869,19 +895,19 @@ const ExamManagement: React.FC = () => {
         )}
 
         {/* {selectedExam && ( */}
-          <EditExamModal
-            open={editModalOpen}
-            onClose={() => {
-              setEditModalOpen(false);
-              setSelectedExam(null);
-            }}
-            examData={selectedExam}
-            onSuccess={() => {
-              fetchExams();
-              setEditModalOpen(false);
-              setSelectedExam(null);
-            }}
-          />
+        <EditExamModal
+          open={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setSelectedExam(null);
+          }}
+          examData={selectedExam}
+          onSuccess={() => {
+            fetchExams();
+            setEditModalOpen(false);
+            setSelectedExam(null);
+          }}
+        />
         {/* )} */}
 
         <ExamDetailsModal
