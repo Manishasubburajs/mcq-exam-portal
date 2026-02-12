@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { usePreventNavigation } from "@/hooks/usePreventNavigation";
 import { useMediaQuery } from "@mui/material";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSidebar } from "@/app/components/student_layout";
@@ -135,10 +136,15 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [examData, timeLeft]);
 
+  // Use custom hook to prevent navigation within the application
+  usePreventNavigation(examData?.examType !== "practice", () => {
+    submitExam(true);
+  });
+
   // Handle page unload and tab closure
   useEffect(() => {
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      // For normal page refresh or navigation away
+      // For all exam types except practice
       if (examData?.examType !== "practice") {
         e.preventDefault();
         e.returnValue = ''; // Required for some browsers
@@ -156,10 +162,26 @@ const ExamContent: React.FC = () => {
       }
     };
 
+    // Handle navigation within the application using browser history
+    const handleNavigation = (event: PopStateEvent) => {
+      if (examData?.examType !== "practice") {
+        const confirmed = window.confirm("Do you want to leave the exam? Your current progress will be saved and the exam will be submitted automatically.");
+        if (confirmed) {
+          submitExam(true);
+        } else {
+          // Prevent navigation
+          window.history.pushState(null, '', window.location.pathname + window.location.search);
+          event.preventDefault();
+        }
+      }
+    };
+
     window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("popstate", handleNavigation);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("popstate", handleNavigation);
     };
   }, [examData, userAnswers, questionTimeMap.current, examId]);
 
