@@ -50,6 +50,7 @@ const ExamContent: React.FC = () => {
   const [showNavigator, setShowNavigator] = useState(true);
   const [showLiveWarning, setShowLiveWarning] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   const questionStartRef = useRef<number>(Date.now());
   const questionTimeMap = useRef<Record<number, number>>({});
@@ -367,6 +368,7 @@ const ExamContent: React.FC = () => {
   const submitExam = async (autoSubmitted = false): Promise<void> => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    setSubmitting(true);
 
     saveQuestionTime();
 
@@ -408,6 +410,7 @@ const ExamContent: React.FC = () => {
       // ❌ Stop if backend failed
       if (!res.ok || !data?.success) {
         submittingRef.current = false;
+        setSubmitting(false);
         alert(data?.message || "Submission failed");
         return;
       }
@@ -421,6 +424,7 @@ const ExamContent: React.FC = () => {
     } catch (err) {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;
+      setSubmitting(false);
       alert("Submission failed");
     }
   };
@@ -718,7 +722,18 @@ const ExamContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Submit Confirmation Modal */}
+        {/* Loading Overlay */}
+        <div
+          className={`${styles.overlay} ${submitting ? styles.show : ""}`}
+          id="loadingOverlay"
+        >
+          <div className={styles.overlayContent}>
+            <i className="fas fa-spinner fa-spin"></i>
+            <p>Submitting exam...</p>
+          </div>
+        </div>
+
+      {/* Submit Confirmation Modal */}
         <div
           className={`${styles.modal} ${showSubmitModal ? styles.show : ""}`}
           id="submitModal"
@@ -741,8 +756,15 @@ const ExamContent: React.FC = () => {
                 className={`${styles.btn} ${styles.btnDanger}`}
                 id="confirmSubmit"
                 onClick={() => submitExam(false)}
+                disabled={submitting}
               >
-                Yes, Submit
+                {submitting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i> Submitting...
+                  </>
+                ) : (
+                  "Yes, Submit"
+                )}
               </button>
             </div>
           </div>
