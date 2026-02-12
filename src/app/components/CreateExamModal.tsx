@@ -20,7 +20,9 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { useState, useMemo, useEffect } from "react";
 import * as Yup from "yup";
 
@@ -62,22 +64,31 @@ const generalInfoSchema = Yup.object({
     .required("Exam type is required"),
 });
 
+const parseLocalDatetime = (value: string) => {
+  if (!value) return new Date("");
+
+  const [datePart, timePart] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minutes] = timePart.split(":").map(Number);
+
+  return new Date(year, month - 1, day, hours, minutes);
+};
+
 const rulesSchema = Yup.object({
   duration: Yup.number()
     .typeError("Duration must be a number")
     .required("Duration is required")
     .min(1, "Duration must be at least 1 minute")
     .max(300, "Duration cannot exceed 300 minutes"),
+
   startTime: Yup.string().when("examType", {
     is: "live",
     then: () =>
       Yup.string()
-        .required("Start date is required")
-        .test("not-past", "Start date must be today or later", (value) => {
+        .required("Start time is required")
+        .test("not-past", "Start time must be now or later", (value) => {
           if (!value) return false;
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          return new Date(value) >= today;
+          return parseLocalDatetime(value) >= new Date();
         }),
     otherwise: () => Yup.string().nullable(),
   }),
@@ -86,14 +97,14 @@ const rulesSchema = Yup.object({
     is: "live",
     then: () =>
       Yup.string()
-        .required("End date is required")
+        .required("End time is required")
         .test(
           "after-start",
-          "End date must be on or after start date",
+          "End time must be after start time",
           function (value) {
             const { startTime } = this.parent;
             if (!value || !startTime) return false;
-            return new Date(value) >= new Date(startTime);
+            return parseLocalDatetime(value) >= parseLocalDatetime(startTime);
           },
         ),
     otherwise: () => Yup.string().nullable(),
@@ -114,7 +125,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     setExamTitle("");
     setDescription("");
     setExamType("practice");
-    setDuration(60);
+    setDuration("" as any);
     setStartTime("");
     setEndTime("");
     setSelectedSubjects([]);
@@ -132,7 +143,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   const [examType, setExamType] = useState<ExamType>("practice");
 
   // STEP 2: Rules
-  const [duration, setDuration] = useState(60);
+  const [duration, setDuration] = useState<number | "">("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
 
@@ -164,11 +175,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     });
   };
 
-  const steps = useMemo(() => {
-    return examType === "practice"
-      ? ["General Info", "Questions", "Review"]
-      : ["General Info", "Rules", "Questions", "Review"];
-  }, [examType]);
+  const steps = ["General Info", "Questions", "Rules", "Review"];
 
   const isPractice = examType === "practice";
 
@@ -201,9 +208,8 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   const handleDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
 
-    // allow empty for typing
     if (rawValue === "") {
-      setDuration(undefined as any);
+      setDuration("" as any);
       setFormErrors((prev) => ({
         ...prev,
         duration: "Duration is required",
@@ -213,7 +219,6 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
     const value = Number(rawValue);
 
-    // hard guard
     if (value < 1) {
       setFormErrors((prev) => ({
         ...prev,
@@ -224,6 +229,15 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     }
 
     setDuration(value);
+
+    // Recalculate endTime if startTime exists
+    if (!startTime) {
+      setEndTime("");
+    } else {
+      const start = parseLocalDatetime(startTime);
+      const end = new Date(start.getTime() + value * 60 * 1000); // add duration in minutes
+      setEndTime(toDatetimeLocal(end.toISOString()));
+    }
 
     // Yup validation
     rulesSchema
@@ -238,26 +252,18 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     if (examType !== "live") return true;
 
     const errors: Record<string, string> = {};
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
 
     if (!start) {
-      errors.startTime = "Start date is required";
-    } else {
-      const startDate = new Date(start);
-      if (startDate < today) {
-        errors.startTime = "Start date must be today or later";
-      }
+      errors.startTime = "Start time is required";
+    } else if (parseLocalDatetime(start) < now) {
+      errors.startTime = "Start time must be now or later";
     }
 
     if (!end) {
-      errors.endTime = "End date is required";
-    } else if (start) {
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      if (endDate < startDate) {
-        errors.endTime = "End date must be on or after start date";
-      }
+      errors.endTime = "End time is required";
+    } else if (start && parseLocalDatetime(end) < parseLocalDatetime(start)) {
+      errors.endTime = "End time must be after start time";
     }
 
     setDateErrors(errors);
@@ -265,7 +271,6 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     return Object.keys(errors).length === 0;
   };
 
-  // Fetch subjects when modal opens
   useEffect(() => {
     if (!open) return;
     setLoadingSubjects(true);
@@ -525,9 +530,18 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       isValid = false;
     }
 
-    // 🚨 total questions validation
-    if (totalQuestions <= 0) {
-      errors.totalQuestions = "Please add at least one question";
+    // // 🚨 total questions validation
+    // if (totalQuestions <= 0) {
+    //   errors.totalQuestions = "Please add at least one question";
+    //   isValid = false;
+    // }
+
+    if (
+      (examType === "mock" || examType === "live") &&
+      totalQuestions > 0 &&
+      totalQuestions !== 100
+    ) {
+      errors.totalQuestions = "Exam must contain exactly 100 questions";
       isValid = false;
     }
 
@@ -623,6 +637,39 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     }));
   };
 
+  const formatReviewDateTime = (value: string) => {
+    if (!value) return "Not set";
+
+    const date = parseLocalDatetime(value);
+
+    return date.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (examType !== "practice") return;
+
+    const calculatedDuration = Math.ceil(totalQuestions * 1.2);
+
+    if (calculatedDuration > 0) {
+      setDuration(calculatedDuration);
+    } else {
+      setDuration(0);
+    }
+  }, [totalQuestions, examType]);
+
   const renderStepContent = () => {
     switch (steps[activeStep]) {
       case "General Info":
@@ -665,6 +712,15 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                 setExamType(type);
                 validateField("examType", type);
                 setActiveStep(0);
+
+                // reset rules-related fields when switching types
+                setStartTime("");
+                setEndTime("");
+                setDateErrors({});
+
+                if (type === "mock" || type === "live") {
+                  setDuration(120);
+                }
               }}
             >
               <FormControlLabel
@@ -682,10 +738,19 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
         return (
           <Box display="flex" flexDirection="column" gap={2}>
             <TextField
-              label="Duration (minutes)"
+              label={
+                examType === "practice"
+                  ? "Duration (Auto Calculated)"
+                  : "Duration (minutes)"
+              }
               type="number"
               value={duration}
               onChange={handleDurationChange}
+              disabled={
+                examType === "mock" ||
+                examType === "live" ||
+                examType === "practice"
+              }
               error={!!formErrors.duration}
               helperText={formErrors.duration}
               inputProps={{
@@ -701,36 +766,47 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
             {examType === "live" && (
               <>
                 <TextField
-                  label="Start Date"
-                  type="date"
+                  label="Start Time"
+                  type="datetime-local"
                   InputLabelProps={{ shrink: true }}
                   value={startTime}
                   onChange={(e) => {
                     const value = e.target.value;
                     setStartTime(value);
-                    validateLiveDates(value, endTime);
+
+                    if (!value) {
+                      setEndTime("");
+                      setDateErrors({});
+                      return;
+                    }
+
+                    let newEnd = "";
+
+                    // Calculate endTime based on duration
+                    if (duration) {
+                      const start = parseLocalDatetime(value);
+                      const end = new Date(
+                        start.getTime() + duration * 60 * 1000,
+                      );
+                      newEnd = toDatetimeLocal(end.toISOString());
+                      setEndTime(toDatetimeLocal(end.toISOString()));
+                    }
+
+                    validateLiveDates(value, newEnd);
                   }}
                   error={!!dateErrors.startTime}
                   helperText={dateErrors.startTime}
                   inputProps={{
-                    min: new Date().toISOString().split("T")[0],
+                    min: toDatetimeLocal(new Date().toISOString()),
                   }}
                 />
+
                 <TextField
-                  label="End Date"
-                  type="date"
+                  label="End Time (Auto Calculated)"
+                  type="datetime-local"
                   InputLabelProps={{ shrink: true }}
                   value={endTime}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setEndTime(value);
-                    validateLiveDates(startTime, value);
-                  }}
-                  error={!!dateErrors.endTime}
-                  helperText={dateErrors.endTime}
-                  inputProps={{
-                    min: startTime || new Date().toISOString().split("T")[0],
-                  }}
+                  InputProps={{ readOnly: true }}
                 />
               </>
             )}
@@ -819,6 +895,13 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                                   min: 0,
                                   max: topic.question_count,
                                 }}
+                                onKeyDown={(e) => {
+                                  if (
+                                    ["-", "+", "e", "E", "."].includes(e.key)
+                                  ) {
+                                    e.preventDefault();
+                                  }
+                                }}
                               />
                             </Box>
                           );
@@ -833,6 +916,10 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
             <Typography fontWeight={700} mt={2}>
               Total Questions: {totalQuestions}
             </Typography>
+
+            {formErrors.totalQuestions && (
+              <Typography color="error">{formErrors.totalQuestions}</Typography>
+            )}
           </Box>
         );
 
@@ -854,10 +941,11 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
             {examType === "live" && (
               <>
                 <Typography>
-                  <b>Start Date:</b> {startTime || "Not set"}
+                  <b>Start Time:</b> {formatReviewDateTime(startTime)}
                 </Typography>
+
                 <Typography>
-                  <b>End Date:</b> {endTime || "Not set"}
+                  <b>End Time:</b> {formatReviewDateTime(endTime)}
                 </Typography>
               </>
             )}
@@ -870,15 +958,29 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     <>
       <Dialog
         open={open}
-        onClose={() => {
+        onClose={(event, reason) => {
+          // Prevent closing when clicking outside or pressing Escape
+          if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+
           resetForm();
           onClose();
         }}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Create New Exam</DialogTitle>
-        <DialogContent>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          Create New Exam
+          <IconButton onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
           <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
             {steps.map((label) => (
               <Step key={label}>

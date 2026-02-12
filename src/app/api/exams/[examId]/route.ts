@@ -35,11 +35,22 @@ export async function GET(
       );
     }
 
+    let status = exam.is_active ? "active" : "inactive";
+    if (exam.exam_type === "live" && exam.scheduled_end) {
+      const now = new Date();
+      const end = new Date(exam.scheduled_end);
+      if (now > end) {
+        status = "inactive"; 
+      } else {
+        status = "active";
+      }
+    }
+
     const transformedExam = {
       id: exam.exam_id,
       exam_name: exam.exam_title,
       exam_type: exam.exam_type,
-      status: exam.is_active ? "active" : "inactive",
+      status,
       questions_count: exam.question_count,
       duration_minutes: exam.time_limit_minutes,
       created_at: exam.created_at.toISOString(),
@@ -134,11 +145,11 @@ export async function PUT(
     }
 
     /* ⏱ Duration rules */
-    if ((examType === "mock" || examType === "live") && !duration) {
+    if (!duration || duration <= 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Duration is required for mock and live exams",
+          message: "Duration is required for all exam types",
         },
         { status: 400 },
       );
@@ -161,8 +172,8 @@ export async function PUT(
           description,
           exam_type: examType,
 
-          // Practice → no timing
-          time_limit_minutes: examType === "practice" ? null : duration,
+          // For simplicity, we require duration for ALL exam types (practice, mock, live)
+          time_limit_minutes: duration || null,
 
           // Only LIVE exams have schedule
           scheduled_start:
