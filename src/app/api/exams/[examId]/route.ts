@@ -35,11 +35,22 @@ export async function GET(
       );
     }
 
+    let status = exam.is_active ? "active" : "inactive";
+    if (exam.exam_type === "live" && exam.scheduled_end) {
+      const now = new Date();
+      const end = new Date(exam.scheduled_end);
+      if (now > end) {
+        status = "inactive"; 
+      } else {
+        status = "active";
+      }
+    }
+
     const transformedExam = {
       id: exam.exam_id,
       exam_name: exam.exam_title,
       exam_type: exam.exam_type,
-      status: exam.is_active ? "active" : "inactive",
+      status,
       questions_count: exam.question_count,
       duration_minutes: exam.time_limit_minutes,
       created_at: exam.created_at.toISOString(),
