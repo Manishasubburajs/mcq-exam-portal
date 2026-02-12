@@ -210,7 +210,7 @@ export default function ExamResultsReview() {
   const totalMarks = resultData.totalMarks || (totalQuestions * 2); // Assuming backend provides totalMarks
   const correctCount = resultData.correct_answers || 0;
   const wrongCount = resultData.wrong_answers || 0;
-  const unansweredCount = totalQuestions - correctCount - wrongCount;
+  const unansweredCount = resultData.unanswered || 0;
   const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0;
 
   const filteredQuestions = questions.filter(

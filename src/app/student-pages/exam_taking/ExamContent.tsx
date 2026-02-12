@@ -415,12 +415,11 @@ const ExamContent: React.FC = () => {
       if (!res.ok || !data?.success) {
         submittingRef.current = false;
         
-        // Only hide loading state when not auto-submitting
+        // Only hide loading state and show alert when not auto-submitting
         if (!autoSubmitted) {
           setSubmitting(false);
+          alert(data?.message || "Submission failed");
         }
-        
-        alert(data?.message || "Submission failed");
         return;
       }
 
@@ -434,12 +433,11 @@ const ExamContent: React.FC = () => {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;
       
-      // Only hide loading state when not auto-submitting
+      // Only hide loading state and show alert when not auto-submitting
       if (!autoSubmitted) {
         setSubmitting(false);
+        alert("Submission failed");
       }
-      
-      alert("Submission failed");
     }
   };
 
