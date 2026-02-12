@@ -139,11 +139,10 @@ const ExamContent: React.FC = () => {
 
   // Use custom hook to prevent navigation within the application
   usePreventNavigation(examData?.examType !== "practice", (href) => {
-    // First, submit the exam
+    // First, submit the exam without showing a spinner
     submitExam(true).then(() => {
       // After submission, redirect to the requested page
       if (href) {
-        // Use window.location.replace to navigate directly
         window.location.href = href;
       }
     });
@@ -369,7 +368,11 @@ const ExamContent: React.FC = () => {
   const submitExam = async (autoSubmitted = false): Promise<void> => {
     if (submittingRef.current) return;
     submittingRef.current = true;
-    setSubmitting(true);
+    
+    // Only show loading state when not auto-submitting (i.e., when using the submit button)
+    if (!autoSubmitted) {
+      setSubmitting(true);
+    }
 
     saveQuestionTime();
 
@@ -411,7 +414,12 @@ const ExamContent: React.FC = () => {
       // ❌ Stop if backend failed
       if (!res.ok || !data?.success) {
         submittingRef.current = false;
-        setSubmitting(false);
+        
+        // Only hide loading state when not auto-submitting
+        if (!autoSubmitted) {
+          setSubmitting(false);
+        }
+        
         alert(data?.message || "Submission failed");
         return;
       }
@@ -425,7 +433,12 @@ const ExamContent: React.FC = () => {
     } catch (err) {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;
-      setSubmitting(false);
+      
+      // Only hide loading state when not auto-submitting
+      if (!autoSubmitted) {
+        setSubmitting(false);
+      }
+      
       alert("Submission failed");
     }
   };
