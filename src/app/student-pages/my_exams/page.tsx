@@ -58,7 +58,7 @@ interface ExamCardProps {
   title: string;
   subject: string;
   meta: ExamMeta;
-  onStart?: () => void;
+  onStart?: (examType: string) => void;
 }
 
 const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
@@ -276,7 +276,7 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
               boxShadow: "none",
               "&:hover": { transform: "translateY(-2px)" },
             }}
-            onClick={onStart}
+            onClick={() => onStart && onStart(meta.examType)}
           >
             Start Exam
           </Button>
@@ -327,7 +327,7 @@ export default function MyExamsPage() {
 
   console.log("availableExams", availableExams);
 
-  const startExam = async (examId: number) => {
+  const startExam = async (examId: number, examType: string) => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await fetch("/api/students/start", {
@@ -341,6 +341,29 @@ export default function MyExamsPage() {
 
       const data = await response.json();
       if (data.success) {
+        // For mock and live exams, enter fullscreen before navigating
+        if (examType === "mock" || examType === "live") {
+          const enterFullscreen = async () => {
+            try {
+              const elem = document.documentElement;
+              if (elem.requestFullscreen) {
+                await elem.requestFullscreen();
+              } else if ((elem as any).webkitRequestFullscreen) {
+                await (elem as any).webkitRequestFullscreen();
+              } else if ((elem as any).mozRequestFullScreen) {
+                await (elem as any).mozRequestFullScreen();
+              } else if ((elem as any).msRequestFullscreen) {
+                await (elem as any).msRequestFullscreen();
+              }
+            } catch (error) {
+              console.error("Fullscreen error:", error);
+              // Continue without fullscreen if request fails
+            }
+          };
+          
+          await enterFullscreen();
+        }
+        
         router.push(`/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`);
       } else {
         alert(data.message || "Failed to start exam");
@@ -426,7 +449,7 @@ export default function MyExamsPage() {
                       points: exam.points ?? 0,
                       examType: exam.examType,
                     }}
-                    onStart={() => startExam(exam.id)}
+                    onStart={(examType) => startExam(exam.id, examType)}
                   />
                 </Box>
               ))

@@ -61,7 +61,7 @@ interface ExamCardProps {
   subject: string;
   meta: ExamMeta;
   onViewResults?: () => void;
-  onTakeExam?: () => void;
+  onTakeExam?: (examType: string) => void;
   canRetake?: boolean;
 }
 
@@ -327,7 +327,7 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }
                   transform: "translateY(-2px)"
                 },
               }}
-              onClick={onTakeExam}
+              onClick={() => onTakeExam && onTakeExam(meta.examType)}
             >
               Retake
             </Button>
@@ -380,7 +380,7 @@ export default function ExamHistoryPage() {
     router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
   };
 
-  const takeExam = async (attemptId: number, examId: number) => {
+  const takeExam = async (attemptId: number, examId: number, examType: string) => {
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await fetch("/api/students/retake", {
@@ -399,6 +399,29 @@ export default function ExamHistoryPage() {
         // Remove any saved answers or question times for previous attempts
         sessionStorage.removeItem(`exam_${examId}_userAnswers`);
         sessionStorage.removeItem(`exam_${examId}_questionTimes`);
+        
+        // For mock exams (live exams don't allow retake), enter fullscreen before navigating
+        if (examType === "mock") {
+          const enterFullscreen = async () => {
+            try {
+              const elem = document.documentElement;
+              if (elem.requestFullscreen) {
+                await elem.requestFullscreen();
+              } else if ((elem as any).webkitRequestFullscreen) {
+                await (elem as any).webkitRequestFullscreen();
+              } else if ((elem as any).mozRequestFullScreen) {
+                await (elem as any).mozRequestFullScreen();
+              } else if ((elem as any).msRequestFullscreen) {
+                await (elem as any).msRequestFullscreen();
+              }
+            } catch (error) {
+              console.error("Fullscreen error:", error);
+              // Continue without fullscreen if request fails
+            }
+          };
+          
+          await enterFullscreen();
+        }
         
         router.push(`/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`);
       } else {
@@ -488,7 +511,7 @@ export default function ExamHistoryPage() {
                       attemptNumber: exam.attemptNumber,
                     }}
                     onViewResults={() => viewResults(exam.attemptId)}
-                    onTakeExam={() => takeExam(exam.attemptId, exam.examId)}
+                    onTakeExam={(examType) => takeExam(exam.attemptId, exam.examId, examType)}
                     canRetake={exam.canRetake}
                   />
                 </Box>

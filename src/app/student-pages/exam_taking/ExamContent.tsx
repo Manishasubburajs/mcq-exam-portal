@@ -51,6 +51,87 @@ const ExamContent: React.FC = () => {
   const [showLiveWarning, setShowLiveWarning] = useState(false);
   const [violationCount, setViolationCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Function to enter fullscreen with browser compatibility
+  const enterFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if ((elem as any).webkitRequestFullscreen) {
+          await (elem as any).webkitRequestFullscreen();
+        } else if ((elem as any).mozRequestFullScreen) {
+          await (elem as any).mozRequestFullScreen();
+        } else if ((elem as any).msRequestFullscreen) {
+          await (elem as any).msRequestFullscreen();
+        }
+      }
+    } catch (error) {
+      console.error("Fullscreen error:", error);
+    }
+  };
+
+  // Function to exit fullscreen
+  const exitFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error("Fullscreen error:", error);
+    }
+  };
+
+  // Listen for fullscreen changes with browser compatibility
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+      
+      // Auto-submit if user exits fullscreen and it's a mock or live exam
+      if (!isCurrentlyFullscreen && examData && (examData.examType === "mock" || examData.examType === "live")) {
+        submitExam(true);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, [examData]);
+
+  // Enter fullscreen when exam starts for mock or live exams
+  useEffect(() => {
+    const initializeExam = async () => {
+      if (examData && (examData.examType === "mock" || examData.examType === "live")) {
+        // Wait for a short time to ensure the DOM is fully rendered
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        try {
+          await enterFullscreen();
+        } catch (error) {
+          console.error("Failed to enter fullscreen automatically:", error);
+          // Silent failure - continue without fullscreen
+        }
+      }
+    };
+    
+    initializeExam();
+  }, [examData]);
 
   const questionStartRef = useRef<number>(Date.now());
   const questionTimeMap = useRef<Record<number, number>>({});
