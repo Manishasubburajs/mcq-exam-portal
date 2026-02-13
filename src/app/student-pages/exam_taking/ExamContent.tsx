@@ -32,9 +32,9 @@ const ExamContent: React.FC = () => {
   const examId = searchParams.get("examId");
   const attemptId = searchParams.get("attemptId");
 
-  const { sidebarOpen } = useSidebar();
   const isDesktop = useMediaQuery("(min-width:1024px)");
-  const leftPosition = isDesktop && sidebarOpen ? "220px" : "0px";
+  // For exam page, we always use full width without sidebar
+  const leftPosition = "0px";
 
   const [examData, setExamData] = useState<ExamData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +55,7 @@ const ExamContent: React.FC = () => {
   const questionStartRef = useRef<number>(Date.now());
   const questionTimeMap = useRef<Record<number, number>>({});
   const submittingRef = useRef(false);
+  const [allowNavigation, setAllowNavigation] = useState(false);
 
   useEffect(() => {
     if (!examId) {
@@ -63,19 +64,33 @@ const ExamContent: React.FC = () => {
       return;
     }
 
-    // Initialize violation count
-    const stored = sessionStorage.getItem(`violation_${examId}`);
+    // Check if exam was automatically submitted (e.g., on refresh)
+    const autoSubmit = sessionStorage.getItem("autoSubmit");
+    if (autoSubmit === "true") {
+      // Remove the flag to prevent infinite redirect loop
+      sessionStorage.removeItem("autoSubmit");
+      // Redirect to results page
+      router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
+      return;
+    }
+
+    // Initialize violation count using attemptId to ensure each attempt is separate
+    const stored = sessionStorage.getItem(`violation_${attemptId}`);
     setViolationCount(stored ? parseInt(stored, 10) : 0);
 
     // Check for stuck attempts on page load
     const checkStuckAttempts = async () => {
       try {
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        const response = await fetch("/api/students/exams/check-stuck-attempts", {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const token =
+          localStorage.getItem("token") || sessionStorage.getItem("token");
+        const response = await fetch(
+          "/api/students/exams/check-stuck-attempts",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
-        });
+        );
         const data = await response.json();
         console.log("Check stuck attempts response:", data);
       } catch (error) {
@@ -137,52 +152,41 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [examData, timeLeft]);
 
-  // Handle page refresh - auto submit and redirect to results
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (examData?.examType !== "practice") {
-        e.preventDefault();
-        e.returnValue = 'Are you sure you want to refresh the page? This will end your exam and show the results.';
-        
-        // Auto-submit the exam in background
-        submitExam(true).then(() => {
-          // Redirect to results page
-          window.location.href = `/student-pages/exam_res_rev?attemptId=${attemptId}`;
-        });
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [examData]);
-
   // Use custom hook to prevent navigation within the application
-  usePreventNavigation(examData?.examType !== "practice", (href) => {
-    // First, submit the exam without showing a spinner
-    submitExam(true).then(() => {
-      // After submission, redirect to the requested page
-      if (href) {
-        window.location.href = href;
-      }
-    });
-  });
+  usePreventNavigation(
+    examData?.examType !== "practice" && !allowNavigation,
+    (href?: string) => {
+      const confirmLeave = window.confirm(
+        "If you leave, your exam will be submitted. Continue?",
+      );
+
+      if (!confirmLeave) return;
+
+      // Call async function inside (not returning Promise)
+      submitExam(true, href);
+    },
+  );
 
   // Handle page unload and tab closure
   useEffect(() => {
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      // For all exam types except practice
-      if (examData?.examType !== "practice") {
-        e.preventDefault();
-        e.returnValue = ''; // Required for some browsers
-
+      if (
+        examData?.examType !== "practice" &&
+        !submittingRef.current &&
+        !allowNavigation
+      ) {
+        // Do NOT show browser popup - remove preventDefault and returnValue
         // Attempt to submit exam in background
         try {
           sessionStorage.setItem("autoSubmit", "true");
-          sessionStorage.setItem(`exam_${examId}_userAnswers`, JSON.stringify(userAnswers));
-          sessionStorage.setItem(`exam_${examId}_questionTimes`, JSON.stringify(questionTimeMap.current));
+          sessionStorage.setItem(
+            `exam_${examId}_userAnswers`,
+            JSON.stringify(userAnswers),
+          );
+          sessionStorage.setItem(
+            `exam_${examId}_questionTimes`,
+            JSON.stringify(questionTimeMap.current),
+          );
           // We can't await fetch here because browser will cancel it
           submitExam(true);
         } catch (error) {
@@ -193,15 +197,12 @@ const ExamContent: React.FC = () => {
 
     // Handle navigation within the application using browser history
     const handleNavigation = (event: PopStateEvent) => {
-      if (examData?.examType !== "practice") {
-        const confirmed = window.confirm("Do you want to leave the exam? Your current progress will be saved and the exam will be submitted automatically.");
-        if (confirmed) {
-          submitExam(true);
-        } else {
-          // Prevent navigation
-          window.history.pushState(null, '', window.location.pathname + window.location.search);
-          event.preventDefault();
-        }
+      if (
+        examData?.examType !== "practice" &&
+        !submittingRef.current &&
+        !allowNavigation
+      ) {
+        submitExam(true);
       }
     };
 
@@ -218,7 +219,7 @@ const ExamContent: React.FC = () => {
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      alert("Right-click is disabled during the exam.");
+      // Right-click is disabled without any alert
     };
 
     document.addEventListener("contextmenu", handleContextMenu);
@@ -235,8 +236,8 @@ const ExamContent: React.FC = () => {
     const handleViolation = () => {
       const newCount = violationCount + 1;
       setViolationCount(newCount);
-      // Use examId instead of attemptId
-      sessionStorage.setItem(`violation_${examId}`, newCount.toString());
+      // Use attemptId to ensure each attempt has separate violation tracking
+      sessionStorage.setItem(`violation_${attemptId}`, newCount.toString());
       setShowLiveWarning(true);
       if (newCount > 1) {
         setTimeout(() => submitExam(true), 1500);
@@ -265,8 +266,14 @@ const ExamContent: React.FC = () => {
   // Auto-save answers periodically
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
-      sessionStorage.setItem(`exam_${examId}_userAnswers`, JSON.stringify(userAnswers));
-      sessionStorage.setItem(`exam_${examId}_questionTimes`, JSON.stringify(questionTimeMap.current));
+      sessionStorage.setItem(
+        `exam_${examId}_userAnswers`,
+        JSON.stringify(userAnswers),
+      );
+      sessionStorage.setItem(
+        `exam_${examId}_questionTimes`,
+        JSON.stringify(questionTimeMap.current),
+      );
     }, 30000); // Save every 30 seconds
 
     return () => {
@@ -281,7 +288,9 @@ const ExamContent: React.FC = () => {
       sessionStorage.removeItem("autoSubmit");
       // Restore saved answers and question times
       const savedAnswers = sessionStorage.getItem(`exam_${examId}_userAnswers`);
-      const savedQuestionTimes = sessionStorage.getItem(`exam_${examId}_questionTimes`);
+      const savedQuestionTimes = sessionStorage.getItem(
+        `exam_${examId}_questionTimes`,
+      );
       if (savedAnswers) {
         setUserAnswers(JSON.parse(savedAnswers));
       }
@@ -387,10 +396,16 @@ const ExamContent: React.FC = () => {
     return "unanswered";
   };
 
-  const submitExam = async (autoSubmitted = false): Promise<void> => {
+  const submitExam = async (
+    autoSubmitted = false,
+    redirectTo?: string,
+  ): Promise<void> => {
     if (submittingRef.current) return;
     submittingRef.current = true;
-    
+
+    // Immediately allow navigation when submit is called
+    setAllowNavigation(true);
+
     // Only show loading state when not auto-submitting (i.e., when using the submit button)
     if (!autoSubmitted) {
       setSubmitting(true);
@@ -436,11 +451,10 @@ const ExamContent: React.FC = () => {
       // ❌ Stop if backend failed
       if (!res.ok || !data?.success) {
         submittingRef.current = false;
-        
-        // Only hide loading state and show alert when not auto-submitting
+
+        // Only hide loading state when not auto-submitting
         if (!autoSubmitted) {
           setSubmitting(false);
-          alert(data?.message || "Submission failed");
         }
         return;
       }
@@ -449,16 +463,27 @@ const ExamContent: React.FC = () => {
       sessionStorage.removeItem(`exam_${examId}_userAnswers`);
       sessionStorage.removeItem(`exam_${examId}_questionTimes`);
 
-      // ✅ Success → redirect
-      router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
+      // Stop loader BEFORE redirect
+      if (!autoSubmitted) {
+        setSubmitting(false);
+      }
+
+      // Allow navigation
+      setAllowNavigation(true);
+
+       // Redirect
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else {
+        router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
+      }
     } catch (err) {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;
-      
-      // Only hide loading state and show alert when not auto-submitting
+
+      // Only hide loading state when not auto-submitting
       if (!autoSubmitted) {
         setSubmitting(false);
-        alert("Submission failed");
       }
     }
   };
@@ -468,13 +493,7 @@ const ExamContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div
-        className={`${styles.examContainer} ${
-          leftPosition === "220px"
-            ? styles.containerShifted
-            : styles.containerFull
-        }`}
-      >
+      <div className={`${styles.examContainer} ${styles.containerFull}`}>
         <div
           style={{
             display: "flex",
@@ -491,13 +510,7 @@ const ExamContent: React.FC = () => {
 
   if (error || !examData) {
     return (
-      <div
-        className={`${styles.examContainer} ${
-          leftPosition === "220px"
-            ? styles.containerShifted
-            : styles.containerFull
-        }`}
-      >
+      <div className={`${styles.examContainer} ${styles.containerFull}`}>
         <div
           style={{
             display: "flex",
@@ -516,19 +529,9 @@ const ExamContent: React.FC = () => {
     <>
       <LiveExamWarningModal open={showLiveWarning} />
 
-      <div
-        className={`${styles.examContainer} ${
-          leftPosition === "220px"
-            ? styles.containerShifted
-            : styles.containerFull
-        }`}
-      >
+      <div className={`${styles.examContainer} ${styles.containerFull}`}>
         {/* Exam Header */}
-        <div
-          className={`${styles.examHeader} ${
-            leftPosition === "220px" ? styles.left220 : styles.left0
-          }`}
-        >
+        <div className={styles.examHeader}>
           <div className={styles.examInfo}>
             <h1>{examData!.title}</h1>
             <p>
@@ -747,9 +750,16 @@ const ExamContent: React.FC = () => {
 
                 <button
                   className={`${styles.btn} ${styles.btnDanger} ${styles.btnLarge}`}
-                  onClick={() => setShowSubmitModal(true)}
+                  onClick={() => submitExam(false)}
+                  disabled={submitting}
                 >
-                  Submit Exam
+                  {submitting ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin"></i> Submitting...
+                    </>
+                  ) : (
+                    "Submit Exam"
+                  )}
                 </button>
               </div>
             </div>
@@ -764,43 +774,6 @@ const ExamContent: React.FC = () => {
           <div className={styles.overlayContent}>
             <i className="fas fa-spinner fa-spin"></i>
             <p>Submitting exam...</p>
-          </div>
-        </div>
-
-      {/* Submit Confirmation Modal */}
-        <div
-          className={`${styles.modal} ${showSubmitModal ? styles.show : ""}`}
-          id="submitModal"
-        >
-          <div className={styles.modalContent}>
-            <h2 className={styles.modalTitle}>Submit Exam?</h2>
-            <p className={styles.modalText} id="modalText">
-              You have answered {answeredCount} out of {examData.totalQuestions}{" "}
-              questions. Are you sure you want to submit your exam?
-            </p>
-            <div className={styles.modalButtons}>
-              <button
-                className={`${styles.btn} ${styles.btnOutline}`}
-                id="cancelSubmit"
-                onClick={() => setShowSubmitModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className={`${styles.btn} ${styles.btnDanger}`}
-                id="confirmSubmit"
-                onClick={() => submitExam(false)}
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin"></i> Submitting...
-                  </>
-                ) : (
-                  "Yes, Submit"
-                )}
-              </button>
-            </div>
           </div>
         </div>
       </div>
