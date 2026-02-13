@@ -137,18 +137,12 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [examData, timeLeft]);
 
-  // Handle page refresh
+  // Prevent page refresh
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (examData?.examType !== "practice") {
         e.preventDefault();
-        e.returnValue = '';
-        
-        // Auto-submit the exam in background
-        submitExam(true).then(() => {
-          // Redirect to dashboard
-          window.location.href = "/student-pages";
-        });
+        e.returnValue = 'Are you sure you want to refresh the page? This will end your exam.';
       }
     };
 
