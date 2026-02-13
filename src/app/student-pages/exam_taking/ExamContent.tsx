@@ -137,12 +137,18 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [examData, timeLeft]);
 
-  // Prevent page refresh
+  // Handle page refresh - auto submit and redirect to results
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (examData?.examType !== "practice") {
         e.preventDefault();
-        e.returnValue = 'Are you sure you want to refresh the page? This will end your exam.';
+        e.returnValue = 'Are you sure you want to refresh the page? This will end your exam and show the results.';
+        
+        // Auto-submit the exam in background
+        submitExam(true).then(() => {
+          // Redirect to results page
+          window.location.href = `/student-pages/exam_res_rev?attemptId=${attemptId}`;
+        });
       }
     };
 
