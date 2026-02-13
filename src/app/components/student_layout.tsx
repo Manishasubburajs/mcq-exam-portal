@@ -27,7 +27,7 @@ export const useSidebar = () => {
 };
 
 function getMobileGalaxyFoldExamPagePaddingTop() {
-  return '100px';
+  return '0px';
 }
 
 function getMobileNonGalaxyFoldExamPagePaddingTop() {
@@ -35,11 +35,11 @@ function getMobileNonGalaxyFoldExamPagePaddingTop() {
 }
 
 function getDesktopGalaxyFoldExamPagePaddingTop() {
-  return '72px';
+  return '0px';
 }
 
 function getDesktopNonGalaxyFoldExamPagePaddingTop() {
-  return '72px';
+  return '0px';
 }
 
 function getGalaxyFoldNonExamPagePaddingTop() {
@@ -90,9 +90,12 @@ function calculatePaddingTop(pageType: PageType, deviceType: DeviceType, foldTyp
 }
 
 function getBoxStyles(paddingTop: string | object, isExamPage: boolean, sidebarOpen: boolean, isMobile: boolean, isTablet: boolean) {
+  // For exam pages, ensure full width without sidebar margin
+  const marginLeft = isExamPage ? 0 : (sidebarOpen && !isMobile && !isTablet ? '220px' : 0);
+  
   return {
     flex: 1,
-    ml: sidebarOpen && !isMobile && !isTablet ? '220px' : 0,
+    ml: marginLeft,
     transition: 'all 0.3s ease',
     width: '100%',
     minHeight: '100vh',
@@ -118,7 +121,11 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   }, [isDesktop]);
 
   const pathname = usePathname();
-  const isExamPage = pathname === '/student-pages/exam_taking';
+  const isExamPage = pathname.startsWith('/student-pages/exam_taking') || pathname.startsWith('/student-pages/exam_res_rev');
+  
+  // For exam page, always hide sidebar regardless of device type
+  // This ensures full-screen experience for mock and live exams
+  const shouldShowSidebar = !isExamPage;
   const deviceType: DeviceType = isMobile ? 'mobile' : 'desktop';
   const foldType: FoldType = isGalaxyFold ? 'galaxyFold' : 'nonGalaxyFold';
   const pageType: PageType = isExamPage ? 'exam' : 'nonExam';
@@ -168,25 +175,31 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
     <SidebarContext.Provider value={contextValue}>
       <StudentDashboardLayout>
         <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'grey.50' }}>
-          <Sidebar isOpen={sidebarOpen} onShowNavigationWarning={handleShowNavigationWarning} />
-          {sidebarOpen && (isMobile || isTablet) && (
-            <Box
-              sx={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                zIndex: 999,
-              }}
-              onClick={() => setSidebarOpen(false)}
-            />
+          {shouldShowSidebar && (
+            <>
+              <Sidebar isOpen={sidebarOpen} onShowNavigationWarning={handleShowNavigationWarning} />
+              {sidebarOpen && (isMobile || isTablet) && (
+                <Box
+                  sx={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    zIndex: 999,
+                  }}
+                  onClick={() => setSidebarOpen(false)}
+                />
+              )}
+            </>
           )}
           <Box
-            sx={getBoxStyles(paddingTop, isExamPage, sidebarOpen, isMobile, isTablet)}
+            sx={getBoxStyles(paddingTop, isExamPage, shouldShowSidebar ? sidebarOpen : false, isMobile, isTablet)}
           >
-            <StudentHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
+            {shouldShowSidebar && (
+              <StudentHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} sidebarOpen={sidebarOpen} />
+            )}
             {children}
           </Box>
         </Box>
