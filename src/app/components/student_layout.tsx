@@ -27,7 +27,7 @@ export const useSidebar = () => {
 };
 
 function getMobileGalaxyFoldExamPagePaddingTop() {
-  return '100px';
+  return '0px';
 }
 
 function getMobileNonGalaxyFoldExamPagePaddingTop() {
@@ -35,11 +35,11 @@ function getMobileNonGalaxyFoldExamPagePaddingTop() {
 }
 
 function getDesktopGalaxyFoldExamPagePaddingTop() {
-  return '72px';
+  return '0px';
 }
 
 function getDesktopNonGalaxyFoldExamPagePaddingTop() {
-  return '72px';
+  return '0px';
 }
 
 function getGalaxyFoldNonExamPagePaddingTop() {
