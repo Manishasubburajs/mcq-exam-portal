@@ -137,13 +137,35 @@ const ExamContent: React.FC = () => {
     return () => clearInterval(timer);
   }, [examData, timeLeft]);
 
+  // Handle page refresh - auto submit and redirect to results
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (examData?.examType !== "practice") {
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to refresh the page? This will end your exam and show the results.';
+        
+        // Auto-submit the exam in background
+        submitExam(true).then(() => {
+          // Redirect to results page
+          window.location.href = `/student-pages/exam_res_rev?attemptId=${attemptId}`;
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [examData]);
+
   // Use custom hook to prevent navigation within the application
   usePreventNavigation(examData?.examType !== "practice", (href) => {
-    // First, submit the exam
+    // First, submit the exam without showing a spinner
     submitExam(true).then(() => {
       // After submission, redirect to the requested page
       if (href) {
-        router.push(href);
+        window.location.href = href;
       }
     });
   });
@@ -368,7 +390,11 @@ const ExamContent: React.FC = () => {
   const submitExam = async (autoSubmitted = false): Promise<void> => {
     if (submittingRef.current) return;
     submittingRef.current = true;
-    setSubmitting(true);
+    
+    // Only show loading state when not auto-submitting (i.e., when using the submit button)
+    if (!autoSubmitted) {
+      setSubmitting(true);
+    }
 
     saveQuestionTime();
 
@@ -410,8 +436,12 @@ const ExamContent: React.FC = () => {
       // ❌ Stop if backend failed
       if (!res.ok || !data?.success) {
         submittingRef.current = false;
-        setSubmitting(false);
-        alert(data?.message || "Submission failed");
+        
+        // Only hide loading state and show alert when not auto-submitting
+        if (!autoSubmitted) {
+          setSubmitting(false);
+          alert(data?.message || "Submission failed");
+        }
         return;
       }
 
@@ -424,8 +454,12 @@ const ExamContent: React.FC = () => {
     } catch (err) {
       console.error("Submit Exam error:", err);
       submittingRef.current = false;
-      setSubmitting(false);
-      alert("Submission failed");
+      
+      // Only hide loading state and show alert when not auto-submitting
+      if (!autoSubmitted) {
+        setSubmitting(false);
+        alert("Submission failed");
+      }
     }
   };
 

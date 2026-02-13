@@ -13,25 +13,21 @@ export const usePreventNavigation = (
     const originalPush = router.push;
     const originalReplace = router.replace;
 
-    router.push = function (href, options) {
-      const confirmed = window.confirm("Do you want to leave the exam? Your current progress will be saved and the exam will be submitted automatically.");
-      if (confirmed) {
-        if (onNavigate) {
-          onNavigate(href as string);
-        } else {
-          return originalPush.call(this, href, options);
-        }
+    (router as any).push = function (href: string, options?: any) {
+      // Auto-submit the exam without showing a confirmation
+      if (onNavigate) {
+        onNavigate(href);
+      } else {
+        return originalPush.call(this, href, options);
       }
     };
 
-    router.replace = function (href, options) {
-      const confirmed = window.confirm("Do you want to leave the exam? Your current progress will be saved and the exam will be submitted automatically.");
-      if (confirmed) {
-        if (onNavigate) {
-          onNavigate(href as string);
-        } else {
-          return originalReplace.call(this, href, options);
-        }
+    (router as any).replace = function (href: string, options?: any) {
+      // Auto-submit the exam without showing a confirmation
+      if (onNavigate) {
+        onNavigate(href);
+      } else {
+        return originalReplace.call(this, href, options);
       }
     };
 
