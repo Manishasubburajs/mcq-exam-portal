@@ -393,6 +393,13 @@ export default function ExamHistoryPage() {
       });
       const data = await response.json();
       if (data.success) {
+        // Clear any existing violation flags for this exam before starting new attempt
+        sessionStorage.removeItem(`violation_${examId}`);
+        sessionStorage.removeItem("autoSubmit");
+        // Remove any saved answers or question times for previous attempts
+        sessionStorage.removeItem(`exam_${examId}_userAnswers`);
+        sessionStorage.removeItem(`exam_${examId}_questionTimes`);
+        
         router.push(`/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`);
       } else {
         alert(data.message || "Failed to create retake");

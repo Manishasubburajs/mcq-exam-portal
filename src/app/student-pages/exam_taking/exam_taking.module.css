@@ -10,12 +10,11 @@
   overflow-x: hidden;
   transition: width 0.3s ease;
 }
-.examContainer.containerFull {
-  width: 100vw;
-}
 
+/* Always use full width for exam container */
+.examContainer.containerFull,
 .examContainer.containerShifted {
-  width: calc(100vw - 220px);
+  width: 100vw;
 }
 
 /* body {
@@ -37,14 +36,7 @@
   margin: 0;
   box-sizing: border-box;
   transition: left 0.3s ease;
-}
-
-.examHeader.left0 {
-  left: 0px;
-}
-
-.examHeader.left220 {
-  left: 220px;
+  left: 0px; /* Always at left 0 for full screen */
 }
 
 
