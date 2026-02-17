@@ -18,6 +18,7 @@ import {
   TextField,
   Snackbar,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useEffect, useState } from "react";
@@ -46,6 +47,9 @@ export default function AssignExamModal({
   const [error, setError] = useState("");
 
   const [preAssigned, setPreAssigned] = useState<number[]>([]);
+  const [completedStudents, setCompletedStudents] = useState<Set<number>>(
+    new Set(),
+  );
   const [checked, setChecked] = useState<Set<number>>(new Set());
 
   // ✅ NEW: shuffle toggle
@@ -88,13 +92,21 @@ export default function AssignExamModal({
       const res = await fetch(`/api/exams/${examId}/assigned-students`);
       const json = await res.json();
       if (json.success) {
-        setPreAssigned(json.data);
-        setChecked(new Set(json.data));
+        const assignedIds = json.data.map((s: any) => s.student_id);
+        const lockedIds = json.data
+          .filter((s: any) => s.isLocked)
+          .map((s: any) => s.student_id);
+
+        setPreAssigned(assignedIds);
+        setChecked(new Set(assignedIds));
+        setCompletedStudents(new Set(lockedIds));
       }
     } catch {}
   };
 
   const toggleStudent = (studentId: number) => {
+    if (completedStudents.has(studentId)) return;
+
     setChecked((prev) => {
       const next = new Set(prev);
       next.has(studentId) ? next.delete(studentId) : next.add(studentId);
@@ -217,7 +229,21 @@ export default function AssignExamModal({
                 <ListItem key={s.user_id} disablePadding>
                   <ListItemButton onClick={() => toggleStudent(s.user_id)}>
                     <ListItemIcon>
-                      <Checkbox checked={checked.has(s.user_id)} />
+                      <Tooltip
+                        title={
+                          completedStudents.has(s.user_id)
+                            ? "Cannot unassign: student started or completed the exam"
+                            : ""
+                        }
+                        arrow
+                      >
+                        <span>
+                          <Checkbox
+                            checked={checked.has(s.user_id)}
+                            disabled={completedStudents.has(s.user_id)}
+                          />
+                        </span>
+                      </Tooltip>
                     </ListItemIcon>
                     <ListItemText primary={s.username} secondary={s.email} />
                   </ListItemButton>
