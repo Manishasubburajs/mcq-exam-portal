@@ -57,6 +57,7 @@ import EditExamModal from "../../components/EditExamModal";
 import ExamDetailsModal from "../../components/ExamDetailsModal";
 import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import AssignExamModal from "../../components/AssignExamModal";
+import ExamResultsModal from "@/app/components/ExamResultsModal";
 
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
@@ -117,6 +118,9 @@ const ExamManagement: React.FC = () => {
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assignExamId, setAssignExamId] = useState<number | null>(null);
+
+  const [resultsModalOpen, setResultsModalOpen] = useState(false);
+  const [resultsExamId, setResultsExamId] = useState<number | null>(null);
 
   // Question availability states
   const [questionCounts, setQuestionCounts] = useState<{
@@ -410,7 +414,8 @@ const ExamManagement: React.FC = () => {
   };
 
   const handleResultsClick = (exam: Exam) => {
-    alert(`Viewing results for: ${exam.exam_name}`);
+    setResultsExamId(exam.id);
+    setResultsModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -915,6 +920,14 @@ const ExamManagement: React.FC = () => {
           onClose={() => setViewModalOpen(false)}
           exam={selectedExamForView}
         />
+
+        {resultsExamId && (
+          <ExamResultsModal
+            open={resultsModalOpen}
+            onClose={() => setResultsModalOpen(false)}
+            examId={resultsExamId}
+          />
+        )}
 
         <Snackbar
           open={snackbar.open}
