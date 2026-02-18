@@ -157,6 +157,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   const [existingExams, setExistingExams] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -582,6 +583,9 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return; // 🚀 Prevent double click
+    setIsSubmitting(true); // 🔒 Lock button immediately
+
     const payload = {
       examTitle,
       description,
@@ -610,6 +614,8 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     } catch (err) {
       console.error(err);
       showSnackbar("Error creating exam", "error");
+    }finally {
+      setIsSubmitting(false); // 🔓 Unlock button
     }
   };
 
@@ -798,6 +804,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                   helperText={dateErrors.startTime}
                   inputProps={{
                     min: toDatetimeLocal(new Date().toISOString()),
+                    max: "9999-12-31T23:59"
                   }}
                 />
 
@@ -994,8 +1001,20 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
           <Button disabled={activeStep === 0} onClick={handleBack}>
             Back
           </Button>
-          <Button variant="contained" onClick={handleNext}>
-            {activeStep === steps.length - 1 ? "Create Exam" : "Next"}
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={isSubmitting}
+          >
+            {activeStep === steps.length - 1 ? (
+              isSubmitting ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                "Create Exam"
+              )
+            ) : (
+              "Next"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
