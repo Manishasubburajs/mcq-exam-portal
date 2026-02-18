@@ -452,9 +452,24 @@ export default function EditExamModal({
 
     // 🚨 subject validation
     if (isPractice) {
-      if (selectedSubjects.length !== 1) {
+      const subjectId = selectedSubjects[0];
+
+      if (!subjectId) {
         errors.subject = "Please select one subject";
         isValid = false;
+      } else {
+        const subject = subjects.find(
+          (s) => s.subject_id === subjectId
+        );
+
+        const hasAssignedTopic = subject?.topics.some(
+          (topic) => (topicCounts[topic.topic_id] || 0) > 0
+        );
+
+        if (!hasAssignedTopic) {
+          errors.subject = "Please assign at least one topic";
+          isValid = false;
+        }
       }
     } else {
       if (selectedSubjects.length === 0) {
