@@ -44,6 +44,7 @@ import {
   Upload as UploadIcon,
   Close,
 } from "@mui/icons-material";
+import CloseIcon from "@mui/icons-material/Close";
 import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
 
@@ -73,7 +74,10 @@ export default function QuestionBankPage() {
   const [selectedTopicId, setSelectedTopicId] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showTable, setShowTable] = useState<boolean>(false);
-
+  const [searchParams, setSearchParams] = useState({
+    subjectId: 0,
+    topicId: 0,
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -247,19 +251,21 @@ export default function QuestionBankPage() {
       );
     }
 
-    // Filter by subject
-    if (selectedSubjectId) {
-      filtered = filtered.filter((q) => q.subject_id === selectedSubjectId);
+    // Filter by subject only if search clicked
+    if (searchParams.subjectId) {
+      filtered = filtered.filter(
+        (q) => q.subject_id === searchParams.subjectId,
+      );
     }
 
-    // Filter by topic
-    if (selectedTopicId) {
-      filtered = filtered.filter((q) => q.topic_id === selectedTopicId);
+    // Filter by topic only if search clicked
+    if (searchParams.topicId) {
+      filtered = filtered.filter((q) => q.topic_id === searchParams.topicId);
     }
 
     setFilteredQuestions(filtered);
-    setCurrentPage(1); // Reset to first page when filters change
-  }, [questions, searchTerm, selectedSubjectId, selectedTopicId]);
+    setCurrentPage(1);
+  }, [questions, searchTerm, searchParams]);
 
   const subjectColors: { [key: string]: { bg: string; text: string } } = {
     Math: { bg: "#e0f7fa", text: "#006064" },
@@ -569,8 +575,16 @@ export default function QuestionBankPage() {
   };
 
   const handleSearch = () => {
-    // Show table when search is performed
+    // Store selected filters in searchParams
+    setSearchParams({
+      subjectId: selectedSubjectId,
+      topicId: selectedTopicId,
+    });
+
+    // Show the table when search is performed
     setShowTable(true);
+
+    setCurrentPage(1);
   };
 
   const handleReset = () => {
@@ -949,8 +963,17 @@ export default function QuestionBankPage() {
           elevation={1}
           sx={{ p: 3, borderRadius: "10px", backgroundColor: "white", mb: 3 }}
         >
-          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-            <Typography variant="h6">Question Bank</Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6">Search & Filter</Typography>
+
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -964,75 +987,64 @@ export default function QuestionBankPage() {
             </Button>
           </Box>
 
-          {/* Search and Filter Controls */}
-          <Paper
-            elevation={1}
-            sx={{ p: 3, borderRadius: "10px", backgroundColor: "#f8f9fa" }}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 2,
+              mb: 2,
+              mt: 3,
+            }}
           >
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Search & Filter
-            </Typography>
-            <Box
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Subject</InputLabel>
+              <Select
+                value={selectedSubjectId}
+                onChange={(e) =>
+                  handleFilterSubjectChange(Number(e.target.value))
+                }
+              >
+                <MenuItem value={0}>All Subjects</MenuItem>
+                {subjects.map((subject) => (
+                  <MenuItem key={subject.subject_id} value={subject.subject_id}>
+                    {subject.subject_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Topic</InputLabel>
+              <Select
+                value={selectedTopicId}
+                onChange={(e) => setSelectedTopicId(Number(e.target.value))}
+                label="Select Topic"
+                disabled={!selectedSubjectId}
+              >
+                <MenuItem value={0}>All Topics</MenuItem>
+                {topics.map((topic) => (
+                  <MenuItem key={topic.topic_id} value={topic.topic_id}>
+                    {topic.topic_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+            <Button variant="outlined" onClick={handleReset}>
+              Reset
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSearch}
               sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: 2,
-                mb: 2,
+                background: "linear-gradient(to right, #6a11cb, #2575fc)",
+                "&:hover": { opacity: 0.9 },
               }}
             >
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Subject</InputLabel>
-                <Select
-                  value={selectedSubjectId}
-                  onChange={(e) =>
-                    handleFilterSubjectChange(Number(e.target.value))
-                  }
-                >
-                  <MenuItem value={0}>All Subjects</MenuItem>
-                  {subjects.map((subject) => (
-                    <MenuItem
-                      key={subject.subject_id}
-                      value={subject.subject_id}
-                    >
-                      {subject.subject_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl fullWidth size="small">
-                <InputLabel>Select Topic</InputLabel>
-                <Select
-                  value={selectedTopicId}
-                  onChange={(e) => setSelectedTopicId(Number(e.target.value))}
-                  label="Select Topic"
-                  disabled={!selectedSubjectId}
-                >
-                  <MenuItem value={0}>All Topics</MenuItem>
-                  {topics.map((topic) => (
-                    <MenuItem key={topic.topic_id} value={topic.topic_id}>
-                      {topic.topic_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <Button
-                variant="contained"
-                onClick={handleSearch}
-                sx={{
-                  background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                  "&:hover": { opacity: 0.9 },
-                }}
-              >
-                Search
-              </Button>
-              <Button variant="outlined" onClick={handleReset}>
-                Reset
-              </Button>
-            </Box>
-          </Paper>
+              Search
+            </Button>
+          </Box>
         </Paper>
 
         {/* Table Card - Separate Card */}
@@ -1473,11 +1485,27 @@ export default function QuestionBankPage() {
         {/* View Modal */}
         <Dialog
           open={viewModalOpen}
-          onClose={() => setViewModalOpen(false)}
+          onClose={(event, reason) => {
+            // Prevent closing when clicking outside or pressing Escape
+            if (reason === "backdropClick" || reason === "escapeKeyDown")
+              return;
+            setViewModalOpen(false);
+          }}
           maxWidth="sm"
           fullWidth
         >
-          <DialogTitle>View Question</DialogTitle>
+          <DialogTitle
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            View Question
+            <IconButton onClick={() => setViewModalOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
           <DialogContent dividers>
             {selectedQuestion && (
               <Box>
@@ -1504,14 +1532,20 @@ export default function QuestionBankPage() {
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setViewModalOpen(false)}>Close</Button>
+            <Button variant="outlined" onClick={() => setViewModalOpen(false)}>
+              Close
+            </Button>
           </DialogActions>
         </Dialog>
 
         {/* Add Questions Main Modal */}
         <Dialog
           open={addQuestionModalOpen}
-          onClose={handleCloseAddModal}
+          onClose={(event, reason) => {
+            if (reason === "backdropClick" || reason === "escapeKeyDown")
+              return;
+            handleCloseAddModal();
+          }}
           maxWidth="lg"
           fullWidth
         >
@@ -1582,7 +1616,9 @@ export default function QuestionBankPage() {
             {uploadTypeSelection === "individual" && (
               <Box sx={{ p: 2 }}>
                 <Typography variant="h6" sx={{ mb: 3 }}>
-                  Add Individual Question
+                  {isEditMode
+                    ? "Edit Individual Question"
+                    : "Add Individual Question"}
                 </Typography>
 
                 <FormControl fullWidth margin="dense">
@@ -2017,19 +2053,6 @@ export default function QuestionBankPage() {
                   </Typography>
                 )}
 
-                {/* Subject/Topic validation message */}
-                {/* {!bulkSelectedSubjectId && (
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    Please select a subject to continue with bulk upload.
-                  </Alert>
-                )}
-
-                {bulkSelectedSubjectId && !bulkSelectedTopicId && (
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    Please select a topic to continue with bulk upload.
-                  </Alert>
-                )} */}
-
                 {/* Preview Table */}
                 {showBulkPreview && (
                   <Box sx={{ mt: 3 }}>
@@ -2115,12 +2138,13 @@ export default function QuestionBankPage() {
             sx={{ display: "flex", justifyContent: "space-between" }}
           >
             <Box sx={{ display: "flex", gap: 2 }}>
-              {(uploadTypeSelection === "individual" ||
-                (uploadTypeSelection === "bulk" && !showBulkPreview)) && (
-                <Button variant="outlined" onClick={handleBackFromUpload}>
-                  Back
-                </Button>
-              )}
+              {!isEditMode &&
+                (uploadTypeSelection === "individual" ||
+                  (uploadTypeSelection === "bulk" && !showBulkPreview)) && (
+                  <Button variant="outlined" onClick={handleBackFromUpload}>
+                    Back
+                  </Button>
+                )}
             </Box>
 
             <Box sx={{ display: "flex", gap: 2 }}>
@@ -2173,32 +2197,18 @@ export default function QuestionBankPage() {
 
         <StyledDialog
           open={deleteDialog.open}
-          onClose={() => setDeleteDialog({ open: false, ids: [] })}
+          onClose={(event, reason) => {
+            // Prevent closing when clicking outside or pressing Escape
+            if (reason === "backdropClick" || reason === "escapeKeyDown")
+              return;
+            setDeleteDialog({ open: false, ids: [] });
+          }}
           maxWidth="xs"
           fullWidth
         >
-          <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
-            Confirm Delete
-            <IconButton
-              aria-label="close"
-              onClick={() =>
-                setDeleteDialog({
-                  open: false,
-                  ids: [],
-                })
-              }
-              sx={(theme) => ({
-                position: "absolute",
-                right: 12,
-                top: 12,
-                color: theme.palette.grey[500],
-              })}
-            >
-              <Close />
-            </IconButton>
-          </DialogTitle>
+          <DialogTitle>Confirm Delete</DialogTitle>
 
-          <DialogContent dividers>
+          <DialogContent>
             <Typography>
               Are you sure you want to delete <b>{deleteDialog.ids.length}</b>{" "}
               selected question(s)?{" "}
@@ -2238,6 +2248,7 @@ export default function QuestionBankPage() {
             onClose={() => setSnackbarOpen(false)}
             severity={snackbarSeverity}
             sx={{ width: "100%" }}
+            variant="filled"
           >
             {snackbarMessage}
           </Alert>
