@@ -20,6 +20,7 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
 
@@ -199,11 +200,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
   // ----------------- FORM RENDER -----------------
   const renderStudentForm = () => (
     <Box>
-      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
-        Account Details
-      </Typography>
-      <Divider sx={{ mb: 2 }} />
-
       <TextField
         label="Username"
         fullWidth
@@ -321,7 +317,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       />
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="outlined" onClick={onClose}>
+          Cancel
+        </Button>
         <Button variant="contained" onClick={handleSubmit}>
           Save Student
         </Button>
@@ -331,11 +329,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
   const renderOtherForm = () => (
     <Box>
-      <Typography variant="h6" sx={{ mt: 1, mb: 1, fontWeight: 600 }}>
-        Account Details
-      </Typography>
-      <Divider sx={{ mb: 2 }} />
-
       <TextField
         label="Username"
         fullWidth
@@ -401,7 +394,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       />
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="outlined" onClick={onClose}>Cancel</Button>
         <Button variant="contained" onClick={handleSubmit}>
           Save {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}
         </Button>
@@ -411,11 +404,29 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
+      <Dialog
+        open={open}
+        onClose={(event, reason) => {
+          if (reason === "backdropClick") return;
+          onClose();
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: "bold",
+          }}
+        >
           Add New {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}
+          <IconButton onClick={onClose}>
+            <Close />
+          </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ mt: 1 }}>
+        <DialogContent dividers>
           {newUser.role === "student" ? renderStudentForm() : renderOtherForm()}
         </DialogContent>
       </Dialog>

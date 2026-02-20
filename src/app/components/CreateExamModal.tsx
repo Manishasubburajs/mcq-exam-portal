@@ -614,7 +614,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     } catch (err) {
       console.error(err);
       showSnackbar("Error creating exam", "error");
-    }finally {
+    } finally {
       setIsSubmitting(false); // 🔓 Unlock button
     }
   };
@@ -804,7 +804,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                   helperText={dateErrors.startTime}
                   inputProps={{
                     min: toDatetimeLocal(new Date().toISOString()),
-                    max: "9999-12-31T23:59"
+                    max: "9999-12-31T23:59",
                   }}
                 />
 
@@ -980,6 +980,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            fontWeight: "bold",
           }}
         >
           Create New Exam
@@ -998,7 +999,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
           {renderStepContent()}
         </DialogContent>
         <DialogActions>
-          <Button disabled={activeStep === 0} onClick={handleBack}>
+          <Button variant="outlined" disabled={activeStep === 0} onClick={handleBack}>
             Back
           </Button>
           <Button

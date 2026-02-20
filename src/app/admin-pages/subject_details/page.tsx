@@ -508,10 +508,7 @@ const SubjectDetails: React.FC = () => {
         setErrors({});
         fetchSubjects();
       } else {
-        showSnackbar(
-          data.message || "Failed to update subject",
-          "error",
-        );
+        showSnackbar(data.message || "Failed to update subject", "error");
       }
     } catch (err: any) {
       if (err.inner && err.inner.length > 0) {
@@ -549,10 +546,7 @@ const SubjectDetails: React.FC = () => {
         showSnackbar("Subject deleted successfully!", "success");
         fetchSubjects();
       } else {
-        showSnackbar(
-          data.message || "Failed to delete subject",
-          "error",
-        );
+        showSnackbar(data.message || "Failed to delete subject", "error");
       }
     } catch (error) {
       showSnackbar("Network error or server unavailable", "error");
@@ -734,23 +728,24 @@ const SubjectDetails: React.FC = () => {
       {/* Create Subject Modal */}
       <StyledDialog
         open={createModalOpen}
-        onClose={closeCreateModal}
+        onClose={(event, reason) => {
+          if (reason === "backdropClick") return;
+          closeCreateModal();
+        }}
         maxWidth="sm"
         fullWidth
       >
         {/* Header */}
-        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: "bold",
+          }}
+        >
           Create Subject / Topic
-          <IconButton
-            aria-label="close"
-            onClick={closeCreateModal}
-            sx={(theme) => ({
-              position: "absolute",
-              right: 12,
-              top: 12,
-              color: theme.palette.grey[500],
-            })}
-          >
+          <IconButton onClick={closeCreateModal}>
             <Close />
           </IconButton>
         </DialogTitle>
@@ -830,7 +825,7 @@ const SubjectDetails: React.FC = () => {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={closeCreateModal}>Cancel</Button>
+          <Button onClick={closeCreateModal} variant="outlined">Cancel</Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
@@ -848,22 +843,23 @@ const SubjectDetails: React.FC = () => {
       {/* Edit Subject Modal */}
       <StyledDialog
         open={editModalOpen}
-        onClose={onCloseEditModal}
+        onClose={(event, reason) => {
+          if (reason === "backdropClick") return;
+          onCloseEditModal();
+        }}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: "bold",
+          }}
+        >
           Edit Subject / Topic
-          <IconButton
-            aria-label="close"
-            onClick={onCloseEditModal}
-            sx={(theme) => ({
-              position: "absolute",
-              right: 12,
-              top: 12,
-              color: theme.palette.grey[500],
-            })}
-          >
+          <IconButton onClick={onCloseEditModal}>
             <Close />
           </IconButton>
         </DialogTitle>
@@ -1038,7 +1034,7 @@ const SubjectDetails: React.FC = () => {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={onCloseEditModal}>Cancel</Button>
+          <Button onClick={onCloseEditModal} variant="outlined">Cancel</Button>
 
           <Button
             variant="contained"
@@ -1056,31 +1052,25 @@ const SubjectDetails: React.FC = () => {
 
       <StyledDialog
         open={deleteDialog.open}
-        onClose={() =>
-          setDeleteDialog({ open: false, subjectId: null, subjectName: "" })
-        }
+        onClose={(event, reason) => {
+          if (reason === "backdropClick") return;
+          setDeleteDialog({ open: false, subjectId: null, subjectName: "" });
+        }}
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle sx={{ m: 0, p: 2, fontWeight: 600 }}>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontWeight: "bold",
+          }}
+        >
           Confirm Delete
-          <IconButton
-            aria-label="close"
-            onClick={() =>
-              setDeleteDialog({ open: false, subjectId: null, subjectName: "" })
-            }
-            sx={(theme) => ({
-              position: "absolute",
-              right: 12,
-              top: 12,
-              color: theme.palette.grey[500],
-            })}
-          >
-            <Close />
-          </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers>
+        <DialogContent>
           <Typography>
             Are you sure you want to delete <b>{deleteDialog.subjectName}</b>?{" "}
             This will also delete all its topics.
@@ -1092,6 +1082,7 @@ const SubjectDetails: React.FC = () => {
             onClick={() =>
               setDeleteDialog({ open: false, subjectId: null, subjectName: "" })
             }
+            variant="outlined"
           >
             Cancel
           </Button>

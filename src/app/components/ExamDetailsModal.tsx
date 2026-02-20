@@ -107,6 +107,7 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          fontWeight: "bold",
         }}
       >
         {exam.exam_name}
