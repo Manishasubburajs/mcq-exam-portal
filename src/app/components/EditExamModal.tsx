@@ -1059,6 +1059,7 @@ export default function EditExamModal({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            fontWeight: "bold",
           }}
         >
           {isEdit ? "Edit Exam" : "Create New Exam"}
@@ -1082,7 +1083,7 @@ export default function EditExamModal({
           {renderStepContent()}
         </DialogContent>
         <DialogActions>
-          <Button disabled={activeStep === 0} onClick={handleBack}>
+          <Button variant="outlined" disabled={activeStep === 0} onClick={handleBack}>
             Back
           </Button>
           <Button variant="contained" onClick={handleNext}>

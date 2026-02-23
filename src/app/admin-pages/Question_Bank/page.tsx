@@ -1549,19 +1549,17 @@ export default function QuestionBankPage() {
           maxWidth="lg"
           fullWidth
         >
-          <DialogTitle>
+          <DialogTitle
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontWeight: "bold",
+            }}
+          >
             {isEditMode ? "Edit Question" : "Add New Questions"}
 
-            <IconButton
-              aria-label="close"
-              onClick={handleCloseAddModal}
-              sx={(theme) => ({
-                position: "absolute",
-                right: 12,
-                top: 12,
-                color: theme.palette.grey[500],
-              })}
-            >
+            <IconButton onClick={handleCloseAddModal}>
               <Close />
             </IconButton>
           </DialogTitle>
@@ -2206,7 +2204,16 @@ export default function QuestionBankPage() {
           maxWidth="xs"
           fullWidth
         >
-          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogTitle
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontWeight: "bold",
+            }}
+          >
+            Confirm Delete
+          </DialogTitle>
 
           <DialogContent>
             <Typography>
@@ -2223,6 +2230,7 @@ export default function QuestionBankPage() {
                   ids: [],
                 })
               }
+              variant="outlined"
             >
               Cancel
             </Button>
