@@ -884,6 +884,7 @@ export default function EditExamModal({
                   helperText={dateErrors.startTime}
                   inputProps={{
                     min: toDatetimeLocal(new Date().toISOString()),
+                    max: "9999-12-31T23:59",
                   }}
                 />
                 <TextField

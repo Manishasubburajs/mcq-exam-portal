@@ -291,6 +291,10 @@ const PersonalInformationTab = ({
                   size={isMobile ? "small" : "medium"}
                   error={!!errors.birthDate}
                   helperText={errors.birthDate}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  inputProps={{ max: "9999-12-31" }}
                 />
               </Box>
               <Box sx={{ flex: 1 }}>
