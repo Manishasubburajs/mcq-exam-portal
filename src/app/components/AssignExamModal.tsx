@@ -115,7 +115,23 @@ export default function AssignExamModal({
   };
 
   const handleSelectAll = (selectAll: boolean) => {
-    setChecked(selectAll ? new Set(students.map((s) => s.user_id)) : new Set());
+    if (selectAll) {
+      // Select all students that are not locked
+      const selectable = students
+        .map((s) => s.user_id)
+        .filter((id) => !completedStudents.has(id));
+
+      // Merge with already locked students
+      const newChecked = new Set([
+        ...selectable,
+        ...Array.from(completedStudents),
+      ]);
+      setChecked(newChecked);
+    } else {
+      // Uncheck only students that are not locked
+      const stillChecked = Array.from(completedStudents); // keep locked students checked
+      setChecked(new Set(stillChecked));
+    }
   };
 
   const handleAssign = async () => {
@@ -162,7 +178,11 @@ export default function AssignExamModal({
     return !isChanged();
   };
 
-  const allSelected = students.length > 0 && checked.size === students.length;
+  const allSelected =
+    students
+      .filter((s) => !completedStudents.has(s.user_id))
+      .every((s) => checked.has(s.user_id)) &&
+    Array.from(completedStudents).every((id) => checked.has(id));
 
   return (
     <>
@@ -255,7 +275,9 @@ export default function AssignExamModal({
         </DialogContent>
 
         <DialogActions>
-          <Button variant="outlined" onClick={onClose}>Cancel</Button>
+          <Button variant="outlined" onClick={onClose}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleAssign}

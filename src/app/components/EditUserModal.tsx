@@ -289,6 +289,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 fullWidth
                 slotProps={{ inputLabel: { shrink: true } }}
                 sx={{ mb: 2 }}
+                inputProps={{ max: "9999-12-31" }}
               />
 
               <FormControl fullWidth>
@@ -362,7 +363,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ pb: 2, pr: 2 }}>
-        <Button variant="outlined" onClick={handleCancel}>Cancel</Button>
+        <Button variant="outlined" onClick={handleCancel}>
+          Cancel
+        </Button>
         <Button
           variant="contained"
           onClick={handleSave}
