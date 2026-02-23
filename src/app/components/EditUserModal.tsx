@@ -16,7 +16,9 @@ import {
   Alert,
   Typography,
   FormHelperText,
+  IconButton,
 } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import * as yup from "yup";
 
 interface EditUserModalProps {
@@ -202,143 +204,165 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 600 }}>Edit User</DialogTitle>
-
-      <DialogContent
+    <Dialog
+      open={open}
+      onClose={(event, reason) => {
+        if (reason === "backdropClick") return;
+        onClose();
+      }}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle
         sx={{
           display: "flex",
-          flexDirection: "column",
-          gap: 2,
-          pt: 1.5,
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontWeight: "bold",
         }}
       >
-        {/* Username - disabled */}
-        <TextField
-          label="Username"
-          value={editUser.username}
-          disabled
-          fullWidth
-          sx={{ backgroundColor: "#f9f9f9", borderRadius: 1, mt: 2 }}
-        />
+        Edit User
+        <IconButton onClick={onClose}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
 
-        <TextField
-          label="First Name"
-          value={editUser.first_name}
-          onChange={(e) => handleChange("first_name", e.target.value)}
-          error={!!errors.first_name}
-          helperText={errors.first_name}
-          fullWidth
-        />
+      <DialogContent dividers>
+        <>
+          {/* Username - disabled */}
+          <TextField
+            label="Username"
+            value={editUser.username}
+            disabled
+            fullWidth
+            sx={{ backgroundColor: "#f9f9f9", borderRadius: 1, mb: 2 }}
+          />
 
-        <TextField
-          label="Last Name"
-          value={editUser.last_name}
-          onChange={(e) => handleChange("last_name", e.target.value)}
-          error={!!errors.last_name}
-          helperText={errors.last_name}
-          fullWidth
-        />
+          <TextField
+            label="First Name"
+            value={editUser.first_name}
+            onChange={(e) => handleChange("first_name", e.target.value)}
+            error={!!errors.first_name}
+            helperText={errors.first_name}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
 
-        <TextField
-          label="Email"
-          type="email"
-          value={editUser.email}
-          fullWidth
-          disabled
-          sx={{ backgroundColor: "#f9f9f9" }}
-        />
+          <TextField
+            label="Last Name"
+            value={editUser.last_name}
+            onChange={(e) => handleChange("last_name", e.target.value)}
+            error={!!errors.last_name}
+            helperText={errors.last_name}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
 
-        <FormControl fullWidth>
-          <InputLabel>Role</InputLabel>
-          <Select value={editUser.role} label="Role" disabled>
-            <MenuItem value="student">Student</MenuItem>
-            <MenuItem value="teacher">Teacher</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
-          </Select>
-        </FormControl>
+          <TextField
+            label="Email"
+            type="email"
+            value={editUser.email}
+            fullWidth
+            disabled
+            sx={{ backgroundColor: "#f9f9f9", mb: 2 }}
+          />
 
-        {/* STUDENT FIELDS */}
-        {editUser.role === "student" && (
-          <>
-            <TextField
-              label="Date of Birth"
-              type="date"
-              value={editUser.dob || ""}
-              onChange={(e) => handleChange("dob", e.target.value)}
-              error={!!errors.dob}
-              helperText={errors.dob}
-              fullWidth
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
+          <FormControl fullWidth>
+            <InputLabel>Role</InputLabel>
+            <Select value={editUser.role} label="Role" disabled sx={{ mb: 2 }}>
+              <MenuItem value="student">Student</MenuItem>
+              <MenuItem value="teacher">Teacher</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+            </Select>
+          </FormControl>
 
-            <FormControl fullWidth>
-              <InputLabel>Gender</InputLabel>
-              <Select
-                value={editUser.gender || ""}
-                label="Gender"
-                onChange={(e) => handleChange("gender", e.target.value)}
-                error={!!errors.gender}
-              >
-                <MenuItem value="">Select</MenuItem>
-                <MenuItem value="male">Male</MenuItem>
-                <MenuItem value="female">Female</MenuItem>
-                <MenuItem value="other">Other</MenuItem>
-              </Select>
-              {errors.gender && (
-                <Typography variant="caption" color="error">
-                  {errors.gender}
-                </Typography>
-              )}
-            </FormControl>
+          {/* STUDENT FIELDS */}
+          {editUser.role === "student" && (
+            <>
+              <TextField
+                label="Date of Birth"
+                type="date"
+                value={editUser.dob || ""}
+                onChange={(e) => handleChange("dob", e.target.value)}
+                error={!!errors.dob}
+                helperText={errors.dob}
+                fullWidth
+                slotProps={{ inputLabel: { shrink: true } }}
+                sx={{ mb: 2 }}
+              />
 
-            <TextField
-              label="School / College Name"
-              value={editUser.school || ""}
-              onChange={(e) => handleChange("school", e.target.value)}
-              error={!!errors.school}
-              helperText={errors.school}
-              fullWidth
-            />
+              <FormControl fullWidth>
+                <InputLabel>Gender</InputLabel>
+                <Select
+                  value={editUser.gender || ""}
+                  label="Gender"
+                  onChange={(e) => handleChange("gender", e.target.value)}
+                  error={!!errors.gender}
+                  sx={{ mb: 2 }}
+                >
+                  <MenuItem value="">Select</MenuItem>
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </Select>
+                {errors.gender && (
+                  <Typography variant="caption" color="error">
+                    {errors.gender}
+                  </Typography>
+                )}
+              </FormControl>
 
-            <TextField
-              label="Grade / Department"
-              value={editUser.grade || ""}
-              onChange={(e) => handleChange("grade", e.target.value)}
-              error={!!errors.grade}
-              helperText={errors.grade}
-              fullWidth
-            />
+              <TextField
+                label="School / College Name"
+                value={editUser.school || ""}
+                onChange={(e) => handleChange("school", e.target.value)}
+                error={!!errors.school}
+                helperText={errors.school}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
 
-            <TextField
-              label="Section (Optional)"
-              value={editUser.section || ""}
+              <TextField
+                label="Grade / Department"
+                value={editUser.grade || ""}
+                onChange={(e) => handleChange("grade", e.target.value)}
+                error={!!errors.grade}
+                helperText={errors.grade}
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+
+              <TextField
+                label="Section (Optional)"
+                value={editUser.section || ""}
+                onChange={(e) =>
+                  setEditUser({ ...editUser, section: e.target.value })
+                }
+                fullWidth
+                sx={{ mb: 2 }}
+              />
+            </>
+          )}
+
+          {/* STATUS */}
+          <FormControl fullWidth>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={editUser.status}
+              label="Status"
               onChange={(e) =>
-                setEditUser({ ...editUser, section: e.target.value })
+                setEditUser({ ...editUser, status: e.target.value })
               }
-              fullWidth
-            />
-          </>
-        )}
-
-        {/* STATUS */}
-        <FormControl fullWidth>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={editUser.status}
-            label="Status"
-            onChange={(e) =>
-              setEditUser({ ...editUser, status: e.target.value })
-            }
-          >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="inactive">Inactive</MenuItem>
-          </Select>
-        </FormControl>
+            >
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="inactive">Inactive</MenuItem>
+            </Select>
+          </FormControl>
+        </>
       </DialogContent>
 
       <DialogActions sx={{ pb: 2, pr: 2 }}>
-        <Button onClick={handleCancel}>Cancel</Button>
+        <Button variant="outlined" onClick={handleCancel}>Cancel</Button>
         <Button
           variant="contained"
           onClick={handleSave}

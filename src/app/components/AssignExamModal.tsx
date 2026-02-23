@@ -181,6 +181,7 @@ export default function AssignExamModal({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            fontWeight: "bold",
           }}
         >
           Assign Exam to Students
@@ -254,7 +255,7 @@ export default function AssignExamModal({
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="outlined" onClick={onClose}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleAssign}

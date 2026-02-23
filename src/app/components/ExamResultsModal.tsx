@@ -97,6 +97,7 @@ const ExamResultsModal: React.FC<Props> = ({ open, onClose, examId }) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          fontWeight: "bold",
         }}
       >
         Exam Results
