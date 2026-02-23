@@ -516,7 +516,12 @@ const ExamManagement: React.FC = () => {
         {/* Search and Filter Section */}
         <Paper
           elevation={1}
-          sx={{ padding: "20px", marginBottom: "25px", borderRadius: "10px" }}
+          sx={{
+            mt: 4,
+            padding: "20px",
+            marginBottom: "25px",
+            borderRadius: "10px",
+          }}
         >
           <Box
             sx={{
@@ -871,7 +876,9 @@ const ExamManagement: React.FC = () => {
             setDeleteModalOpen(false);
           }}
         >
-          <DialogTitle>Confirm Deletion</DialogTitle>
+          <DialogTitle sx={{ fontWeight: "bold" }}>
+            Confirm Deletion
+          </DialogTitle>
 
           <DialogContent>
             <Typography>
@@ -880,7 +887,12 @@ const ExamManagement: React.FC = () => {
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+            <Button
+              variant="outlined"
+              onClick={() => setDeleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
             <Button
               onClick={handleDeleteConfirm}
               color="error"
