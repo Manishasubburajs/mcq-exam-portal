@@ -23,13 +23,18 @@ export async function GET() {
 
     return NextResponse.json(
       { success: true, data: students },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store", // prevent caching
+        },
+      },
     );
   } catch (error) {
     console.error("❌ GET /api/students error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch students" },
-      { status: 500 }
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
 }
