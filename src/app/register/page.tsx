@@ -34,7 +34,7 @@ const accountSchema = yup.object({
     .email("Enter a valid email address")
     .matches(
       /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
-      "Enter a valid email with proper domain"
+      "Enter a valid email with proper domain",
     ),
 
   username: yup
@@ -50,7 +50,7 @@ const accountSchema = yup.object({
     .matches(/\d/, "Password must contain at least one number")
     .matches(
       /[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/?]/,
-      "Password must contain at least one special character"
+      "Password must contain at least one special character",
     ),
 
   confirmPassword: yup
@@ -383,6 +383,7 @@ export default function Register() {
                       shrink: true,
                     },
                   }}
+                  inputProps={{ max: "9999-12-31" }}
                 />
                 <Select
                   fullWidth

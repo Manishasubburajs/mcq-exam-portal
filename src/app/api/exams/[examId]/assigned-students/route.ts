@@ -17,47 +17,43 @@ export async function GET(
     // 1️⃣ Find assignment
     const assignment = await prisma.exam_assignments.findFirst({
       where: { exam_id: examId },
-      include: {
-        students: {
-          select: { student_id: true },
-        },
-      },
     });
 
     if (!assignment) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    const studentIds = assignment.students.map((s) => s.student_id);
+    // 2️⃣ Get all students linked in the join table
+    const students = await prisma.exam_assignment_students.findMany({
+      where: { assignment_id: assignment.id },
+      select: { student_id: true },
+    });
+
+    const studentIds = students.map((s) => s.student_id);
 
     if (studentIds.length === 0) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    // 2️⃣ Find students who are in_progress or completed
+    // 3️⃣ Check for locked attempts
     const lockedAttempts = await prisma.student_exam_attempts.findMany({
       where: {
         exam_id: examId,
         student_id: { in: studentIds },
-        status: {
-          in: ["in_progress", "completed"], // 🔥 block both
-        },
+        status: { in: ["in_progress", "completed"] },
       },
-      select: { student_id: true, status: true },
+      select: { student_id: true },
     });
 
     const lockedSet = new Set(lockedAttempts.map((a) => a.student_id));
 
-    // 3️⃣ Build response with lock info
+    // 4️⃣ Build response
     const result = studentIds.map((id) => ({
       student_id: id,
       isLocked: lockedSet.has(id),
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error("Assigned students fetch error:", error);
     return NextResponse.json(

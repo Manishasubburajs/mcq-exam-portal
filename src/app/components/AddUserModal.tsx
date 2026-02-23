@@ -267,6 +267,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         error={!!errors.dob}
         helperText={errors.dob}
         sx={{ mb: 2 }}
+        inputProps={{ max: "9999-12-31" }}
       />
       <FormControl fullWidth sx={{ mb: 2 }}>
         <InputLabel>Gender</InputLabel>
@@ -394,7 +395,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       />
 
       <DialogActions>
-        <Button variant="outlined" onClick={onClose}>Cancel</Button>
+        <Button variant="outlined" onClick={onClose}>
+          Cancel
+        </Button>
         <Button variant="contained" onClick={handleSubmit}>
           Save {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}
         </Button>
