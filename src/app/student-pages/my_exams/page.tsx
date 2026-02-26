@@ -477,6 +477,11 @@ export default function MyExamsPage() {
     }
   };
 
+  // Separate exams by type
+  const practiceExams = availableExams.filter(exam => exam.examType === "practice");
+  const mockExams = availableExams.filter(exam => exam.examType === "mock");
+  const liveExams = availableExams.filter(exam => exam.examType === "live");
+
   return (
     <Box
       sx={{
@@ -489,83 +494,262 @@ export default function MyExamsPage() {
         p: { xs: 1.5, sm: 2.5, md: 3.75 },
       }}
     >
-      {/* Available Exams */}
-      <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
-        <Card
-          sx={{
-            background: CARD_BG,
-            borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
-            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-            p: { xs: 2, sm: 2.5, md: 3.125 },
-            transition: "all 0.3s ease",
-          }}
-        >
-          <Box
+      {/* Practice Exams */}
+      {practiceExams.length > 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: { xs: 1.5, sm: 2, md: 2.5 },
-              pb: { xs: 1, sm: 1.5, md: 1.875 },
-              borderBottom: `2px solid #f0f0f0`,
-              flexDirection: { xs: "column", sm: "row" },
-              gap: { xs: 1, sm: 0 },
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
             }}
           >
-            <Typography
+            <Box
               sx={{
-                fontWeight: 700,
-                color: "#2c3e50",
-                fontSize: { xs: 18, sm: 19, md: 20 },
-                textAlign: { xs: "center", sm: "left" },
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: { xs: 1.5, sm: 2, md: 2.5 },
+                pb: { xs: 1, sm: 1.5, md: 1.875 },
+                borderBottom: `2px solid #f0f0f0`,
+                flexDirection: { xs: "column", sm: "row" },
+                gap: { xs: 1, sm: 0 },
               }}
             >
-              My Exams
-            </Typography>
-          </Box>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: "#2c3e50",
+                  fontSize: { xs: 18, sm: 19, md: 20 },
+                  textAlign: { xs: "center", sm: "left" },
+                }}
+              >
+                Practice Exams
+              </Typography>
+            </Box>
 
-          <Box
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
+                alignItems: "start",
+              }}
+            >
+              {loading ? (
+                <Typography>Loading exams...</Typography>
+              ) : practiceExams.length > 0 ? (
+                practiceExams.map((exam) => (
+                  <Box
+                    key={exam.id}
+                    sx={{
+                      flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
+                    }}
+                  >
+                    <ExamCard
+                      title={exam.title}
+                      subject={exam.subject}
+                      meta={{
+                        duration: exam.duration ?? 0,
+                        questions: exam.questions ?? 0,
+                        due: exam.endDate ? formatDate(exam.endDate) : "",
+                        points: exam.points ?? 0,
+                        examType: exam.examType,
+                      }}
+                      onStart={(examType) => startExam(exam.id, examType)}
+                      timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
+                      isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
+                      startDate={exam.startDate}
+                      endDate={exam.endDate}
+                    />
+                  </Box>
+                ))
+              ) : (
+                <Typography>No practice exams available.</Typography>
+              )}
+            </Box>
+          </Card>
+        </Box>
+      )}
+
+      {/* Mock Exams */}
+      {mockExams.length > 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: { xs: 1.5, sm: 2, md: 2.5 },
-              alignItems: "start",
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
             }}
           >
-            {loading ? (
-              <Typography>Loading exams...</Typography>
-            ) : availableExams.length > 0 ? (
-              availableExams.map((exam) => (
-                <Box
-                  key={exam.id}
-                  sx={{
-                    flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
-                  }}
-                >
-                  <ExamCard
-                    title={exam.title}
-                    subject={exam.subject}
-                    meta={{
-                      duration: exam.duration ?? 0,
-                      questions: exam.questions ?? 0,
-                      due: exam.endDate ? formatDate(exam.endDate) : "",
-                      points: exam.points ?? 0,
-                      examType: exam.examType,
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: { xs: 1.5, sm: 2, md: 2.5 },
+                pb: { xs: 1, sm: 1.5, md: 1.875 },
+                borderBottom: `2px solid #f0f0f0`,
+                flexDirection: { xs: "column", sm: "row" },
+                gap: { xs: 1, sm: 0 },
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: "#2c3e50",
+                  fontSize: { xs: 18, sm: 19, md: 20 },
+                  textAlign: { xs: "center", sm: "left" },
+                }}
+              >
+                Mock Exams
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
+                alignItems: "start",
+              }}
+            >
+              {loading ? (
+                <Typography>Loading exams...</Typography>
+              ) : mockExams.length > 0 ? (
+                mockExams.map((exam) => (
+                  <Box
+                    key={exam.id}
+                    sx={{
+                      flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
                     }}
-                    onStart={(examType) => startExam(exam.id, examType)}
-                    timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
-                    isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
-                    startDate={exam.startDate}
-                    endDate={exam.endDate}
-                  />
-                </Box>
-              ))
-            ) : (
-              <Typography>No available exams at the moment.</Typography>
-            )}
-          </Box>
-        </Card>
-      </Box>
+                  >
+                    <ExamCard
+                      title={exam.title}
+                      subject={exam.subject}
+                      meta={{
+                        duration: exam.duration ?? 0,
+                        questions: exam.questions ?? 0,
+                        due: exam.endDate ? formatDate(exam.endDate) : "",
+                        points: exam.points ?? 0,
+                        examType: exam.examType,
+                      }}
+                      onStart={(examType) => startExam(exam.id, examType)}
+                      timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
+                      isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
+                      startDate={exam.startDate}
+                      endDate={exam.endDate}
+                    />
+                  </Box>
+                ))
+              ) : (
+                <Typography>No mock exams available.</Typography>
+              )}
+            </Box>
+          </Card>
+        </Box>
+      )}
+
+      {/* Live Exams */}
+      {liveExams.length > 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
+            sx={{
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: { xs: 1.5, sm: 2, md: 2.5 },
+                pb: { xs: 1, sm: 1.5, md: 1.875 },
+                borderBottom: `2px solid #f0f0f0`,
+                flexDirection: { xs: "column", sm: "row" },
+                gap: { xs: 1, sm: 0 },
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: "#2c3e50",
+                  fontSize: { xs: 18, sm: 19, md: 20 },
+                  textAlign: { xs: "center", sm: "left" },
+                }}
+              >
+                Live Exams
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
+                alignItems: "start",
+              }}
+            >
+              {loading ? (
+                <Typography>Loading exams...</Typography>
+              ) : liveExams.length > 0 ? (
+                liveExams.map((exam) => (
+                  <Box
+                    key={exam.id}
+                    sx={{
+                      flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
+                    }}
+                  >
+                    <ExamCard
+                      title={exam.title}
+                      subject={exam.subject}
+                      meta={{
+                        duration: exam.duration ?? 0,
+                        questions: exam.questions ?? 0,
+                        due: exam.endDate ? formatDate(exam.endDate) : "",
+                        points: exam.points ?? 0,
+                        examType: exam.examType,
+                      }}
+                      onStart={(examType) => startExam(exam.id, examType)}
+                      timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
+                      isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
+                      startDate={exam.startDate}
+                      endDate={exam.endDate}
+                    />
+                  </Box>
+                ))
+              ) : (
+                <Typography>No live exams available.</Typography>
+              )}
+            </Box>
+          </Card>
+        </Box>
+      )}
+
+      {/* No Exams Message */}
+      {!loading && availableExams.length === 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
+            sx={{
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
+            }}
+          >
+            <Typography>No exams available at the moment.</Typography>
+          </Card>
+        </Box>
+      )}
     </Box>
   );
 }
