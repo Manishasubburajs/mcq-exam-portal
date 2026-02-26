@@ -59,9 +59,65 @@ interface ExamCardProps {
   subject: string;
   meta: ExamMeta;
   onStart?: (examType: string) => void;
+  timeRemaining?: string;
+  isStartEnabled?: boolean;
 }
 
-const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
+// Helper to calculate time remaining
+const getTimeRemaining = (startDateString: string, endDateString: string) => {
+  if (!startDateString) return "Available soon";
+  
+  const now = new Date();
+  const startDate = new Date(startDateString);
+  const endDate = new Date(endDateString);
+  const timeRemaining = startDate.getTime() - now.getTime();
+  const timeUntilEnd = endDate.getTime() - now.getTime();
+
+  if (timeRemaining <= 0 && timeUntilEnd > 0) {
+    return "Exam is live";
+  } else if (timeUntilEnd <= 0) {
+    return "Exam ended";
+  }
+
+  const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (days > 0) {
+    return `${days}d ${hours}h remaining`;
+  } else if (hours > 0) {
+    return `${hours}h ${minutes}m remaining`;
+  } else {
+    return `${minutes}m remaining`;
+  }
+};
+
+// Helper to check if start button should be enabled
+const isStartEnabled = (startDateString: string, endDateString: string, examType: string) => {
+  if (examType !== "live") return true;
+  
+  const now = new Date();
+  const startDate = new Date(startDateString);
+  const endDate = new Date(endDateString);
+  
+  return now >= startDate && now <= endDate;
+};
+
+// Helper to format date and time
+const formatDateTime = (dateString: string) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+const ExamCard = ({ title, subject, meta, onStart, timeRemaining, isStartEnabled = true, startDate, endDate }: ExamCardProps & { startDate?: string; endDate?: string }) => (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -178,26 +234,51 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
           </Typography>
         </Box>
 
-        <Box
-          sx={{
-            flex: { xs: "1 0 100%", sm: "1 0 50%" },
-            mb: { xs: 0.75, sm: 1, md: 1.25 },
-            display: "flex",
-            alignItems: "center",
-            gap: { xs: 0.5, sm: 0.625 },
-          }}
-        >
-          <EventIcon fontSize="small" sx={{ color: "#6a11cb" }} />
-          <Typography
-            variant="body2"
-            sx={{
-              color: TEXT_PRIMARY,
-              fontSize: { xs: 13, sm: 14 },
-            }}
-          >
-            Due: {meta.due}
-          </Typography>
-        </Box>
+        {meta.examType === "live" && startDate && endDate && (
+          <>
+            <Box
+              sx={{
+                flex: { xs: "1 0 100%", sm: "1 0 50%" },
+                mb: { xs: 0.75, sm: 1, md: 1.25 },
+                display: "flex",
+                alignItems: "center",
+                gap: { xs: 0.5, sm: 0.625 },
+              }}
+            >
+              <EventIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: TEXT_PRIMARY,
+                  fontSize: { xs: 13, sm: 14 },
+                }}
+              >
+                Start: {formatDateTime(startDate)}
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                flex: { xs: "1 0 100%", sm: "1 0 50%" },
+                mb: { xs: 0.75, sm: 1, md: 1.25 },
+                display: "flex",
+                alignItems: "center",
+                gap: { xs: 0.5, sm: 0.625 },
+              }}
+            >
+              <EventIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: TEXT_PRIMARY,
+                  fontSize: { xs: 13, sm: 14 },
+                }}
+              >
+                End: {formatDateTime(endDate)}
+              </Typography>
+            </Box>
+          </>
+        )}
+
         <Box
           sx={{
             flex: { xs: "1 0 100%", sm: "1 0 50%" },
@@ -239,15 +320,15 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
         >
           <Typography
             sx={{
-              background: "#e6f4ea",
-              color: "#137333",
+              background: timeRemaining ? "#fef3c7" : "#e6f4ea",
+              color: timeRemaining ? "#d97706" : "#137333",
               borderRadius: "20px",
               padding: { xs: "4px 8px", sm: "5px 10px" },
               fontSize: { xs: 11, sm: 12 },
               fontWeight: 600,
             }}
           >
-            Available
+            {timeRemaining || "Available"}
           </Typography>
         </Box>
 
@@ -268,17 +349,20 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
               alignItems: "center",
               justifyContent: "center",
               textTransform: "none",
-              background: "linear-gradient(to right, #6a11cb, #2575fc)",
+              background: isStartEnabled 
+                ? "linear-gradient(to right, #6a11cb, #2575fc)"
+                : "#9ca3af",
               color: "#fff",
               borderRadius: 2,
               fontSize: { xs: "13px", sm: "14px" },
               fontWeight: 600,
               boxShadow: "none",
-              "&:hover": { transform: "translateY(-2px)" },
+              "&:hover": isStartEnabled ? { transform: "translateY(-2px)" } : {},
             }}
             onClick={() => onStart && onStart(meta.examType)}
+            disabled={!isStartEnabled}
           >
-            Start Exam
+            {isStartEnabled ? "Start Exam" : "Not Available"}
           </Button>
         </Box>
       </Box>
@@ -286,11 +370,23 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
   </Card>
 );
 
+// Helper to format date
+const formatDate = (dateString: string) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 export default function MyExamsPage() {
   const router = useRouter();
   const theme = useTheme();
   const [availableExams, setAvailableExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     // Check if user is logged in and is student
@@ -323,6 +419,13 @@ export default function MyExamsPage() {
     };
 
     fetchExams();
+
+    // Update current time every second to refresh the countdown
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [router]);
 
   console.log("availableExams", availableExams);
@@ -445,11 +548,15 @@ export default function MyExamsPage() {
                     meta={{
                       duration: exam.duration ?? 0,
                       questions: exam.questions ?? 0,
-                      due: exam.due ?? "",
+                      due: exam.endDate ? formatDate(exam.endDate) : "",
                       points: exam.points ?? 0,
                       examType: exam.examType,
                     }}
                     onStart={(examType) => startExam(exam.id, examType)}
+                    timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
+                    isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
+                    startDate={exam.startDate}
+                    endDate={exam.endDate}
                   />
                 </Box>
               ))
