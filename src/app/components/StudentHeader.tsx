@@ -63,8 +63,8 @@ const StudentHeader: React.FC<Props> = ({ onMenuClick, title, sidebarOpen = true
     }
   };
 
-  const handleTakeExam = () => {
-    router.push('/student-pages/exam_taking');
+  const handleMyProgress = () => {
+    router.push('/student-pages/student_progress');
   };
 
   const sidebarOffset = sidebarOpen ? '220px' : '0px';
@@ -107,18 +107,12 @@ const StudentHeader: React.FC<Props> = ({ onMenuClick, title, sidebarOpen = true
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap, flexWrap: 'wrap' }}>
-        <Button
-          variant="contained"
-          onClick={handleTakeExam}
+        <Button 
+          variant="outlined" 
+          color="secondary" 
           size={size}
-          sx={{
-            background: 'linear-gradient(to right, #6a11cb, #2575fc)',
-            '&:hover': { opacity: 0.9 }
-          }}
+          onClick={handleMyProgress}
         >
-          Take Exam
-        </Button>
-        <Button variant="outlined" color="secondary" size={size}>
           My Progress
         </Button>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>

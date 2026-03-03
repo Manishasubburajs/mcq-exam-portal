@@ -104,6 +104,9 @@ export async function GET(req: Request) {
         totalTimeSeconds: attempt.total_time_seconds,
         canRetake,
         attemptNumber: attempt.attempt_number,
+        correctAnswers: attempt.correct_answers,
+        wrongAnswers: attempt.wrong_answers,
+        unanswered: attempt.unanswered,
       };
     }));
 
