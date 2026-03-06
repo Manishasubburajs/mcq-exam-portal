@@ -66,6 +66,7 @@ const StudentProgressPage = () => {
 
   const [stats, setStats] = useState({
     averageScore: 0,
+    overallAccuracy: 0,
     examsTaken: 0,
     passed: 0,
     failed: 0,
@@ -261,6 +262,12 @@ const StudentProgressPage = () => {
       const avgScore =
         totalExams > 0 ? Number((sumPercentage / totalExams).toFixed(2)) : 0;
 
+      // Overall Accuracy: Total Correct / Total Attempted (Correct + Wrong)
+      const totalCorrect = attempts.reduce((sum, exam) => sum + Number(exam.correctAnswers), 0);
+      const totalWrong = attempts.reduce((sum, exam) => sum + Number(exam.wrongAnswers), 0);
+      const totalAttempted = totalCorrect + totalWrong;
+      const overallAccuracy = totalAttempted > 0 ? Number(((totalCorrect / totalAttempted) * 100).toFixed(2)) : 0;
+
       // Passed / Failed exams (based on 33% pass rule)
       const passedExams = attempts.filter((exam) => {
         const percentage = calculatePercentageFromScore(
@@ -273,6 +280,7 @@ const StudentProgressPage = () => {
 
       setStats({
         averageScore: avgScore,
+        overallAccuracy: overallAccuracy,
         examsTaken: totalExams,
         passed: passedExams,
         failed: failedExams,
@@ -334,7 +342,7 @@ const StudentProgressPage = () => {
       }}
     >
       {/* Stats Cards */}
-      <Box
+       <Box
         sx={{
           display: "flex",
           flexWrap: "wrap",
@@ -344,18 +352,24 @@ const StudentProgressPage = () => {
             flex: {
               xs: "1 1 100%",
               sm: "1 1 calc(50% - 8px)",
-              md: "1 1 calc(25% - 18px)",
+              md: "1 1 calc(20% - 22px)",
             },
             minWidth: { xs: "150px", sm: "180px", md: "150px" },
           },
         }}
       >
-        {[
+         {[
           {
             icon: <TrendingUp />,
             value: `${stats.averageScore}%`,
             label: "Average Score",
             color: "#1a73e8",
+          },
+          {
+            icon: <Assessment />,
+            value: `${stats.overallAccuracy}%`,
+            label: "Overall Accuracy",
+            color: "#ffc107",
           },
           {
             icon: <School />,
@@ -409,7 +423,8 @@ const StudentProgressPage = () => {
             </CardContent>
           </Card>
         ))}
-      </Box>
+       </Box>
+
 
       {/* Performance Chart */}
       <Card
