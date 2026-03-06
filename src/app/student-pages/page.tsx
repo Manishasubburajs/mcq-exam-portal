@@ -133,7 +133,21 @@ interface CompletedExam {
   examType: string;
 }
 
-const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
+// Helper to format date and time
+const formatDateTime = (dateString: string) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+const ExamCard = ({ title, subject, meta, timeRemaining, startDate, endDate }: ExamCardProps & { timeRemaining?: string; startDate?: string; endDate?: string }) => (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -223,9 +237,7 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
             variant="body2"
             sx={{ color: TEXT_PRIMARY, fontSize: { xs: 13, sm: 14 } }}
           >
-            {meta.examType === "practice"
-              ? "No time limit"
-              : `${meta.duration} min`}
+            {meta.duration} min
           </Typography>
         </Box>
         <Box
@@ -248,23 +260,52 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
             {meta.questions} questions
           </Typography>
         </Box>
-        <Box
-          sx={{
-            flex: { xs: "1 0 100%", sm: "1 0 50%" },
-            mb: { xs: 0.75, sm: 1, md: 1.25 },
-            display: "flex",
-            alignItems: "center",
-            gap: { xs: 0.5, sm: 0.625 },
-          }}
-        >
-          <EventIcon fontSize="small" sx={{ color: "#6a11cb" }} />
-          <Typography
-            variant="body2"
-            sx={{ color: TEXT_PRIMARY, fontSize: { xs: 13, sm: 14 } }}
-          >
-            {meta.examType === "live" ? `Due: ${meta.due}` : "No due date"}
-          </Typography>
-        </Box>
+
+        {meta.examType === "live" && startDate && endDate && (
+          <>
+            <Box
+              sx={{
+                flex: { xs: "1 0 100%", sm: "1 0 50%" },
+                mb: { xs: 0.75, sm: 1, md: 1.25 },
+                display: "flex",
+                alignItems: "center",
+                gap: { xs: 0.5, sm: 0.625 },
+              }}
+            >
+              <EventIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: TEXT_PRIMARY,
+                  fontSize: { xs: 13, sm: 14 },
+                }}
+              >
+                Start: {formatDateTime(startDate)}
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                flex: { xs: "1 0 100%", sm: "1 0 50%" },
+                mb: { xs: 0.75, sm: 1, md: 1.25 },
+                display: "flex",
+                alignItems: "center",
+                gap: { xs: 0.5, sm: 0.625 },
+              }}
+            >
+              <EventIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: TEXT_PRIMARY,
+                  fontSize: { xs: 13, sm: 14 },
+                }}
+              >
+                End: {formatDateTime(endDate)}
+              </Typography>
+            </Box>
+          </>
+        )}
+
         <Box
           sx={{
             flex: { xs: "1 0 100%", sm: "1 0 50%" },
@@ -290,64 +331,21 @@ const ExamCard = ({ title, subject, meta, onStart }: ExamCardProps) => (
         sx={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: { xs: 1, sm: 2 },
-          flexDirection: { xs: "column", sm: "row" },
+          justifyContent: "flex-start",
         }}
       >
-        <Box
+        <Chip
           sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            width: { xs: "100%", sm: "auto" },
-            justifyContent: { xs: "center", sm: "flex-start" },
+            background: timeRemaining ? "#fef3c7" : "#e6f4ea",
+            color: timeRemaining ? "#d97706" : "#137333",
+            borderRadius: "20px",
+            padding: { xs: "4px 8px", sm: "5px 10px" },
+            fontSize: { xs: 11, sm: 12 },
+            fontWeight: 600,
           }}
-        >
-          <Chip
-            sx={{
-              background: "#e6f4ea",
-              color: "#137333",
-              borderRadius: "20px",
-              padding: { xs: "4px 8px", sm: "5px 10px" },
-              fontSize: { xs: 11, sm: 12 },
-              fontWeight: 600,
-            }}
-            label="Available"
-            size="small"
-          />
-        </Box>
-
-        <Box
-          sx={{
-            width: { xs: "100%", sm: ACTION_BUTTON_MD_WIDTH },
-            display: "flex",
-          }}
-        >
-          <Button
-            variant="contained"
-            fullWidth
-            sx={{
-              padding: { xs: "6px 12px", sm: "8px 15px" },
-              height: { xs: "36px", sm: "40px" },
-              lineHeight: { xs: "36px", sm: "40px" },
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textTransform: "none",
-              background: "linear-gradient(to right, #6a11cb, #2575fc)",
-              color: "#fff",
-              borderRadius: 2,
-              fontSize: { xs: "13px", sm: "14px" },
-              fontWeight: 600,
-              boxShadow: "none",
-              "&:hover": { transform: "translateY(-2px)" },
-            }}
-            onClick={onStart}
-          >
-            Start Exam
-          </Button>
-        </Box>
+          label={timeRemaining || "Available"}
+          size="small"
+        />
       </Box>
     </Box>
   </Card>
@@ -489,10 +487,7 @@ const CompletedExamCard = ({
             }}
           >
             <AccessTimeIcon fontSize="small" sx={{ color: "#6a11cb" }} />
-            Duration:{" "}
-            {exam.examType === "practice"
-              ? "No time limit"
-              : `${exam.duration} min`}
+            Duration: {exam.duration} min
           </Box>
           <Box
             sx={{
@@ -606,35 +601,43 @@ export default function StudentDashboard() {
   const theme = useTheme();
   const [isMobile, setIsMobile] = useState(false);
   const [availableExams, setAvailableExams] = useState<any[]>([]);
+  const [upcomingLiveExams, setUpcomingLiveExams] = useState<any[]>([]);
   const [completedExams, setCompletedExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const startExam = async (examId: number) => {
-    try {
-      const token =
-        localStorage.getItem("token") || sessionStorage.getItem("token");
+  // Helper to format date
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
 
-      const res = await fetch("/api/students/start", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ examId }),
-      });
+  // Helper to calculate time remaining
+  const getTimeRemaining = (startDateString: string) => {
+    if (!startDateString) return "Available soon";
+    
+    const now = new Date();
+    const startDate = new Date(startDateString);
+    const timeRemaining = startDate.getTime() - now.getTime();
 
-      const data = await res.json();
+    if (timeRemaining <= 0) {
+      return "Exam starting now";
+    }
 
-      if (!data.success) {
-        alert(data.message); // mock/live limit message
-        return;
-      }
+    const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
 
-      router.push(
-        `/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`,
-      );
-    } catch (err) {
-      alert("Failed to start exam");
+    if (days > 0) {
+      return `${days}d ${hours}h remaining`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m remaining`;
+    } else {
+      return `${minutes}m remaining`;
     }
   };
 
@@ -658,8 +661,21 @@ export default function StudentDashboard() {
           },
         });
         const availableData = await availableResponse.json();
-        if (availableData.success) {
-          setAvailableExams(availableData.data);
+         if (availableData.success) {
+          // Filter to show practice, mock, and currently live exams (available now)
+          const practiceMockLiveExams = availableData.data.filter(
+            (exam: any) => 
+              exam.examType === "practice" || 
+              exam.examType === "mock" || 
+              (exam.examType === "live" && exam.state === "available"),
+          );
+          setAvailableExams(practiceMockLiveExams);
+
+          // Filter to show only upcoming live exams
+          const upcomingLive = availableData.data.filter(
+            (exam: any) => exam.examType === "live" && exam.state === "upcoming",
+          );
+          setUpcomingLiveExams(upcomingLive);
         }
 
         // Fetch completed exams
@@ -787,7 +803,7 @@ export default function StudentDashboard() {
                 background: "transparent",
                 alignSelf: { xs: "stretch", sm: "auto" },
               }}
-              onClick={() => router.push("/student-pages/exam-history")}
+              onClick={() => router.push("/student-pages/my_exams")}
             >
               View All
             </Button>
@@ -804,7 +820,7 @@ export default function StudentDashboard() {
             {loading ? (
               <Typography>Loading exams...</Typography>
             ) : availableExams.length > 0 ? (
-              availableExams.map((exam) => (
+              availableExams.slice(0, 6).map((exam) => (
                 <Box
                   key={exam.id}
                   sx={{
@@ -817,16 +833,100 @@ export default function StudentDashboard() {
                     meta={{
                       duration: exam.duration ?? 0,
                       questions: exam.questions ?? 0,
-                      due: exam.due ?? "",
+                      due: exam.endDate ? formatDate(exam.endDate) : "",
                       points: exam.points ?? 0,
                       examType: exam.examType,
                     }}
-                    onStart={() => startExam(exam.id)}
+                    startDate={exam.startDate}
+                    endDate={exam.endDate}
                   />
                 </Box>
               ))
             ) : (
               <Typography>No available exams at the moment.</Typography>
+            )}
+          </Box>
+        </Card>
+      </Box>
+
+      {/* Upcoming Live Exams */}
+      <Box sx={{ mb: 3.75 }}>
+        <Card
+          sx={{
+            background: CARD_BG,
+            borderRadius: 2.5,
+            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+            p: 3.125,
+            transition: "all 0.3s ease",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2.5,
+              pb: 1.875,
+              borderBottom: `2px solid #f0f0f0`,
+              flexDirection: isMobile ? "column" : "row",
+            }}
+          >
+            <Typography
+              sx={{ fontWeight: 700, color: "#2c3e50", fontSize: 20 }}
+            >
+              Upcoming Live Exams
+            </Typography>
+            <Button
+              variant="outlined"
+              color="secondary"
+              sx={{
+                padding: "10px 20px",
+                fontSize: "16px",
+                fontWeight: 600,
+                borderRadius: 2,
+                mt: isMobile ? 1 : 0,
+                background: "transparent",
+              }}
+              onClick={() => router.push("/student-pages/my_exams")}
+            >
+              View All
+            </Button>
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 2.5,
+              alignItems: "stretch",
+            }}
+          >
+            {loading ? (
+              <Typography>Loading upcoming exams...</Typography>
+            ) : upcomingLiveExams.length > 0 ? (
+              upcomingLiveExams.slice(0, 6).map((exam: any) => (
+                <Box
+                  key={exam.id}
+                  sx={{ flex: { xs: "1 1 100%", sm: "1 1 300px" } }}
+                >
+                  <ExamCard
+                    title={exam.title}
+                    subject={exam.subject}
+                    meta={{
+                      duration: exam.duration ?? 0,
+                      questions: exam.questions ?? 0,
+                      due: exam.startDate ? formatDate(exam.startDate) : "",
+                      points: exam.points ?? 0,
+                      examType: exam.examType,
+                    }}
+                    timeRemaining={getTimeRemaining(exam.startDate)}
+                    startDate={exam.startDate}
+                    endDate={exam.endDate}
+                  />
+                </Box>
+              ))
+            ) : (
+              <Typography>No upcoming live exams at the moment.</Typography>
             )}
           </Box>
         </Card>
@@ -870,7 +970,7 @@ export default function StudentDashboard() {
                 mt: isMobile ? 1 : 0,
                 background: "transparent",
               }}
-              onClick={() => router.push("/student-pages/exam-history")}
+              onClick={() => router.push("/student-pages/exam_history")}
             >
               View All
             </Button>
@@ -887,96 +987,7 @@ export default function StudentDashboard() {
             {loading ? (
               <Typography>Loading completed exams...</Typography>
             ) : completedExams.length > 0 ? (
-              completedExams.slice(0, 3).map((exam: any) => (
-                <Box
-                  key={exam.attemptId}
-                  sx={{ flex: { xs: "1 1 100%", sm: "1 1 300px" } }}
-                >
-                  <CompletedExamCard
-                    exam={{
-                      title: exam.title,
-                      subject: exam.subject,
-                      scorePercentage: Math.round(
-                        (parseInt(exam.score) / parseInt(exam.points)) * 100,
-                      ),
-                      completionDate: exam.completedAt,
-                      duration: exam.duration ?? 0,
-
-                      questions: exam.questions.toString(),
-                      scoreFraction: `${parseInt(exam.score)}/${parseInt(exam.points)}`,
-                      examType: exam.examType,
-                    }}
-                    onView={() =>
-                      router.push(
-                        `/student-pages/exam_res_rev?attemptId=${exam.attemptId}`,
-                      )
-                    }
-                  />
-                </Box>
-              ))
-            ) : (
-              <Typography>No completed exams yet.</Typography>
-            )}
-          </Box>
-        </Card>
-      </Box>
-
-       {/* Upcoming Exams */}
-      <Box sx={{ mb: 3.75 }}>
-        <Card
-          sx={{
-            background: CARD_BG,
-            borderRadius: 2.5,
-            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-            p: 3.125,
-            transition: "all 0.3s ease",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2.5,
-              pb: 1.875,
-              borderBottom: `2px solid #f0f0f0`,
-              flexDirection: isMobile ? "column" : "row",
-            }}
-          >
-            <Typography
-              sx={{ fontWeight: 700, color: "#2c3e50", fontSize: 20 }}
-            >
-              Upcoming Live Exams
-            </Typography>
-            <Button
-              variant="outlined"
-              color="secondary"
-              sx={{
-                padding: "10px 20px",
-                fontSize: "16px",
-                fontWeight: 600,
-                borderRadius: 2,
-                mt: isMobile ? 1 : 0,
-                background: "transparent",
-              }}
-              onClick={() => router.push("/student-pages/exam-history")}
-            >
-              View All
-            </Button>
-          </Box>
-
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 2.5,
-              alignItems: "stretch",
-            }}
-          >
-            {loading ? (
-              <Typography>Loading completed exams...</Typography>
-            ) : completedExams.length > 0 ? (
-              completedExams.slice(0, 3).map((exam: any) => (
+              completedExams.slice(0, 6).map((exam: any) => (
                 <Box
                   key={exam.attemptId}
                   sx={{ flex: { xs: "1 1 100%", sm: "1 1 300px" } }}
