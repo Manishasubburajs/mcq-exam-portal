@@ -23,7 +23,6 @@ model users {
   exams_created          exams[]                    @relation("ExamsCreated")
   questions              questions[]
   student_details        student_details?
-  attempts               student_exam_attempts[]
 
   @@index([email])
   @@index([role])
@@ -121,6 +120,7 @@ model questions {
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
   updated_by             Int?
+  explanation            String?                  @db.Text
   exam_questions         exam_questions[]
   creator                users?                   @relation(fields: [created_by], references: [user_id])
   subject                subjects                 @relation(fields: [subject_id], references: [subject_id])
@@ -145,21 +145,22 @@ model student_details {
 }
 
 model student_exam_attempts {
-  attempt_id            Int                          @id @default(autoincrement())
-  student_id            Int
-  exam_id               Int
-  attempt_number        Int                          @default(1)
-  start_time            DateTime
-  end_time              DateTime?
-  total_time_seconds    Int?
-  score                 Decimal                      @default(0) @db.Decimal(12, 4)
-  correct_answers       Int                          @default(0)
-  wrong_answers         Int                          @default(0)
-  unanswered            Int                          @default(0)
-  status                student_exam_attempts_status @default(in_progress)
-  student_answers       student_answers[]
-  exam                  exams                        @relation(fields: [exam_id], references: [exam_id])
-  student               users                        @relation(fields: [student_id], references: [user_id])
+  attempt_id             Int                           @id @default(autoincrement())
+  student_id             Int
+  exam_id                Int
+  start_time             DateTime
+  end_time               DateTime?
+  total_time_seconds     Int?
+  score                  Decimal                       @default(0) @db.Decimal(12, 4)
+  correct_answers        Int                           @default(0)
+  wrong_answers          Int                           @default(0)
+  unanswered             Int                           @default(0)
+  accuracy               Decimal?                      @default(0) @db.Decimal(5, 2)
+  result                 student_exam_attempts_result?
+  status                 student_exam_attempts_status  @default(in_progress)
+  attempt_number         Int                           @default(1)
+  student_answers        student_answers[]
+  exam                   exams                         @relation(fields: [exam_id], references: [exam_id])
   student_exam_questions student_exam_questions[]
 
   @@index([exam_id], map: "student_exam_attempts_exam_id_fkey")
@@ -258,4 +259,9 @@ enum student_exam_attempts_status {
 enum users_role {
   admin
   student
+}
+
+enum student_exam_attempts_result {
+  pass
+  fail
 }
