@@ -5,7 +5,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 const MARK_PER_Q = 2;
 const NEGATIVE = 0.66;
-const PASS_PERCENTAGE = 33;
+const PASS_PERCENTAGE = 35;
 
 export async function POST(req: Request) {
   try {
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
         const qId = Number(questionId);
         const correctAnswer = questionMap.get(qId) ?? ""; // ensure string
         const isCorrect = selectedAnswer === correctAnswer;
-        const marksAwarded = isCorrect ? MARK_PER_Q : 0;
+        const marksAwarded = isCorrect ? MARK_PER_Q : -NEGATIVE;
 
         return {
           attempt_id: parsedAttemptId,
@@ -145,10 +145,10 @@ export async function POST(req: Request) {
     const unanswered = totalQuestions - answeredCount;
 
     const score = Math.max(0, correct * MARK_PER_Q - wrong * NEGATIVE);
+    const attempted = correct + wrong;
+
     const accuracy =
-      totalQuestions > 0
-        ? Number(((correct / totalQuestions) * 100).toFixed(2))
-        : 0;
+      attempted > 0 ? Number(((correct / attempted) * 100).toFixed(2)) : 0;
 
     const totalMarks = totalQuestions * MARK_PER_Q;
     const passMark = (totalMarks * PASS_PERCENTAGE) / 100;
