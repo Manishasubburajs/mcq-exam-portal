@@ -94,9 +94,13 @@ const ExamContent: React.FC = () => {
         (document as any).msFullscreenElement
       );
       setIsFullscreen(isCurrentlyFullscreen);
-      
+
       // Auto-submit if user exits fullscreen and it's a mock or live exam
-      if (!isCurrentlyFullscreen && examData && (examData.examType === "mock" || examData.examType === "live")) {
+      if (
+        !isCurrentlyFullscreen &&
+        examData &&
+        (examData.examType === "mock" || examData.examType === "live")
+      ) {
         submitExam(true);
       }
     };
@@ -108,19 +112,31 @@ const ExamContent: React.FC = () => {
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
-      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
+      document.removeEventListener(
+        "mozfullscreenchange",
+        handleFullscreenChange,
+      );
+      document.removeEventListener(
+        "MSFullscreenChange",
+        handleFullscreenChange,
+      );
     };
   }, [examData]);
 
   // Enter fullscreen when exam starts for mock or live exams
   useEffect(() => {
     const initializeExam = async () => {
-      if (examData && (examData.examType === "mock" || examData.examType === "live")) {
+      if (
+        examData &&
+        (examData.examType === "mock" || examData.examType === "live")
+      ) {
         // Wait for a short time to ensure the DOM is fully rendered
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         try {
           await enterFullscreen();
         } catch (error) {
@@ -129,7 +145,7 @@ const ExamContent: React.FC = () => {
         }
       }
     };
-    
+
     initializeExam();
   }, [examData]);
 
@@ -191,9 +207,12 @@ const ExamContent: React.FC = () => {
           return;
         }
 
-        const response = await fetch(`/api/students/exams/take?id=${examId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetch(
+          `/api/students/exams/take?id=${examId}&attemptId=${attemptId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
 
         const data = await response.json();
         if (data.success) {
@@ -552,7 +571,7 @@ const ExamContent: React.FC = () => {
       // Allow navigation
       setAllowNavigation(true);
 
-       // Redirect
+      // Redirect
       if (redirectTo) {
         router.push(redirectTo);
       } else {

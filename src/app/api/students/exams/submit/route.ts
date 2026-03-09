@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     if (!decoded || decoded.role !== "student") {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     if (!examId || !attemptId) {
       return NextResponse.json(
         { success: false, message: "examId and attemptId required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     if (isNaN(parsedExamId) || isNaN(parsedAttemptId)) {
       return NextResponse.json(
         { success: false, message: "Invalid examId or attemptId" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -60,14 +60,14 @@ export async function POST(req: Request) {
         attempt_id: parsedAttemptId,
         student_id: studentId,
         exam_id: parsedExamId,
-        status: "in_progress"
-      }
+        status: "in_progress",
+      },
     });
 
     if (!attempt) {
       return NextResponse.json(
         { success: false, message: "Invalid or completed attempt" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -79,23 +79,47 @@ export async function POST(req: Request) {
     if (totalQuestions === 0) {
       return NextResponse.json(
         { success: false, message: "No questions found for exam" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // ---------------- SAVE ANSWERS ----------------
-    await Promise.all(
-      Object.entries(answers).map(([questionId, selectedAnswer]) =>
-        prisma.student_answers.create({
-          data: {
-            attempt_id: parsedAttemptId,
-            question_id: Number(questionId),
-            selected_answer: selectedAnswer as string,
-            time_taken_seconds: questionTimes[questionId] || 0,
-          },
-        })
-      )
+    // Fetch all relevant questions once
+    const questionRecords = await prisma.questions.findMany({
+      where: { question_id: { in: Object.keys(answers).map(Number) } },
+      select: { question_id: true, correct_answer: true },
+    });
+
+    // Map for quick lookup
+    const questionMap = new Map<number, string>();
+    questionRecords.forEach((q) =>
+      questionMap.set(q.question_id, q.correct_answer ?? ""),
     );
+
+    // Prepare answer data
+    const answerData = Object.entries(answers).map(
+      ([questionId, selectedAnswer]) => {
+        const qId = Number(questionId);
+        const correctAnswer = questionMap.get(qId) ?? ""; // ensure string
+        const isCorrect = selectedAnswer === correctAnswer;
+        const marksAwarded = isCorrect ? MARK_PER_Q : 0;
+
+        return {
+          attempt_id: parsedAttemptId,
+          question_id: qId,
+          selected_answer: selectedAnswer as string,
+          time_taken_seconds: questionTimes[questionId] || 0,
+          is_correct: isCorrect,
+          marks_awarded: marksAwarded,
+        };
+      },
+    );
+
+    // Insert all answers at once
+    await prisma.student_answers.createMany({
+      data: answerData,
+      skipDuplicates: true, // optional: prevents duplicate insert errors
+    });
 
     // ---------------- FETCH ANSWERS WITH CORRECT KEY ----------------
     const savedAnswers = await prisma.student_answers.findMany({
@@ -109,7 +133,7 @@ export async function POST(req: Request) {
     let correct = 0;
     let wrong = 0;
 
-    savedAnswers.forEach(ans => {
+    savedAnswers.forEach((ans) => {
       if (ans.selected_answer === ans.question.correct_answer) {
         correct++;
       } else if (ans.selected_answer) {
@@ -120,8 +144,11 @@ export async function POST(req: Request) {
     const answeredCount = savedAnswers.length;
     const unanswered = totalQuestions - answeredCount;
 
-    let score = correct * MARK_PER_Q - wrong * NEGATIVE;
-    score = Math.max(0, score);
+    const score = Math.max(0, correct * MARK_PER_Q - wrong * NEGATIVE);
+    const accuracy =
+      totalQuestions > 0
+        ? Number(((correct / totalQuestions) * 100).toFixed(2))
+        : 0;
 
     const totalMarks = totalQuestions * MARK_PER_Q;
     const passMark = (totalMarks * PASS_PERCENTAGE) / 100;
@@ -131,13 +158,15 @@ export async function POST(req: Request) {
     await prisma.student_exam_attempts.update({
       where: { attempt_id: parsedAttemptId },
       data: {
-        status: 'completed',
+        status: "completed",
         end_time: new Date(),
+        total_time_seconds: totalTimeTaken,
         score: new Decimal(score),
         correct_answers: correct,
         wrong_answers: wrong,
         unanswered,
-        total_time_seconds: totalTimeTaken,
+        accuracy: new Decimal(accuracy),
+        result, // make sure your schema has this column
       },
     });
 
@@ -153,7 +182,6 @@ export async function POST(req: Request) {
       passMark,
       result,
     });
-
   } catch (err) {
     console.error("Submit exam error:", err);
     // Log detailed error for debugging
@@ -162,12 +190,12 @@ export async function POST(req: Request) {
       console.error("Error stack:", err.stack);
     }
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: "Submit failed",
-        error: err instanceof Error ? err.message : "Unknown error"
+        error: err instanceof Error ? err.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
