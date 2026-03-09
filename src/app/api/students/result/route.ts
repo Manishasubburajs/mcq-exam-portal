@@ -79,6 +79,7 @@ export async function GET(req: Request) {
             : "incorrect"
           : "unanswered",
         timeTaken: answer?.time_taken_seconds || 0,
+        explanation: q.explanation,
       };
     });
 

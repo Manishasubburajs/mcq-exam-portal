@@ -120,6 +120,7 @@ model questions {
   created_at             DateTime                 @default(now())
   updated_at             DateTime                 @updatedAt
   updated_by             Int?
+  explanation            String?                  @db.Text
   exam_questions         exam_questions[]
   creator                users?                   @relation(fields: [created_by], references: [user_id])
   subject                subjects                 @relation(fields: [subject_id], references: [subject_id])
