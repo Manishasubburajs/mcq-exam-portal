@@ -37,6 +37,7 @@ export async function GET() {
         subject_name: q.subject?.subject_name,
         topic_id: q.topic_id,
         created_at: q.created_at,
+        explanation: q.explanation,
 
         examCount,
         canEdit: examCount === 0,
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
       difficulty,
       subject_id,
       topic_id,
+      explanation,
     } = body;
 
     if (!question_text || !correct_answer || !subject_id || !topic_id) {
@@ -127,6 +129,7 @@ export async function POST(req: Request) {
         difficulty: normalizedDifficulty,
         subject_id,
         topic_id,
+        explanation: explanation || null,
       },
     });
 
@@ -161,6 +164,7 @@ export async function PUT(req: Request) {
       difficulty,
       subject_id,
       topic_id,
+      explanation,
     } = body;
 
     if (
@@ -216,6 +220,7 @@ export async function PUT(req: Request) {
         difficulty: normalizedDifficulty,
         subject_id,
         topic_id,
+        explanation: explanation || null,
         updated_at: new Date(),
       },
     });

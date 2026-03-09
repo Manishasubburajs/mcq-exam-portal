@@ -19,7 +19,7 @@ function canTakeExam(exam: any) {
 }
 
 /* --------------------------------------------------
-   GET : Load exam questions (NO DB WRITE)
+   GET : Load exam questions
 -------------------------------------------------- */
 export async function GET(req: Request) {
   try {
@@ -46,14 +46,17 @@ export async function GET(req: Request) {
     /* ---------- PARAM ---------- */
     const { searchParams } = new URL(req.url);
     const examId = searchParams.get("id");
-    if (!examId) {
+    const attemptId = searchParams.get("attemptId");
+
+    if (!examId || !attemptId) {
       return NextResponse.json(
-        { success: false, message: "Exam ID required" },
+        { success: false, message: "Exam ID and Attempt ID required" },
         { status: 400 }
       );
     }
 
     const examIdNum = Number(examId);
+    const attemptIdNum = Number(attemptId);
 
     /* ---------- CHECK ASSIGNMENT ---------- */
     const assignmentRow = await prisma.exam_assignment_students.findFirst({
@@ -89,7 +92,43 @@ export async function GET(req: Request) {
       );
     }
 
-    /* ---------- FETCH QUESTIONS ---------- */
+    /* --------------------------------------------------
+       CHECK IF QUESTIONS ALREADY STORED
+    -------------------------------------------------- */
+
+    const storedQuestions = await prisma.student_exam_questions.findMany({
+      where: { attempt_id: attemptIdNum },
+      include: { questions: true },
+      orderBy: { question_order: "asc" },
+    });
+
+    if (storedQuestions.length > 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          examId: exam.exam_id,
+          title: exam.exam_title,
+          duration: exam.time_limit_minutes,
+          totalQuestions: storedQuestions.length,
+          shuffle: assignment.shuffle_questions,
+          questions: storedQuestions.map((q) => ({
+            id: q.questions.question_id,
+            text: q.questions.question_text,
+            options: [
+              { id: "A", text: q.questions.option_a },
+              { id: "B", text: q.questions.option_b },
+              { id: "C", text: q.questions.option_c },
+              { id: "D", text: q.questions.option_d },
+            ].filter((o) => o.text),
+          })),
+        },
+      });
+    }
+
+    /* --------------------------------------------------
+       GENERATE QUESTIONS FIRST TIME
+    -------------------------------------------------- */
+
     let questions: any[] = [];
 
     for (const cfg of exam.exam_subject_configs) {
@@ -114,7 +153,8 @@ export async function GET(req: Request) {
       );
     }
 
-    /* ---------- SHUFFLE (IN MEMORY ONLY) ---------- */
+    /* ---------- SHUFFLE ---------- */
+
     if (assignment.shuffle_questions) {
       questions = shuffleArray(questions);
       questions = questions.map((q) => ({
@@ -123,7 +163,20 @@ export async function GET(req: Request) {
       }));
     }
 
-    /* ---------- RESPONSE (NO DB SAVE) ---------- */
+    /* --------------------------------------------------
+       STORE QUESTIONS FOR THIS ATTEMPT
+    -------------------------------------------------- */
+
+    await prisma.student_exam_questions.createMany({
+      data: questions.map((q, index) => ({
+        attempt_id: attemptIdNum,
+        question_id: q.id,
+        question_order: index + 1,
+      })),
+    });
+
+    /* ---------- RESPONSE ---------- */
+
     return NextResponse.json({
       success: true,
       data: {
@@ -135,8 +188,10 @@ export async function GET(req: Request) {
         questions,
       },
     });
+
   } catch (error) {
     console.error("Take exam API error:", error);
+
     return NextResponse.json(
       { success: false, message: "Failed to load exam" },
       { status: 500 }

@@ -118,6 +118,7 @@ export default function QuestionBankPage() {
     subject_id: 0,
     topic_id: 0,
     difficulty: "Medium",
+    explanation: "",
   });
 
   const [validationErrors, setValidationErrors] = useState<{
@@ -315,6 +316,7 @@ export default function QuestionBankPage() {
       subject_id: 0,
       topic_id: 0,
       difficulty: "Medium",
+      explanation: "",
     });
     setValidationErrors({});
     setIsEditMode(false);
@@ -336,6 +338,7 @@ export default function QuestionBankPage() {
       subject_id: q.subject_id || 0,
       topic_id: q.topic_id || 0,
       difficulty: q.difficulty || "Medium",
+      explanation: q.explanation || "",
     });
     setValidationErrors({});
     setIsEditMode(true);
@@ -447,6 +450,7 @@ export default function QuestionBankPage() {
           subject_id: 0,
           topic_id: 0,
           difficulty: "Medium",
+          explanation: "",
         });
         fetchQuestions();
       } else {
@@ -710,6 +714,7 @@ export default function QuestionBankPage() {
             difficulty: question.difficulty,
             subject_id: 0, // Will use pre-selected bulk subject
             topic_id: 0, // Will use pre-selected bulk topic
+            explanation: question.explanation || "",
           });
         }
 
@@ -759,6 +764,7 @@ export default function QuestionBankPage() {
         difficulty: q.difficulty,
         subject_id: bulkSelectedSubjectId,
         topic_id: bulkSelectedTopicId,
+        explanation: q.explanation || "",
       }));
 
       // Submit questions
@@ -791,10 +797,10 @@ export default function QuestionBankPage() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `question_text,option_a,option_b,option_c,option_d,correct_answer,points,difficulty
-"What is 2+2?","3","4","5","6","B",2,Easy
-"What is the capital of France?","London","Berlin","Paris","Madrid","C",2,Medium
-"Who wrote Romeo and Juliet?","Shakespeare","Hemingway","Tolstoy","Dickens","A",2,Hard`;
+    const csvContent = `question_text,option_a,option_b,option_c,option_d,correct_answer,points,difficulty,explanation
+"What is 2+2?","3","4","5","6","B",2,Easy,"The correct answer is 4 because 2+2 equals 4"
+"What is the capital of France?","London","Berlin","Paris","Madrid","C",2,Medium,"Paris is the capital city of France"
+"Who wrote Romeo and Juliet?","Shakespeare","Hemingway","Tolstoy","Dickens","A",2,Hard,"William Shakespeare wrote Romeo and Juliet"`;
 
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -822,20 +828,21 @@ export default function QuestionBankPage() {
     setBulkSelectedTopicId(0);
     setBulkTopics([]);
     setIsEditMode(false);
-    // Reset form
-    setNewQuestion({
-      question_id: 0,
-      question_text: "",
-      option_a: "",
-      option_b: "",
-      option_c: "",
-      option_d: "",
-      correct_answer: "",
-      points: 2,
-      subject_id: 0,
-      topic_id: 0,
-      difficulty: "Medium",
-    });
+         // Reset form
+        setNewQuestion({
+          question_id: 0,
+          question_text: "",
+          option_a: "",
+          option_b: "",
+          option_c: "",
+          option_d: "",
+          correct_answer: "",
+          points: 2,
+          subject_id: 0,
+          topic_id: 0,
+          difficulty: "Medium",
+          explanation: "",
+        });
     setValidationErrors({});
   };
 
@@ -892,6 +899,7 @@ export default function QuestionBankPage() {
         subject_id: 0,
         topic_id: 0,
         difficulty: "Medium",
+        explanation: "",
       });
       setValidationErrors({});
       setTopics([]);
@@ -1405,7 +1413,7 @@ export default function QuestionBankPage() {
               helperText={validationErrors.option_d}
             />
 
-            <FormControl
+             <FormControl
               fullWidth
               margin="dense"
               error={!!validationErrors.correct_answer}
@@ -1435,6 +1443,25 @@ export default function QuestionBankPage() {
                 </Typography>
               )}
             </FormControl>
+
+            <TextField
+              label="Explanation"
+              fullWidth
+              margin="dense"
+              multiline
+              rows={3}
+              value={newQuestion.explanation}
+              onChange={(e) => {
+                setNewQuestion({
+                  ...newQuestion,
+                  explanation: e.target.value,
+                });
+                setValidationErrors({ ...validationErrors, explanation: "" });
+              }}
+              error={!!validationErrors.explanation}
+              helperText={validationErrors.explanation}
+              placeholder="Provide an explanation for the correct answer (optional)"
+            />
 
             <TextField
               label="Points"
@@ -1528,6 +1555,11 @@ export default function QuestionBankPage() {
                 <Typography>
                   <b>Subject:</b> {selectedQuestion.subject_name}
                 </Typography>
+                {selectedQuestion.explanation && (
+                  <Typography sx={{ mt: 2 }}>
+                    <b>Explanation:</b> {selectedQuestion.explanation}
+                  </Typography>
+                )}
               </Box>
             )}
           </DialogContent>
@@ -1848,7 +1880,7 @@ export default function QuestionBankPage() {
                   helperText={validationErrors.option_d}
                 />
 
-                <FormControl
+                 <FormControl
                   fullWidth
                   margin="dense"
                   error={!!validationErrors.correct_answer}
@@ -1881,6 +1913,28 @@ export default function QuestionBankPage() {
                     </Typography>
                   )}
                 </FormControl>
+
+                <TextField
+                  label="Explanation"
+                  fullWidth
+                  margin="dense"
+                  multiline
+                  rows={3}
+                  value={newQuestion.explanation}
+                  onChange={(e) => {
+                    setNewQuestion({
+                      ...newQuestion,
+                      explanation: e.target.value,
+                    });
+                    setValidationErrors((prev) => ({
+                      ...prev,
+                      explanation: "",
+                    }));
+                  }}
+                  error={!!validationErrors.explanation}
+                  helperText={validationErrors.explanation}
+                  placeholder="Provide an explanation for the correct answer (optional)"
+                />
 
                 <TextField
                   label="Points"
