@@ -85,6 +85,7 @@ export async function POST(req: Request) {
         difficulty: difficulty as any,
         subject_id: q.subject_id,
         topic_id: q.topic_id,
+        explanation: q.explanation?.trim() || null,
       });
     });
 

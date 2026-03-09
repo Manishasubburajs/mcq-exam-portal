@@ -5,9 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
   Box,
   Typography,
-  Avatar,
   Paper,
-  LinearProgress,
   Card,
   CardContent,
   Button,
@@ -17,43 +15,22 @@ import {
   ListItemText,
   Chip,
   CircularProgress,
+  Divider,
+  Grid,
 } from "@mui/material";
 import {
-  Home as HomeIcon,
-  Assignment as AssignmentIcon,
-  BarChart as BarChartIcon,
-  History as HistoryIcon,
-  Person as PersonIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
   Print as PrintIcon,
   Download as DownloadIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 
-const navItems = [
-  { label: "Dashboard", icon: <HomeIcon />, active: false },
-  { label: "Take Exam", icon: <AssignmentIcon />, active: false },
-  { label: "Results", icon: <BarChartIcon />, active: true },
-  { label: "Exam History", icon: <HistoryIcon />, active: false },
-  { label: "Profile", icon: <PersonIcon />, active: false },
-  { label: "Settings", icon: <SettingsIcon />, active: false },
-  { label: "Logout", icon: <LogoutIcon />, active: false },
-];
-
-const categories: any[] = [];
-
-// Questions will be set from fetched data
-
 const ScoreCircle = ({ score }: { score: number }) => {
   const percentage = score;
   const getScoreColor = (val: number): string => {
-    if (val >= 66) return '#28a745';
-    if (val >= 33) return '#ffc107';
+    if (val >= 60) return '#28a745';
+    if (val >= 40) return '#ffc107';
     return '#dc3545';
   };
   const color = getScoreColor(percentage);
@@ -100,7 +77,7 @@ export default function ExamResultsReview() {
   const [resultData, setResultData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "correct" | "incorrect">("all");
+  const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "unanswered">("all");
 
   useEffect(() => {
     if (!attemptId) {
@@ -175,43 +152,17 @@ export default function ExamResultsReview() {
     );
   }
 
-  // Transform data
-  const exam = resultData.exam;
-  const answers = resultData.student_answers;
-
-  const questions = answers.map((answer: any, index: number) => {
-    const q = answer.question;
-    const options = [
-      { id: "A", text: q.option_a },
-      { id: "B", text: q.option_b },
-      { id: "C", text: q.option_c },
-      { id: "D", text: q.option_d },
-    ].filter((opt) => opt.text); // Filter out null options
-    const correctAnswer = q.correct_answer;
-    const selectedAnswer = answer.selected_answer;
-
-    return {
-      id: q.question_id,
-      title: `Question ${index + 1}`,
-      text: q.question_text,
-      status: selectedAnswer === correctAnswer ? "correct" : "incorrect",
-      timeTaken: answer.time_taken_seconds || 0,
-      options: options.map((opt: any) => ({
-        text: opt.text,
-        correct: opt.id === correctAnswer,
-        selected: opt.id === selectedAnswer,
-      })),
-      explanation: "Explanation not available", // Placeholder
-    };
-  });
-
-  const score = resultData.score || 0;
+  const { attempt, exam, questions } = resultData;
+  
+  const score = attempt.score || 0;
   const totalQuestions = exam.question_count || 0;
-  const totalMarks = resultData.totalMarks || (totalQuestions * 2); // Assuming backend provides totalMarks
-  const correctCount = resultData.correct_answers || 0;
-  const wrongCount = resultData.wrong_answers || 0;
-  const unansweredCount = resultData.unanswered || 0;
-  const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0;
+  const correctCount = attempt.correct_answers || 0;
+  const wrongCount = attempt.wrong_answers || 0;
+  const unansweredCount = attempt.unanswered || 0;
+  const accuracy = attempt.accuracy || 0;
+  const result = attempt.result || "Fail";
+  const totalTimeTaken = attempt.total_time_seconds || 0;
+  const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   const filteredQuestions = questions.filter(
     (q: any) => filter === "all" || q.status === filter
@@ -289,273 +240,131 @@ export default function ExamResultsReview() {
           mb: { xs: 2, sm: 3 },
           borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
           boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-          textAlign: "center",
         }}
       >
-        <ScoreCircle score={percentage} />
         <Typography
           variant="h5"
           sx={{
-            mb: { xs: 0.75, sm: 1 },
-            fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
+            mb: { xs: 2, sm: 3 },
+            color: "#2c3e50",
+            textAlign: "center",
+            fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
           }}
         >
-          {exam.exam_title}
+          Result Summary 📊
         </Typography>
+        
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid size={{xs:12, md:4}} sx={{ display: "flex", justifyContent: "center" }}>
+            <ScoreCircle score={percentage} />
+          </Grid>
+          
+          <Grid size={{xs:12, md:8}}>
+            <Grid container spacing={2}>
+              <Grid size={{xs:6, sm:3}}>
+                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+                  <CardContent sx={{ textAlign: "center", padding: 2 }}>
+                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                      Score 🏆
+                    </Typography>
+                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#28a745" }}>
+                      {score}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid size={{xs:6, sm:3}}>
+                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+                  <CardContent sx={{ textAlign: "center", padding: 2 }}>
+                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                      Correct ✔️
+                    </Typography>
+                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#28a745" }}>
+                      {correctCount}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid size={{xs:6, sm:3}}>
+                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+                  <CardContent sx={{ textAlign: "center", padding: 2 }}>
+                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                      Wrong ❌
+                    </Typography>
+                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc3545" }}>
+                      {wrongCount}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid size={{xs:6, sm:3}}>
+                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+                  <CardContent sx={{ textAlign: "center", padding: 2 }}>
+                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                      Unanswered ⏭️
+                    </Typography>
+                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#ffc107" }}>
+                      {unansweredCount}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+            
+            <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+              <Box sx={{ flex: 1, minWidth: "200px" }}>
+                <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                  Accuracy 🎯
+                </Typography>
+                <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}>
+                  {accuracy}%
+                </Typography>
+              </Box>
+              
+              <Box sx={{ flex: 1, minWidth: "200px" }}>
+                <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                  Result 📜
+                </Typography>
+                <Chip
+                  label={result === "Pass" ? "Pass" : "Fail"}
+                  color={result === "Pass" ? "success" : "error"}
+                  size="medium"
+                  sx={{ fontSize: "1rem", padding: "0 16px" }}
+                />
+              </Box>
+              
+              <Box sx={{ flex: 1, minWidth: "200px" }}>
+                <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                  Total Time Taken ⏱️
+                </Typography>
+                <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}>
+                  {Math.floor(totalTimeTaken / 60)}m {totalTimeTaken % 60}s
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+        
+        <Divider sx={{ my: 2 }} />
+        
         <Typography
           sx={{
             color: "#6c757d",
-            mb: { xs: 2, sm: 3 },
-            fontSize: { xs: "0.8rem", sm: "0.875rem", md: "1rem" },
+            textAlign: "center",
+            fontSize: { xs: "0.875rem", sm: "1rem" },
           }}
         >
-          Completed on {new Date(resultData.end_time).toLocaleDateString()} •
-          Time Spent: {Math.floor(resultData.total_time_seconds / 60)} minutes{" "}
-          {resultData.total_time_seconds % 60} seconds out of{" "}
-          {exam.time_limit_minutes} minutes
-        </Typography>
-
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: { xs: 0.75, sm: 1, md: 2 },
-            maxWidth: { xs: "100%", sm: 600 },
-            mx: "auto",
-            justifyContent: "center",
-            "& > *": {
-              flex: { xs: "1 1 45%", sm: "1 1 22%" },
-              minWidth: { xs: "100px", sm: "120px", md: "140px" },
-            },
-          }}
-        >
-          <Box
-            sx={{
-              textAlign: "center",
-              padding: { xs: 1, sm: 1.5 },
-              backgroundColor: "#f8f9fa",
-              borderRadius: 1,
-              minHeight: { xs: 80, sm: "auto" },
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
-            <Typography
-              sx={{
-                fontWeight: 700,
-                mb: 0.5,
-                fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
-              }}
-            >
-              {correctCount}/{totalQuestions}
-            </Typography>
-            <Typography
-              sx={{
-                color: "#6c757d",
-                fontSize: { xs: 12, sm: 14 },
-                lineHeight: 1.2,
-              }}
-            >
-              Questions Correct
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              textAlign: "center",
-              padding: { xs: 1, sm: 1.5 },
-              backgroundColor: "#f8f9fa",
-              borderRadius: 1,
-              minHeight: { xs: 80, sm: "auto" },
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
-            <Typography
-              sx={{
-                fontWeight: 700,
-                mb: 0.5,
-                fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
-                color: percentage >= 33 ? "green" : "red",
-              }}
-            >
-              {percentage >= 33 ? "Pass" : "Fail"}
-            </Typography>
-            <Typography
-              sx={{
-                color: "#6c757d",
-                fontSize: { xs: 12, sm: 14 },
-                lineHeight: 1.2,
-              }}
-            >
-              Result
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              textAlign: "center",
-              padding: { xs: 1, sm: 1.5 },
-              backgroundColor: "#f8f9fa",
-              borderRadius: 1,
-              minHeight: { xs: 80, sm: "auto" },
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
-            <Typography
-              sx={{
-                fontWeight: 700,
-                mb: 0.5,
-                fontSize: { xs: "0.8rem", sm: "0.9rem", md: "1rem" },
-              }}
-            >
-              Correct: {correctCount}
-            </Typography>
-            <Typography
-              sx={{
-                fontWeight: 700,
-                mb: 0.5,
-                fontSize: { xs: "0.8rem", sm: "0.9rem", md: "1rem" },
-              }}
-            >
-              Wrong: {wrongCount}
-            </Typography>
-            <Typography
-              sx={{
-                fontWeight: 700,
-                mb: 0.5,
-                fontSize: { xs: "0.8rem", sm: "0.9rem", md: "1rem" },
-              }}
-            >
-              Unanswered: {unansweredCount}
-            </Typography>
-            <Typography
-              sx={{
-                fontWeight: 700,
-                mb: 0.5,
-                fontSize: { xs: "0.8rem", sm: "0.9rem", md: "1rem" },
-              }}
-            >
-              Score: {score}/{totalMarks}
-            </Typography>
-            <Typography
-              sx={{
-                color: "#6c757d",
-                fontSize: { xs: 12, sm: 14 },
-                lineHeight: 1.2,
-              }}
-            >
-              Question Counts
-            </Typography>
-          </Box>
-          {/* <Box sx={{
-              textAlign: 'center',
-              padding: { xs: 1, sm: 1.5 },
-              backgroundColor: '#f8f9fa',
-              borderRadius: 1,
-              minHeight: { xs: 80, sm: 'auto' },
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              marginLeft: 'auto'
-            }}>
-              <Typography
-                sx={{
-                  fontWeight: 700,
-                  mb: 0.5,
-                  fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-                }}
-              >
-                {Math.round((score / (totalQuestions * 2)) * 100)}%
-              </Typography>
-              <Typography sx={{
-                color: '#6c757d',
-                fontSize: { xs: 12, sm: 14 },
-                lineHeight: 1.2
-              }}>
-                Overall Score
-              </Typography>
-            </Box> */}
-        </Box>
-      </Paper>
-
-      {/* Performance Breakdown */}
-      <Paper
-        sx={{
-          padding: { xs: 2, sm: 2.5, md: 3 },
-          mb: { xs: 2, sm: 3 },
-          borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
-          boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-        }}
-      >
-        <Typography
-          variant="h5"
-          sx={{
-            mb: { xs: 1.5, sm: 2 },
-            color: "#2c3e50",
-            paddingBottom: { xs: 0.75, sm: 1 },
-            borderBottom: "2px solid #f0f0f0",
-            fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
-          }}
-        >
-          Performance by Category
-        </Typography>
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: { xs: 1.5, sm: 2 },
-            "& > *": {
-              flex: {
-                xs: "1 1 100%",
-                sm: "1 1 calc(50% - 8px)",
-                md: "1 1 calc(33.333% - 16px)",
-              },
-              minWidth: { xs: "200px", sm: "250px", md: "200px" },
-            },
-          }}
-        >
-          {categories.map((category) => (
-            <Box
-              key={category.name}
-              sx={{ padding: 1.5, borderRadius: 1, backgroundColor: "#f8f9fa" }}
-            >
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
-              >
-                <Typography sx={{ fontWeight: 600 }}>
-                  {category.name}
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>
-                  {category.score}%
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={category.score}
-                sx={{
-                  height: 8,
-                  borderRadius: 1,
-                  mb: 1,
-                  backgroundColor: "#e9ecef",
-                  "& .MuiLinearProgress-bar": {
-                    backgroundColor: (() => {
-                      if (category.score >= 90) return "#28a745";
-                      if (category.score >= 70) return "#20c997";
-                      return "#ffc107";
-                    })(),
-                    borderRadius: 1,
-                  },
-                }}
-              />
-              <Typography sx={{ fontSize: 12, color: "#6c757d" }}>
-                {category.correct}/{category.total} questions correct
-              </Typography>
+          Completed on {new Date(attempt.end_time).toLocaleDateString()} •
+          Time Spent: {Math.floor(totalTimeTaken / 60)} minutes {totalTimeTaken % 60} seconds
+          {exam.time_limit_minutes > 0 && (
+            <Box component="span" sx={{ ml: 1 }}>
+              out of {exam.time_limit_minutes} minutes
             </Box>
-          ))}
-        </Box>
+          )}
+        </Typography>
       </Paper>
 
       {/* Questions Review */}
@@ -584,8 +393,9 @@ export default function ExamResultsReview() {
               fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
             }}
           >
-            Question Review
+            Question Review ({filteredQuestions.length} of {questions.length})
           </Typography>
+          
           <Box
             sx={{
               display: "flex",
@@ -636,7 +446,19 @@ export default function ExamResultsReview() {
               >
                 Incorrect
               </Button>
+              <Button
+                variant={filter === "unanswered" ? "contained" : "outlined"}
+                onClick={() => setFilter("unanswered")}
+                sx={{
+                  textTransform: "none",
+                  fontSize: { xs: 11, sm: 12 },
+                  flex: 1,
+                }}
+              >
+                Unanswered
+              </Button>
             </ButtonGroup>
+            
             <Box
               sx={{
                 display: "flex",
@@ -681,7 +503,7 @@ export default function ExamResultsReview() {
           </Box>
         </Box>
 
-        {filteredQuestions.map((question: any) => (
+        {filteredQuestions.map((question: any, index: number) => (
           <Card
             key={question.id}
             sx={{
@@ -709,7 +531,7 @@ export default function ExamResultsReview() {
                   fontSize: { xs: "1rem", sm: "1.25rem" },
                 }}
               >
-                {question.title}
+                Question {index + 1}
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -720,9 +542,13 @@ export default function ExamResultsReview() {
                 </Box>
                 <Chip
                   label={
-                    question.status === "correct" ? "Correct" : "Incorrect"
+                    question.status === "correct" ? "Correct" : 
+                    question.status === "incorrect" ? "Incorrect" : "Unanswered"
                   }
-                  color={question.status === "correct" ? "success" : "error"}
+                  color={
+                    question.status === "correct" ? "success" : 
+                    question.status === "incorrect" ? "error" : "warning"
+                  }
                   size="small"
                 />
               </Box>
@@ -737,10 +563,11 @@ export default function ExamResultsReview() {
               >
                 {question.text}
               </Typography>
+              
               <List>
-                {question.options.map((option: any, index: number) => (
+                {question.options.map((option: any, optIndex: number) => (
                   <ListItem
-                    key={`option-${question.id}-${index}`}
+                    key={`option-${question.id}-${optIndex}`}
                     sx={{
                       padding: "12px 15px",
                       border: "1px solid #e0e0e0",
@@ -770,7 +597,7 @@ export default function ExamResultsReview() {
                         flexShrink: 0,
                       }}
                     >
-                      {String.fromCodePoint(65 + index)}
+                      {String.fromCodePoint(65 + optIndex)}
                     </Box>
                     <ListItemText primary={option.text} />
                     {option.correct && (
@@ -785,19 +612,22 @@ export default function ExamResultsReview() {
                   </ListItem>
                 ))}
               </List>
+              
               <Box
                 sx={{
-                  backgroundColor: "#e7f3ff",
+                  mt: 2,
                   padding: 1.5,
                   borderRadius: 1,
-                  mt: 1.5,
                   borderLeft: "4px solid #2575fc",
+                  backgroundColor: "#e3f2fd",
                 }}
               >
                 <Typography sx={{ fontWeight: 600, mb: 0.5, color: "#2575fc" }}>
                   Explanation:
                 </Typography>
-                <Typography>{question.explanation}</Typography>
+                <Typography sx={{ color: "#1976d2", fontWeight: 500 }}>
+                  {question.explanation || "Explanation not available"}
+                </Typography>
               </Box>
             </CardContent>
           </Card>
@@ -816,39 +646,15 @@ export default function ExamResultsReview() {
           }}
         >
           <Button
-            variant="outlined"
-            color="secondary"
-            startIcon={<ChevronLeftIcon />}
-            sx={{
-              textTransform: "none",
-              width: { xs: "100%", sm: "auto" },
-              mb: { xs: 0.5, sm: 0 },
-            }}
-          >
-            Previous
-          </Button>
-          <Button
             variant="contained"
             onClick={() => router.push("/student-pages/exam_history")}
             sx={{
               textTransform: "none",
               background: "linear-gradient(to right, #6a11cb, #2575fc)",
               width: { xs: "100%", sm: "auto" },
-              mb: { xs: 0.5, sm: 0 },
             }}
           >
             Back to Exam History
-          </Button>
-          <Button
-            variant="outlined"
-            color="secondary"
-            endIcon={<ChevronRightIcon />}
-            sx={{
-              textTransform: "none",
-              width: { xs: "100%", sm: "auto" },
-            }}
-          >
-            Next
           </Button>
         </Box>
       </Paper>
