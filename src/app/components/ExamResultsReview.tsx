@@ -251,7 +251,7 @@ export default function ExamResultsReview() {
             fontSize: { xs: "1.25rem", sm: "1.5rem", md: "1.75rem" },
           }}
         >
-          Result Summary
+          Result Summary 📊
         </Typography>
         
         <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -265,7 +265,7 @@ export default function ExamResultsReview() {
                 <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
                     <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
-                      Score
+                      Score 🏆
                     </Typography>
                     <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#28a745" }}>
                       {score}
@@ -278,7 +278,7 @@ export default function ExamResultsReview() {
                 <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
                     <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
-                      Correct
+                      Correct ✔️
                     </Typography>
                     <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#28a745" }}>
                       {correctCount}
@@ -291,7 +291,7 @@ export default function ExamResultsReview() {
                 <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
                     <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
-                      Wrong
+                      Wrong ❌
                     </Typography>
                     <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc3545" }}>
                       {wrongCount}
@@ -304,7 +304,7 @@ export default function ExamResultsReview() {
                 <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
                     <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
-                      Unanswered
+                      Unanswered ⏭️
                     </Typography>
                     <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#ffc107" }}>
                       {unansweredCount}
@@ -317,7 +317,7 @@ export default function ExamResultsReview() {
             <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
               <Box sx={{ flex: 1, minWidth: "200px" }}>
                 <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
-                  Accuracy
+                  Accuracy 🎯
                 </Typography>
                 <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}>
                   {accuracy}%
@@ -326,7 +326,7 @@ export default function ExamResultsReview() {
               
               <Box sx={{ flex: 1, minWidth: "200px" }}>
                 <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
-                  Result
+                  Result 📜
                 </Typography>
                 <Chip
                   label={result === "Pass" ? "Pass" : "Fail"}
@@ -338,7 +338,7 @@ export default function ExamResultsReview() {
               
               <Box sx={{ flex: 1, minWidth: "200px" }}>
                 <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
-                  Total Time Taken
+                  Total Time Taken ⏱️
                 </Typography>
                 <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}>
                   {Math.floor(totalTimeTaken / 60)}m {totalTimeTaken % 60}s
