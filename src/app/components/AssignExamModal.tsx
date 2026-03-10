@@ -45,7 +45,7 @@ export default function AssignExamModal({
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
+  const [submitting, setSubmitting] = useState(false);
   const [preAssigned, setPreAssigned] = useState<number[]>([]);
   const [completedStudents, setCompletedStudents] = useState<Set<number>>(
     new Set(),
@@ -135,6 +135,9 @@ export default function AssignExamModal({
   };
 
   const handleAssign = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+
     try {
       const res = await fetch("/api/exams/assign", {
         method: "POST",
@@ -163,6 +166,8 @@ export default function AssignExamModal({
       setSnackbarMessage(err.message || "Failed to assign exam");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -281,11 +286,19 @@ export default function AssignExamModal({
           <Button
             variant="contained"
             onClick={handleAssign}
-            disabled={isButtonDisabled()}
+            disabled={isButtonDisabled() || submitting}
+            startIcon={
+              submitting ? <CircularProgress size={18} color="inherit" /> : null
+            }
           >
-            {checked.size > preAssigned.length
-              ? "Assign Exam"
-              : "Update Assignment"}
+            {submitting
+              ? preAssigned.length === 0
+                ? "Assigning..."
+                : "Updating..."
+              : preAssigned.length === 0
+                ? "Assign Exam"
+                : "Update Assignment"}
+            {/* {preAssigned.length === 0 ? "Assign Exam" : "Update Assignment"} */}
           </Button>
         </DialogActions>
       </Dialog>

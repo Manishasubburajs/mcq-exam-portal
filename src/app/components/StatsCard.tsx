@@ -1,5 +1,11 @@
 import React from "react";
-import { Paper, Box, Typography, Avatar } from "@mui/material";
+import {
+  Paper,
+  Box,
+  Typography,
+  Avatar,
+  CircularProgress,
+} from "@mui/material";
 import {
   School,
   Assignment,
@@ -17,9 +23,10 @@ interface Stat {
 
 interface Props {
   stat: Stat;
+  loading?: boolean;
 }
 
-const StatsCard: React.FC<Props> = ({ stat }) => {
+const StatsCard: React.FC<Props> = ({ stat, loading }) => {
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case "School":
@@ -42,7 +49,7 @@ const StatsCard: React.FC<Props> = ({ stat }) => {
       sx={{
         display: "flex",
         alignItems: "center",
-        gap: 2, 
+        gap: 2,
       }}
     >
       <Avatar
@@ -51,19 +58,24 @@ const StatsCard: React.FC<Props> = ({ stat }) => {
           height: 60,
           background: stat.bgColor,
           boxShadow: 3,
-          transition: "all 0.3s ease",
-          "&:hover": {
-            transform: "translateY(-3px)",
-            boxShadow: 5,
-          },
+          color: "#fff",
         }}
       >
         {getIcon(stat.icon)}
       </Avatar>
+
       <Box>
         <Typography variant="h6" color="text.primary">
-          {stat.title}
+          {loading ? (
+            <>
+              <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />
+              Loading...
+            </>
+          ) : (
+            stat.title
+          )}
         </Typography>
+
         <Typography variant="body2" color="text.secondary">
           {stat.subtitle}
         </Typography>

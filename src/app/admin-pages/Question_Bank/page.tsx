@@ -423,6 +423,8 @@ export default function QuestionBankPage() {
     const method = isEditMode ? "PUT" : "POST";
 
     try {
+      setLoading(true);
+
       const res = await fetch("/api/questions", {
         method,
         headers: { "Content-Type": "application/json" },
@@ -459,6 +461,8 @@ export default function QuestionBankPage() {
     } catch (err) {
       console.error("Error saving question:", err);
       showSnackbar("Something went wrong. Try again.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -467,6 +471,7 @@ export default function QuestionBankPage() {
     if (!ids.length) return;
 
     try {
+      setLoading(true);
       const res = await fetch("/api/questions", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -491,6 +496,7 @@ export default function QuestionBankPage() {
       showSnackbar("Something went wrong while deleting", "error");
     } finally {
       setDeleteDialog({ open: false, ids: [] });
+      setLoading(false);
     }
   };
 
@@ -660,6 +666,7 @@ export default function QuestionBankPage() {
           "correct_answer",
           "points",
           "difficulty",
+          "explanation",
         ];
         const missingFields = requiredFields.filter(
           (field) => !headers.includes(field),
@@ -767,6 +774,8 @@ export default function QuestionBankPage() {
         explanation: q.explanation || "",
       }));
 
+      setLoading(true);
+
       // Submit questions
       const res = await fetch("/api/questions/bulk", {
         method: "POST",
@@ -793,6 +802,8 @@ export default function QuestionBankPage() {
       }
     } catch (error: any) {
       showSnackbar(`Error: ${error.message}`, "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -828,21 +839,21 @@ export default function QuestionBankPage() {
     setBulkSelectedTopicId(0);
     setBulkTopics([]);
     setIsEditMode(false);
-         // Reset form
-        setNewQuestion({
-          question_id: 0,
-          question_text: "",
-          option_a: "",
-          option_b: "",
-          option_c: "",
-          option_d: "",
-          correct_answer: "",
-          points: 2,
-          subject_id: 0,
-          topic_id: 0,
-          difficulty: "Medium",
-          explanation: "",
-        });
+    // Reset form
+    setNewQuestion({
+      question_id: 0,
+      question_text: "",
+      option_a: "",
+      option_b: "",
+      option_c: "",
+      option_d: "",
+      correct_answer: "",
+      points: 2,
+      subject_id: 0,
+      topic_id: 0,
+      difficulty: "Medium",
+      explanation: "",
+    });
     setValidationErrors({});
   };
 
@@ -1285,6 +1296,7 @@ export default function QuestionBankPage() {
                     page={currentPage}
                     onChange={(e, page) => setCurrentPage(page)}
                     disabled={filteredQuestions.length === 0}
+                    color="primary"
                   />
                 </Box>
               </>
@@ -1413,7 +1425,7 @@ export default function QuestionBankPage() {
               helperText={validationErrors.option_d}
             />
 
-             <FormControl
+            <FormControl
               fullWidth
               margin="dense"
               error={!!validationErrors.correct_answer}
@@ -1880,7 +1892,7 @@ export default function QuestionBankPage() {
                   helperText={validationErrors.option_d}
                 />
 
-                 <FormControl
+                <FormControl
                   fullWidth
                   margin="dense"
                   error={!!validationErrors.correct_answer}
@@ -2142,6 +2154,9 @@ export default function QuestionBankPage() {
                             <TableCell sx={{ fontWeight: "bold" }}>
                               Correct Answer
                             </TableCell>
+                            <TableCell sx={{ fontWeight: "bold" }}>
+                              Explanation
+                            </TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -2170,6 +2185,7 @@ export default function QuestionBankPage() {
                               </TableCell>
                               <TableCell>{q.points}</TableCell>
                               <TableCell>{q.correct_answer}</TableCell>
+                              <TableCell>{q.explanation}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -2208,12 +2224,24 @@ export default function QuestionBankPage() {
                 <Button
                   variant="contained"
                   onClick={handleSaveQuestion}
+                  disabled={loading}
+                  startIcon={
+                    loading ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : null
+                  }
                   sx={{
                     background: "linear-gradient(to right, #6a11cb, #2575fc)",
                     "&:hover": { opacity: 0.9 },
                   }}
                 >
-                  {isEditMode ? "Update Question" : "Save Question"}
+                  {loading
+                    ? isEditMode
+                      ? "Updating..."
+                      : "Saving..."
+                    : isEditMode
+                      ? "Update Question"
+                      : "Save Question"}
                 </Button>
               )}
 
@@ -2232,13 +2260,21 @@ export default function QuestionBankPage() {
                     <Button
                       variant="contained"
                       onClick={handleBulkSubmit}
+                      disabled={loading}
+                      startIcon={
+                        loading ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : null
+                      }
                       sx={{
                         background:
                           "linear-gradient(to right, #6a11cb, #2575fc)",
                         "&:hover": { opacity: 0.9 },
                       }}
                     >
-                      Submit {bulkQuestions.length} Questions
+                      {loading
+                        ? "Uploading..."
+                        : `Submit ${bulkQuestions.length} Questions`}
                     </Button>
                   )}
                 </>
@@ -2293,8 +2329,12 @@ export default function QuestionBankPage() {
               variant="contained"
               color="error"
               onClick={confirmDeleteQuestions}
+              disabled={loading}
+              startIcon={
+                loading ? <CircularProgress size={18} color="inherit" /> : null
+              }
             >
-              Delete
+              {loading ? "Deleting..." : "Delete"}
             </Button>
           </DialogActions>
         </StyledDialog>
