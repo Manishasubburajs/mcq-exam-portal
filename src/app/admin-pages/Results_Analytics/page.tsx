@@ -73,6 +73,7 @@ interface StudentResult {
   score: number;
   timeSpent: string;
   correctAnswers: string;
+  examDate: string;
 
   // All exam analytics
   overallPercentage: number;
@@ -460,6 +461,7 @@ const ResultsAnalytics = () => {
                       <TableCell sx={{ fontWeight: "bold" }}>Score</TableCell>
                       <TableCell sx={{ fontWeight: "bold" }}>Correct</TableCell>
                       <TableCell sx={{ fontWeight: "bold" }}>Time</TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Date</TableCell>
                     </>
                   ) : (
                     <>
@@ -502,6 +504,13 @@ const ResultsAnalytics = () => {
                           <TableCell>{student.score}</TableCell>
                           <TableCell>{student.correctAnswers}</TableCell>
                           <TableCell>{student.timeSpent}</TableCell>
+                          <TableCell>
+                            {student.examDate
+                              ? new Date(student.examDate).toLocaleDateString(
+                                  "en-GB",
+                                )
+                              : "-"}
+                          </TableCell>
                         </>
                       ) : (
                         <>
