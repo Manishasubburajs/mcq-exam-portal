@@ -136,102 +136,107 @@ export async function POST(req: Request) {
     // -----------------------------
     // TRANSACTION START
     // -----------------------------
-    const exam = await prisma.$transaction(async (tx) => {
-      let totalMarks = 0; // Initialize total marks
+    const exam = await prisma.$transaction(
+      async (tx) => {
+        let totalMarks = 0; // Initialize total marks
 
-      /* ---- Create Exam with temporary 0 total_marks ---- */
-      const exam = await tx.exams.create({
-        data: {
-          exam_title: examTitle,
-          description,
-          exam_type: examType,
-          time_limit_minutes: duration || null,
-          scheduled_start:
-            examType === "live" && startTime ? new Date(startTime) : null,
-          scheduled_end:
-            examType === "live" && endTime ? new Date(endTime) : null,
-          question_count: totalQuestions,
-          total_marks: 0, // will update later
-          is_active: true,
-        },
-      });
-
-      // -----------------------------
-      // FETCH TOPICS (for subject mapping)
-      // -----------------------------
-      const topicIds = Object.keys(topicCounts).map(Number);
-
-      const topics = await tx.topics.findMany({
-        where: { topic_id: { in: topicIds } },
-        select: {
-          topic_id: true,
-          subject_id: true,
-        },
-      });
-
-      // -----------------------------
-      // INSERT exam_subject_configs ✅
-      // -----------------------------
-      await tx.exam_subject_configs.createMany({
-        data: topics.map((t) => ({
-          exam_id: exam.exam_id,
-          subject_id: t.subject_id,
-          topic_id: t.topic_id,
-          question_count: topicCounts[t.topic_id],
-        })),
-      });
-
-      // -----------------------------
-      // PREPARE exam_questions
-      // -----------------------------
-      let questionOrder = 1;
-      const examQuestionsData: any[] = [];
-
-      for (const [topicIdStr, count] of Object.entries(topicCounts)) {
-        const topicId = Number(topicIdStr);
-        if (count <= 0) continue;
-
-        const allQuestions = await tx.questions.findMany({
-          where: { topic_id: topicId },
-          select: {
-            question_id: true,
-            marks: true,
-            negative_marks: true,
+        /* ---- Create Exam with temporary 0 total_marks ---- */
+        const exam = await tx.exams.create({
+          data: {
+            exam_title: examTitle,
+            description,
+            exam_type: examType,
+            time_limit_minutes: duration || null,
+            scheduled_start:
+              examType === "live" && startTime ? new Date(startTime) : null,
+            scheduled_end:
+              examType === "live" && endTime ? new Date(endTime) : null,
+            question_count: totalQuestions,
+            total_marks: 0, // will update later
+            is_active: true,
           },
         });
 
-        if (allQuestions.length < count) {
-          throw new Error(`Not enough questions for topic ID ${topicId}`);
-        }
+        // -----------------------------
+        // FETCH TOPICS (for subject mapping)
+        // -----------------------------
+        const topicIds = Object.keys(topicCounts).map(Number);
 
-        const selectedQuestions = shuffleArray(allQuestions).slice(0, count);
+        const topics = await tx.topics.findMany({
+          where: { topic_id: { in: topicIds } },
+          select: {
+            topic_id: true,
+            subject_id: true,
+          },
+        });
 
-        for (const q of selectedQuestions) {
-          examQuestionsData.push({
+        // -----------------------------
+        // INSERT exam_subject_configs ✅
+        // -----------------------------
+        await tx.exam_subject_configs.createMany({
+          data: topics.map((t) => ({
             exam_id: exam.exam_id,
-            question_id: q.question_id,
-            question_order: questionOrder++,
-            assigned_marks: q.marks,
-            assigned_negative: q.negative_marks,
+            subject_id: t.subject_id,
+            topic_id: t.topic_id,
+            question_count: topicCounts[t.topic_id],
+          })),
+        });
+
+        // -----------------------------
+        // PREPARE exam_questions
+        // -----------------------------
+        let questionOrder = 1;
+        const examQuestionsData: any[] = [];
+
+        for (const [topicIdStr, count] of Object.entries(topicCounts)) {
+          const topicId = Number(topicIdStr);
+          if (count <= 0) continue;
+
+          const allQuestions = await tx.questions.findMany({
+            where: { topic_id: topicId },
+            select: {
+              question_id: true,
+              marks: true,
+              negative_marks: true,
+            },
           });
 
-          totalMarks += Number(q.marks); // ✅ Add question marks to total
+          if (allQuestions.length < count) {
+            throw new Error(`Not enough questions for topic ID ${topicId}`);
+          }
+
+          const selectedQuestions = shuffleArray(allQuestions).slice(0, count);
+
+          for (const q of selectedQuestions) {
+            examQuestionsData.push({
+              exam_id: exam.exam_id,
+              question_id: q.question_id,
+              question_order: questionOrder++,
+              assigned_marks: q.marks,
+              assigned_negative: q.negative_marks,
+            });
+
+            totalMarks += Number(q.marks); // ✅ Add question marks to total
+          }
         }
-      }
 
-      // ---- Insert exam_questions ----
-      await tx.exam_questions.createMany({
-        data: examQuestionsData,
-      });
+        // ---- Insert exam_questions ----
+        await tx.exam_questions.createMany({
+          data: examQuestionsData,
+        });
 
-      // ---- Update total_marks in exams table ----
-      await tx.exams.update({
-        where: { exam_id: exam.exam_id },
-        data: { total_marks: totalMarks },
-      });
+        // ---- Update total_marks in exams table ----
+        await tx.exams.update({
+          where: { exam_id: exam.exam_id },
+          data: { total_marks: totalMarks },
+        });
 
-      return exam;
-    });
+        return exam;
+      },
+      {
+        timeout: 15000,
+      },
+    );
 
     // -----------------------------
     // SUCCESS RESPONSE

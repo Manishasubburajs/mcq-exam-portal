@@ -157,52 +157,57 @@ export async function PUT(req: Request) {
     }
 
     // Start transaction
-    await prisma.$transaction(async (tx) => {
-      // 1️⃣ Update subject name
-      await tx.subjects.update({
-        where: { subject_id: subjectId },
-        data: { subject_name },
-      });
+    await prisma.$transaction(
+      async (tx) => {
+        // 1️⃣ Update subject name
+        await tx.subjects.update({
+          where: { subject_id: subjectId },
+          data: { subject_name },
+        });
 
-      // 2️⃣ Fetch existing topics
-      const existingTopics = await tx.topics.findMany({
-        where: { subject_id: subjectId },
-        include: {
-          _count: { select: { questions: true } },
-        },
-      });
+        // 2️⃣ Fetch existing topics
+        const existingTopics = await tx.topics.findMany({
+          where: { subject_id: subjectId },
+          include: {
+            _count: { select: { questions: true } },
+          },
+        });
 
-      // 3️⃣ Delete removed topics ONLY if they have no questions
-      for (const existing of existingTopics) {
-        const stillExists = topics.find(
-          (t: any) => t.topic_id === existing.topic_id,
-        );
-        if (!stillExists && existing._count.questions === 0) {
-          await tx.topics.delete({
-            where: { topic_id: existing.topic_id },
-          });
+        // 3️⃣ Delete removed topics ONLY if they have no questions
+        for (const existing of existingTopics) {
+          const stillExists = topics.find(
+            (t: any) => t.topic_id === existing.topic_id,
+          );
+          if (!stillExists && existing._count.questions === 0) {
+            await tx.topics.delete({
+              where: { topic_id: existing.topic_id },
+            });
+          }
         }
-      }
 
-      // 4️⃣ Update existing topics
-      for (const topic of topics) {
-        if (topic.topic_id) {
-          await tx.topics.update({
-            where: { topic_id: topic.topic_id },
-            data: { topic_name: topic.topic_name },
-          });
+        // 4️⃣ Update existing topics
+        for (const topic of topics) {
+          if (topic.topic_id) {
+            await tx.topics.update({
+              where: { topic_id: topic.topic_id },
+              data: { topic_name: topic.topic_name },
+            });
+          }
         }
-      }
 
-      // 5️⃣ Create new topics
-      for (const topic of topics) {
-        if (!topic.topic_id) {
-          await tx.topics.create({
-            data: { subject_id: subjectId, topic_name: topic.topic_name },
-          });
+        // 5️⃣ Create new topics
+        for (const topic of topics) {
+          if (!topic.topic_id) {
+            await tx.topics.create({
+              data: { subject_id: subjectId, topic_name: topic.topic_name },
+            });
+          }
         }
-      }
-    });
+      },
+      {
+        timeout: 15000, // 15 seconds
+      },
+    );
 
     return NextResponse.json({
       success: true,
