@@ -329,8 +329,8 @@ export default function ExamResultsReview() {
                   Result 📜
                 </Typography>
                 <Chip
-                  label={result === "Pass" ? "Pass" : "Fail"}
-                  color={result === "Pass" ? "success" : "error"}
+                  label={result === "pass" ? "Pass" : "Fail"}
+                  color={result === "pass" ? "success" : "error"}
                   size="medium"
                   sx={{ fontSize: "1rem", padding: "0 16px" }}
                 />
