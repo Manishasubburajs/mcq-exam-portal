@@ -101,6 +101,7 @@ const ExamManagement: React.FC = () => {
   const [filteredExams, setFilteredExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   // Modal states
   const [createExamModalOpen, setCreateExamModalOpen] = useState(false);
@@ -421,6 +422,8 @@ const ExamManagement: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (!selectedExam) return;
 
+    setDeleting(true);
+
     try {
       const res = await fetch(`/api/exams/${selectedExam.id}`, {
         method: "DELETE",
@@ -452,6 +455,7 @@ const ExamManagement: React.FC = () => {
         severity: "error",
       });
     }
+    setDeleting(false);
   };
 
   const paginatedExams = filteredExams.slice(
@@ -536,7 +540,13 @@ const ExamManagement: React.FC = () => {
             </Typography>
             <Button
               variant="contained"
-              startIcon={<Add />}
+              startIcon={
+                loading ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <Add />
+                )
+              }
               onClick={handleCreateExam}
               sx={{
                 background: "linear-gradient(to right, #6a11cb, #2575fc)",
@@ -544,7 +554,7 @@ const ExamManagement: React.FC = () => {
               }}
               disabled={loading}
             >
-              Create New Exam
+              {loading ? "Loading..." : "Create New Exam"}
             </Button>
           </Box>
 
@@ -897,11 +907,16 @@ const ExamManagement: React.FC = () => {
               onClick={handleDeleteConfirm}
               color="error"
               variant="contained"
+              disabled={deleting}
+              startIcon={
+                deleting ? <CircularProgress size={18} color="inherit" /> : null
+              }
             >
-              Delete Exam
+              {deleting ? "Deleting..." : "Delete Exam"}
             </Button>
           </DialogActions>
         </Dialog>
+        
         {assignExamId && (
           <AssignExamModal
             open={assignModalOpen}
