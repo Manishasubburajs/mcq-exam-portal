@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
-import { Box, Typography, Card, Button, useTheme } from "@mui/material";
+import { Box, Typography, Card, Button, useTheme, Avatar } from "@mui/material";
 import { useRouter } from "next/navigation";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -14,6 +14,58 @@ import EventIcon from "@mui/icons-material/Event";
 import GradeIcon from "@mui/icons-material/Grade";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+
+interface StatCardProps {
+  icon: ReactNode;
+  label: string;
+  value: string | number;
+  color?: string;
+  iconColor?: string;
+}
+
+const StatCard = ({ icon, label, value, color, iconColor }: StatCardProps) => (
+  <Card
+    sx={{
+      p: 2.5,
+      borderRadius: 2.5,
+      background: CARD_BG,
+      color: TEXT_PRIMARY,
+      boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+      flex: { xs: "1 1 100%", sm: "1 1 50%", md: "1 1 240px" },
+      display: "flex",
+      alignItems: "center",
+      transition: "all 0.3s ease",
+    }}
+  >
+    <Box sx={{ display: "flex", alignItems: "flex-end", gap: 1.875 }}>
+      <Avatar
+        sx={{
+          width: 60,
+          height: 60,
+          bgcolor: color,
+          color: iconColor || "#fff",
+          fontSize: "24px",
+        }}
+      >
+        {icon}
+      </Avatar>
+      <Box>
+        <Typography
+          sx={{
+            fontSize: 24,
+            fontWeight: 600,
+            lineHeight: 1,
+            mb: 0.625,
+            color: TEXT_PRIMARY,
+          }}
+        >
+          {value}
+        </Typography>
+        <Typography sx={{ color: "#7f8c8d", fontSize: 14 }}>{label}</Typography>
+      </Box>
+    </Box>
+  </Card>
+);
 
 const MAIN_BG = "#f5f7fa";
 const CARD_BG = "#ffffff";
@@ -494,6 +546,43 @@ export default function MyExamsPage() {
         p: { xs: 1.5, sm: 2.5, md: 3.75 },
       }}
     >
+      {/* Exam Count Cards */}
+      <Box sx={{ 
+        display: "flex", 
+        flexWrap: "wrap", 
+        gap: { xs: 1.5, sm: 2, md: 2.5 }, 
+        mb: { xs: 2, sm: 3, md: 3.75 } 
+      }}>
+        <StatCard
+          icon={<EmojiEventsIcon fontSize="medium" />}
+          label="Total Exams Available"
+          value={availableExams.length}
+          color="#6a11cb"
+          iconColor="#fff"
+        />
+        <StatCard
+          icon={<CheckCircleIcon fontSize="medium" />}
+          label="Practice Exams"
+          value={practiceExams.length}
+          color="#3b82f6"
+          iconColor="#fff"
+        />
+        <StatCard
+          icon={<StarRateIcon fontSize="medium" />}
+          label="Mock Exams"
+          value={mockExams.length}
+          color="#f59e0b"
+          iconColor="#fff"
+        />
+        <StatCard
+          icon={<ScheduleIcon fontSize="medium" />}
+          label="Live Exams"
+          value={liveExams.length}
+          color="#ef4444"
+          iconColor="#fff"
+        />
+      </Box>
+
       {/* Practice Exams */}
       {practiceExams.length > 0 && (
         <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
