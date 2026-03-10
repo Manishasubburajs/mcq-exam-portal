@@ -258,7 +258,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 Score
                               </TableCell>
                               <TableCell sx={{ fontWeight: "bold" }}>
-                                Attempts
+                                Accuracy
                               </TableCell>
                               <TableCell sx={{ fontWeight: "bold" }}>
                                 Correct
@@ -270,10 +270,13 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 Unanswered
                               </TableCell>
                               <TableCell sx={{ fontWeight: "bold" }}>
+                                Attempts
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: "bold" }}>
                                 Time
                               </TableCell>
                               <TableCell sx={{ fontWeight: "bold" }}>
-                                Accuracy
+                                Result
                               </TableCell>
                             </TableRow>
                           </TableHead>
@@ -291,16 +294,30 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 <TableCell>{rank ?? "-"}</TableCell>
                                 <TableCell>{exam.examTitle}</TableCell>
                                 <TableCell>{exam.score ?? "-"}</TableCell>
-                                <TableCell>{exam.attempts ?? "-"}</TableCell>
-                                <TableCell>{exam.correct ?? "-"}</TableCell>
-                                <TableCell>{exam.incorrect ?? "-"}</TableCell>
-                                <TableCell>{exam.unanswered ?? "-"}</TableCell>
-                                <TableCell>{exam.timeSpent ?? "-"}</TableCell>
                                 <TableCell>
                                   {exam.accuracy !== undefined &&
                                   exam.accuracy !== null
                                     ? `${exam.accuracy}%`
                                     : "-"}
+                                </TableCell>
+                                <TableCell>{exam.correct ?? "-"}</TableCell>
+                                <TableCell>{exam.incorrect ?? "-"}</TableCell>
+                                <TableCell>{exam.unanswered ?? "-"}</TableCell>
+                                <TableCell>{exam.attempts ?? "-"}</TableCell>
+                                <TableCell>{exam.timeSpent ?? "-"}</TableCell>
+                                <TableCell>
+                                  <Chip
+                                    label={
+                                      exam.result?.charAt(0).toUpperCase() +
+                                      exam.result?.slice(1)
+                                    }
+                                    color={
+                                      exam.result?.toLowerCase() === "pass"
+                                        ? "success"
+                                        : "error"
+                                    }
+                                    size="small"
+                                  />
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -316,17 +333,18 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                         </Table>
                       </Box>
 
-                      {/* SUBJECT WISE SUMMARY */}
-                      {exam.subjectSummary?.length > 0 && (
+                      {/* TOPIC WISE SUMMARY */}
+                      {exam.topicSummary?.length > 0 && (
                         <Box sx={{ padding: "20px" }}>
                           <Box sx={{ mb: 2 }}>
                             <Typography
                               variant="h6"
                               sx={{ color: "text.primary" }}
                             >
-                              Subject Wise Analysis
+                              Topic Wise Analysis
                             </Typography>
                           </Box>
+
                           <TableContainer>
                             <Table
                               sx={{
@@ -338,6 +356,9 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 <TableRow sx={{ backgroundColor: "grey.50" }}>
                                   <TableCell sx={{ fontWeight: "bold" }}>
                                     Subject
+                                  </TableCell>
+                                  <TableCell sx={{ fontWeight: "bold" }}>
+                                    Topic
                                   </TableCell>
                                   <TableCell sx={{ fontWeight: "bold" }}>
                                     Total
@@ -355,15 +376,18 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                               </TableHead>
 
                               <TableBody>
-                                {exam.subjectSummary.map((sub: any) => (
-                                  <TableRow key={sub.subject} hover>
-                                    <TableCell>{sub.subject}</TableCell>
-                                    <TableCell>{sub.total}</TableCell>
-                                    <TableCell>{sub.correct}</TableCell>
-                                    <TableCell>{sub.wrong}</TableCell>
-                                    <TableCell>{sub.unanswered}</TableCell>
-                                  </TableRow>
-                                ))}
+                                {exam.topicSummary.map(
+                                  (row: any, index: number) => (
+                                    <TableRow key={index} hover>
+                                      <TableCell>{row.subject}</TableCell>
+                                      <TableCell>{row.topic}</TableCell>
+                                      <TableCell>{row.total}</TableCell>
+                                      <TableCell>{row.correct}</TableCell>
+                                      <TableCell>{row.wrong}</TableCell>
+                                      <TableCell>{row.unanswered}</TableCell>
+                                    </TableRow>
+                                  ),
+                                )}
                               </TableBody>
                             </Table>
                           </TableContainer>
@@ -393,7 +417,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                             Score
                           </TableCell>
                           <TableCell sx={{ fontWeight: "bold" }}>
-                            Attempts
+                            Accuracy
                           </TableCell>
                           <TableCell sx={{ fontWeight: "bold" }}>
                             Correct
@@ -405,10 +429,13 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                             Unanswered
                           </TableCell>
                           <TableCell sx={{ fontWeight: "bold" }}>
+                            Attempts
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: "bold" }}>
                             Time
                           </TableCell>
                           <TableCell sx={{ fontWeight: "bold" }}>
-                            Accuracy
+                            Result
                           </TableCell>
                         </TableRow>
                       </TableHead>
@@ -418,16 +445,30 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                             <TableCell>{idx + 1}</TableCell>
                             <TableCell>{exam.examTitle}</TableCell>
                             <TableCell>{exam.score ?? "-"}</TableCell>
-                            <TableCell>{exam.attempts ?? "-"}</TableCell>
-                            <TableCell>{exam.correct ?? "-"}</TableCell>
-                            <TableCell>{exam.incorrect ?? "-"}</TableCell>
-                            <TableCell>{exam.unanswered ?? "-"}</TableCell>
-                            <TableCell>{exam.timeSpent ?? "-"}</TableCell>
                             <TableCell>
                               {exam.accuracy !== undefined &&
                               exam.accuracy !== null
                                 ? `${exam.accuracy}%`
                                 : "-"}
+                            </TableCell>
+                            <TableCell>{exam.correct ?? "-"}</TableCell>
+                            <TableCell>{exam.incorrect ?? "-"}</TableCell>
+                            <TableCell>{exam.unanswered ?? "-"}</TableCell>
+                            <TableCell>{exam.attempts ?? "-"}</TableCell>
+                            <TableCell>{exam.timeSpent ?? "-"}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={
+                                  exam.result?.charAt(0).toUpperCase() +
+                                  exam.result?.slice(1)
+                                }
+                                color={
+                                  exam.result?.toLowerCase() === "pass"
+                                    ? "success"
+                                    : "error"
+                                }
+                                size="small"
+                              />
                             </TableCell>
                           </TableRow>
                         ))}
