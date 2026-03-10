@@ -19,6 +19,7 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -41,6 +42,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [creating, setCreating] = useState(false);
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success",
   );
@@ -144,9 +146,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
   // ----------------- SUBMIT -----------------
   const handleSubmit = async () => {
+    if (creating) return;
+
     const schema =
       newUser.role === "student" ? studentSchema : teacherAdminSchema;
     try {
+      setCreating(true);
+
       await schema.validate(newUser, { abortEarly: false });
       setErrors({});
 
@@ -194,6 +200,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       } else {
         alert("Network or server error. Try again.");
       }
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -321,8 +329,15 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         <Button variant="outlined" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleSubmit}>
-          Save Student
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={creating}
+          startIcon={
+            creating ? <CircularProgress size={18} color="inherit" /> : null
+          }
+        >
+          {creating ? "Creating..." : "Save Student"}
         </Button>
       </DialogActions>
     </Box>
@@ -398,8 +413,17 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         <Button variant="outlined" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="contained" onClick={handleSubmit}>
-          Save {newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={creating}
+          startIcon={
+            creating ? <CircularProgress size={18} color="inherit" /> : null
+          }
+        >
+          {creating
+            ? "Creating..."
+            : `Save ${newUser.role.charAt(0).toUpperCase() + newUser.role.slice(1)}`}
         </Button>
       </DialogActions>
     </Box>

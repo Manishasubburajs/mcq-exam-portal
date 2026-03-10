@@ -158,6 +158,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
   const [existingExams, setExistingExams] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiLoading, setApiLoading] = useState(false);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -274,12 +275,18 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
   useEffect(() => {
     if (!open) return;
+
+    setApiLoading(true);
     setLoadingSubjects(true);
+
     fetch("/api/questions/question-counts")
       .then((res) => res.json())
       .then((data) => setSubjects(data))
       .catch((err) => console.error(err))
-      .finally(() => setLoadingSubjects(false));
+      .finally(() => {
+        setLoadingSubjects(false);
+        setApiLoading(false);
+      });
   }, [open]);
 
   // Toggle Subject
@@ -622,10 +629,13 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
   useEffect(() => {
     if (!open) return;
 
+    setApiLoading(true);
+
     fetch("/api/exams")
       .then((res) => res.json())
       .then((data) => setExistingExams(data))
-      .catch((err) => console.error(err));
+      .catch((err) => console.error(err))
+      .finally(() => setApiLoading(false));
   }, [open]);
 
   const checkDuplicateTitle = (title: string) => {
@@ -999,23 +1009,28 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
           {renderStepContent()}
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" disabled={activeStep === 0} onClick={handleBack}>
+          <Button
+            variant="outlined"
+            disabled={activeStep === 0 || isSubmitting}
+            onClick={handleBack}
+          >
             Back
           </Button>
           <Button
             variant="contained"
             onClick={handleNext}
-            disabled={isSubmitting}
+            disabled={apiLoading || isSubmitting}
+            startIcon={
+              activeStep === steps.length - 1 && isSubmitting ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : null
+            }
           >
-            {activeStep === steps.length - 1 ? (
-              isSubmitting ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                "Create Exam"
-              )
-            ) : (
-              "Next"
-            )}
+            {activeStep === steps.length - 1
+              ? isSubmitting
+                ? " Creating..."
+                : "Create Exam"
+              : "Next"}
           </Button>
         </DialogActions>
       </Dialog>

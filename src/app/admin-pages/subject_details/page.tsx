@@ -157,6 +157,7 @@ const SubjectDetails: React.FC = () => {
     subjectId: null,
     subjectName: "",
   });
+  const [deleting, setDeleting] = useState(false);
 
   const showSnackbar = (
     message: string,
@@ -535,6 +536,8 @@ const SubjectDetails: React.FC = () => {
     if (!deleteDialog.subjectId) return;
 
     try {
+      setDeleting(true);
+
       const res = await fetch(`/api/subjects?id=${deleteDialog.subjectId}`, {
         method: "DELETE",
       });
@@ -550,6 +553,8 @@ const SubjectDetails: React.FC = () => {
       }
     } catch (error) {
       showSnackbar("Network error or server unavailable", "error");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -617,14 +622,21 @@ const SubjectDetails: React.FC = () => {
                 <Button
                   variant="contained"
                   color="success"
-                  startIcon={<Add />}
+                  disabled={loading}
+                  startIcon={
+                    loading ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <Add />
+                    )
+                  }
                   onClick={() => setCreateModalOpen(true)}
                   sx={{
                     background: "linear-gradient(to right, #6a11cb, #2575fc)",
                     "&:hover": { opacity: 0.9 },
                   }}
                 >
-                  Create Subject / Topic
+                  {loading ? "Loading..." : "Create Subject / Topic"}
                 </Button>
               </Box>
             </Box>
@@ -825,7 +837,9 @@ const SubjectDetails: React.FC = () => {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={closeCreateModal} variant="outlined">Cancel</Button>
+          <Button onClick={closeCreateModal} variant="outlined">
+            Cancel
+          </Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
@@ -835,7 +849,14 @@ const SubjectDetails: React.FC = () => {
               "&:hover": { opacity: 0.9 },
             }}
           >
-            {creating ? "Saving..." : "Save"}
+            {creating ? (
+              <>
+                <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />
+                Saving...
+              </>
+            ) : (
+              "Save"
+            )}
           </Button>
         </DialogActions>
       </StyledDialog>
@@ -1034,7 +1055,9 @@ const SubjectDetails: React.FC = () => {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={onCloseEditModal} variant="outlined">Cancel</Button>
+          <Button onClick={onCloseEditModal} variant="outlined">
+            Cancel
+          </Button>
 
           <Button
             variant="contained"
@@ -1045,7 +1068,14 @@ const SubjectDetails: React.FC = () => {
               "&:hover": { opacity: 0.9 },
             }}
           >
-            {creating ? "Updating..." : "Update"}
+            {creating ? (
+              <>
+                <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />
+                Updating...
+              </>
+            ) : (
+              "Update"
+            )}
           </Button>
         </DialogActions>
       </StyledDialog>
@@ -1087,8 +1117,16 @@ const SubjectDetails: React.FC = () => {
             Cancel
           </Button>
 
-          <Button variant="contained" color="error" onClick={confirmDelete}>
-            Delete
+          <Button
+            variant="contained"
+            color="error"
+            onClick={confirmDelete}
+            disabled={deleting}
+            startIcon={
+              deleting ? <CircularProgress size={18} color="inherit" /> : null
+            }
+          >
+            {deleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogActions>
       </StyledDialog>

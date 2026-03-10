@@ -164,6 +164,9 @@ export default function EditExamModal({
   const [existingExams, setExistingExams] = useState<any[]>([]);
   const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiLoading, setApiLoading] = useState(false);
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -193,12 +196,17 @@ export default function EditExamModal({
   // Fetch subjects + topics + counts when modal opens
   useEffect(() => {
     if (!open) return;
+
+    setApiLoading(true);
     setLoadingSubjects(true);
     fetch("/api/questions/question-counts")
       .then((res) => res.json())
       .then((data) => setSubjects(data))
       .catch((err) => console.error(err))
-      .finally(() => setLoadingSubjects(false));
+      .finally(() => {
+        setLoadingSubjects(false);
+        setApiLoading(false);
+      });
   }, [open]);
 
   const toDatetimeLocal = (dateStr: string) => {
@@ -458,12 +466,10 @@ export default function EditExamModal({
         errors.subject = "Please select one subject";
         isValid = false;
       } else {
-        const subject = subjects.find(
-          (s) => s.subject_id === subjectId
-        );
+        const subject = subjects.find((s) => s.subject_id === subjectId);
 
         const hasAssignedTopic = subject?.topics.some(
-          (topic) => (topicCounts[topic.topic_id] || 0) > 0
+          (topic) => (topicCounts[topic.topic_id] || 0) > 0,
         );
 
         if (!hasAssignedTopic) {
@@ -655,6 +661,9 @@ export default function EditExamModal({
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const payload = {
       examTitle,
       description,
@@ -692,18 +701,21 @@ export default function EditExamModal({
     } catch (err) {
       console.error(err);
       showSnackbar(`Error ${isEdit ? "updating" : "creating"} exam`, "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   useEffect(() => {
     if (!open) return;
 
+    setApiLoading(true);
+
     fetch("/api/exams")
       .then((res) => res.json())
-      .then((data) => {
-        setExistingExams(data || []);
-      })
-      .catch((err) => console.error(err));
+      .then((data) => setExistingExams(data || []))
+      .catch((err) => console.error(err))
+      .finally(() => setApiLoading(false));
   }, [open]);
 
   const formatReviewDateTime = (value: string) => {
@@ -1084,14 +1096,31 @@ export default function EditExamModal({
           {renderStepContent()}
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" disabled={activeStep === 0} onClick={handleBack}>
+          <Button
+            variant="outlined"
+            disabled={activeStep === 0 || isSubmitting}
+            onClick={handleBack}
+          >
             Back
           </Button>
-          <Button variant="contained" onClick={handleNext}>
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={apiLoading || isSubmitting}
+            startIcon={
+              activeStep === steps.length - 1 && isSubmitting ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : null
+            }
+          >
             {activeStep === steps.length - 1
-              ? isEdit
-                ? "Update Exam"
-                : "Create Exam"
+              ? isSubmitting
+                ? isEdit
+                  ? "Updating..."
+                  : "Creating..."
+                : isEdit
+                  ? "Update Exam"
+                  : "Create Exam"
               : "Next"}
           </Button>
         </DialogActions>

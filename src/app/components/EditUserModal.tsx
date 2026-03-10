@@ -17,6 +17,7 @@ import {
   Typography,
   FormHelperText,
   IconButton,
+  CircularProgress,
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import * as yup from "yup";
@@ -56,6 +57,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const [errorOpen, setErrorOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [saving, setSaving] = useState(false);
 
   const studentSchema = yup.object().shape({
     first_name: yup.string().required("First Name is required"),
@@ -131,7 +133,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   // SAVE CHANGES
   // --------------------------------------------
   const handleSave = async () => {
-    if (!editUser) return;
+    if (!editUser || saving) return;
+
+    setSaving(true);
 
     const schema =
       editUser.role === "student" ? studentSchema : teacherAdminSchema;
@@ -194,6 +198,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         setErrorMessage("Something went wrong while updating the user!");
         setErrorOpen(true);
       }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -369,12 +375,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         <Button
           variant="contained"
           onClick={handleSave}
+          disabled={saving}
+          startIcon={
+            saving ? <CircularProgress size={18} color="inherit" /> : null
+          }
           sx={{
             background: "linear-gradient(to right, #6a11cb, #2575fc)",
             color: "white",
           }}
         >
-          Save Changes
+          {saving ? "Updating..." : "Save Changes"}
         </Button>
       </DialogActions>
 

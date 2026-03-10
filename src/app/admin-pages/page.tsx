@@ -35,7 +35,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  ArcElement
+  ArcElement,
 );
 
 export default function Home() {
@@ -44,6 +44,7 @@ export default function Home() {
   const isMobile = useMediaQuery("(max-width:767px)");
   const isTablet = useMediaQuery("(min-width:768px) and (max-width:1023px)");
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
+  const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState([
     {
@@ -93,6 +94,8 @@ export default function Home() {
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
+
       // Fetch students count
       const studentsRes = await fetch("/api/students");
       const studentsData = await studentsRes.json();
@@ -107,7 +110,7 @@ export default function Home() {
       let activeExamsCount = 0;
       if (Array.isArray(examsData)) {
         activeExamsCount = examsData.filter(
-          (exam: any) => exam.status === "active"
+          (exam: any) => exam.status === "active",
         ).length;
       }
 
@@ -129,10 +132,12 @@ export default function Home() {
             return { ...stat, title: totalQuestions.toString() };
           }
           return stat;
-        })
+        }),
       );
     } catch (error) {
       console.error("Error fetching stats:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -392,7 +397,7 @@ export default function Home() {
         <Box sx={{ mt: 4 }}>
           <div className="stats-grid">
             {stats.map((stat) => (
-              <StatsCard key={stat.subtitle} stat={stat} />
+              <StatsCard key={stat.subtitle} stat={stat} loading={loading} />
             ))}
           </div>
         </Box>

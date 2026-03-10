@@ -225,10 +225,16 @@ const UserManagement: React.FC = () => {
             <Button
               variant="contained"
               color="success"
-              startIcon={<PersonAdd />}
+              startIcon={
+                loading ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <PersonAdd />
+                )
+              }
               onClick={() => setAddUserOpen(true)}
             >
-              Add New User
+              {loading ? "Loading..." : "Add New User"}
             </Button>
           </Box>
 
