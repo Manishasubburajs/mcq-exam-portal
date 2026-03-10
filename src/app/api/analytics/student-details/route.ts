@@ -50,6 +50,7 @@ export async function GET(request: Request) {
     // ✅ 2️⃣ Fetch latest attempts
     const latestAttempts = await prisma.student_exam_attempts.findMany({
       where: {
+        status: "completed",
         OR: grouped.map((g) => ({
           student_id: studentId,
           exam_id: g.exam_id,
@@ -76,6 +77,7 @@ export async function GET(request: Request) {
           question: {
             include: {
               subject: true,
+              topic: true,
             },
           },
         },
@@ -95,25 +97,40 @@ export async function GET(request: Request) {
       }
 
       // 🔥 Subject grouping
-      const subjectMap: Record<
+      const subjectTopicMap: Record<
         string,
         {
           subject: string;
-          total: number;
-          correct: number;
-          wrong: number;
-          unanswered: number;
+          topics: Record<
+            string,
+            {
+              topic: string;
+              total: number;
+              correct: number;
+              wrong: number;
+              unanswered: number;
+            }
+          >;
         }
       > = {};
 
       for (const eq of examQuestions) {
         const subjectName = eq.question.subject.subject_name;
+        const topicName = eq.question.topic?.topic_name;
+
         const questionId = eq.question_id;
         const studentAnswer = answerMap[questionId];
 
-        if (!subjectMap[subjectName]) {
-          subjectMap[subjectName] = {
+        if (!subjectTopicMap[subjectName]) {
+          subjectTopicMap[subjectName] = {
             subject: subjectName,
+            topics: {},
+          };
+        }
+
+        if (!subjectTopicMap[subjectName].topics[topicName]) {
+          subjectTopicMap[subjectName].topics[topicName] = {
+            topic: topicName,
             total: 0,
             correct: 0,
             wrong: 0,
@@ -121,26 +138,40 @@ export async function GET(request: Request) {
           };
         }
 
-        subjectMap[subjectName].total += 1;
+        const topicData = subjectTopicMap[subjectName].topics[topicName];
+
+        topicData.total += 1;
 
         if (!studentAnswer) {
-          subjectMap[subjectName].unanswered += 1;
+          topicData.unanswered += 1;
         } else if (studentAnswer.is_correct) {
-          subjectMap[subjectName].correct += 1;
+          topicData.correct += 1;
         } else {
-          subjectMap[subjectName].wrong += 1;
+          topicData.wrong += 1;
         }
       }
 
-      const subjectSummary = Object.values(subjectMap).map((sub) => {
-        return {
-          subject: sub.subject,
-          total: sub.total,
-          correct: sub.correct,
-          wrong: sub.wrong,
-          unanswered: sub.unanswered,
-        };
-      });
+      // const subjectSummary = Object.values(subjectTopicMap).map((sub) => {
+      //   return {
+      //     subject: sub.subject,
+      //     topics: Object.values(sub.topics),
+      //   };
+      // });
+
+      const topicSummary: any[] = [];
+
+      for (const sub of Object.values(subjectTopicMap)) {
+        for (const topic of Object.values(sub.topics)) {
+          topicSummary.push({
+            subject: sub.subject,
+            topic: topic.topic,
+            total: topic.total,
+            correct: topic.correct,
+            wrong: topic.wrong,
+            unanswered: topic.unanswered,
+          });
+        }
+      }
 
       results.push({
         examId: attempt.exam_id,
@@ -157,7 +188,9 @@ export async function GET(request: Request) {
             } sec`
           : "0 min 0 sec",
         accuracy: attempt.accuracy?.toFixed(2),
-        subjectSummary,
+        result: attempt.result,
+        // subjectSummary,
+        topicSummary,
       });
     }
 

@@ -76,12 +76,10 @@ export async function GET(
         username: user?.username,
         score: Number(attempt.score ?? 0),
         correctAnswers: `${attempt.correct_answers ?? 0}/${attempt.exam?.question_count ?? 0}`,
-        // timeSpent: attempt.total_time_seconds
-        //   ? `${Math.round(attempt.total_time_seconds / 60)}/${attempt.exam?.time_limit_minutes ?? "-"} min`
-        //   : "-",
         timeSpent: attempt.total_time_seconds
           ? `${Math.floor(attempt.total_time_seconds / 60)} min ${attempt.total_time_seconds % 60} sec / ${attempt.exam?.time_limit_minutes ?? "-"} min`
           : `0 min / ${attempt.exam?.time_limit_minutes ?? "-"} min`,
+        examDate: attempt.start_time,
       };
     });
 
