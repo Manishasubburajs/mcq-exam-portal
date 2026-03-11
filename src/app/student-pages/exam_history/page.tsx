@@ -14,6 +14,7 @@ import EventIcon from "@mui/icons-material/Event";
 import GradeIcon from "@mui/icons-material/Grade";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import AttemptHistoryModal from "@/app/components/AttemptHistoryModal";
 
 const MAIN_BG = "#f5f7fa";
 const CARD_BG = "#ffffff";
@@ -46,6 +47,26 @@ const ACTION_BUTTON_SX = {
   boxShadow: "none",
 };
 
+// Interface for exam attempt data from API
+interface ExamAttempt {
+  attemptId: number;
+  examId: number;
+  title: string;
+  subject: string;
+  duration: number;
+  questions: number;
+  points: string;
+  examType: "practice" | "mock" | "live";
+  score: string;
+  completedAt: string;
+  totalTimeSeconds: number;
+  canRetake: boolean;
+  attemptNumber: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+  unanswered: number;
+}
+
 interface ExamMeta {
   duration: string | number;
   questions: string | number;
@@ -63,9 +84,10 @@ interface ExamCardProps {
   onViewResults?: () => void;
   onTakeExam?: (examType: string) => void;
   canRetake?: boolean;
+  onViewAttemptHistory?: () => void;
 }
 
-const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }: ExamCardProps) => (
+const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, onViewAttemptHistory }: ExamCardProps) => (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -277,41 +299,20 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }
 
         <Box
           sx={{
-            width: { xs: "100%", sm: ACTION_BUTTON_MD_WIDTH },
+            width: { xs: "100%", sm: "auto" },
             display: "flex",
-            gap: canRetake ? 1 : 0,
+            gap: 1,
+            flexDirection: { xs: "column", sm: "row" },
+            minWidth: { xs: "100%", sm: "320px" },
           }}
         >
-          <Button
-            variant="contained"
-            sx={{
-              flex: canRetake ? 1 : "none",
-              width: canRetake ? "auto" : "100%",
-              padding: { xs: "6px 8px", sm: "8px 10px" },
-              height: { xs: "36px", sm: "40px" },
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textTransform: "none",
-              background: "linear-gradient(to right, #6a11cb, #2575fc)",
-              color: "#fff",
-              borderRadius: 2,
-              fontSize: { xs: "10px", sm: "11px" },
-              fontWeight: 600,
-              boxShadow: "none",
-              "&:hover": { transform: "translateY(-2px)" },
-            }}
-            onClick={onViewResults}
-          >
-            View Results
-          </Button>
           {canRetake && (
             <Button
               variant="outlined"
               sx={{
                 flex: 1,
-                padding: { xs: "6px 8px", sm: "8px 10px" },
-                height: { xs: "36px", sm: "40px" },
+                padding: { xs: "8px 12px", sm: "10px 16px" },
+                height: { xs: "40px", sm: "44px" },
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -319,7 +320,7 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }
                 borderColor: "#6a11cb",
                 color: "#6a11cb",
                 borderRadius: 2,
-                fontSize: { xs: "10px", sm: "11px" },
+                fontSize: { xs: "12px", sm: "13px" },
                 fontWeight: 600,
                 "&:hover": {
                   backgroundColor: "#6a11cb",
@@ -332,6 +333,57 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }
               Retake
             </Button>
           )}
+          <Button
+            variant="contained"
+            sx={{
+              flex: canRetake || onViewAttemptHistory ? 1 : "none",
+              width: (!canRetake && !onViewAttemptHistory) ? "100%" : "auto",
+              padding: { xs: "8px 12px", sm: "10px 16px" },
+              height: { xs: "40px", sm: "44px" },
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textTransform: "none",
+              background: "linear-gradient(to right, #6a11cb, #2575fc)",
+              color: "#fff",
+              borderRadius: 2,
+              fontSize: { xs: "12px", sm: "13px" },
+              fontWeight: 600,
+              boxShadow: "none",
+              "&:hover": { transform: "translateY(-2px)" },
+            }}
+            onClick={onViewResults}
+          >
+            View Results
+          </Button>
+          {/* Attempt History Button */}
+          {onViewAttemptHistory && (
+            <Button
+              variant="outlined"
+              sx={{
+                flex: 1,
+                padding: { xs: "8px 12px", sm: "10px 16px" },
+                height: { xs: "40px", sm: "44px" },
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textTransform: "none",
+                borderColor: "#6a11cb",
+                color: "#6a11cb",
+                borderRadius: 2,
+                fontSize: { xs: "12px", sm: "13px" },
+                fontWeight: 600,
+                "&:hover": {
+                  backgroundColor: "#6a11cb",
+                  color: "#fff",
+                  transform: "translateY(-2px)"
+                },
+              }}
+              onClick={onViewAttemptHistory}
+            >
+              Attempt History
+            </Button>
+          )}
         </Box>
       </Box>
     </Box>
@@ -341,8 +393,10 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake }
 export default function ExamHistoryPage() {
   const router = useRouter();
   const theme = useTheme();
-  const [completedExams, setCompletedExams] = useState<any[]>([]);
+  const [completedExams, setCompletedExams] = useState<ExamAttempt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedExam, setSelectedExam] = useState<any>(null);
+  const [attemptHistoryOpen, setAttemptHistoryOpen] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in and is student
@@ -433,6 +487,33 @@ export default function ExamHistoryPage() {
     }
   };
 
+  const openAttemptHistory = (exam: any) => {
+    setSelectedExam(exam);
+    setAttemptHistoryOpen(true);
+  };
+
+  const closeAttemptHistory = () => {
+    setAttemptHistoryOpen(false);
+    setSelectedExam(null);
+  };
+
+  // Group attempts by exam id
+  const examsByExamId = completedExams.reduce((groups, attempt) => {
+    const { examId } = attempt;
+    if (!groups[examId]) {
+      groups[examId] = [];
+    }
+    groups[examId].push(attempt);
+    return groups;
+  }, {} as Record<number, ExamAttempt[]>);
+
+  // For each exam, keep only the latest attempt
+  const latestAttempts = Object.values(examsByExamId).map(examAttempts => {
+    return examAttempts.reduce((latest, current) => {
+      return current.attemptNumber > latest.attemptNumber ? current : latest;
+    });
+  });
+
   return (
     <Box
       sx={{
@@ -490,12 +571,12 @@ export default function ExamHistoryPage() {
           >
             {loading ? (
               <Typography>Loading exam history...</Typography>
-            ) : completedExams.length > 0 ? (
-              completedExams.map((exam) => (
+            ) : latestAttempts.length > 0 ? (
+              latestAttempts.map((exam) => (
                 <Box
-                  key={exam.attemptId}
+                  key={exam.examId}
                   sx={{
-                    flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
+                    flex: { xs: "1 1 100%", sm: "1 1 360px", md: "1 1 400px" },
                   }}
                 >
                   <ExamCard
@@ -513,6 +594,7 @@ export default function ExamHistoryPage() {
                     onViewResults={() => viewResults(exam.attemptId)}
                     onTakeExam={(examType) => takeExam(exam.attemptId, exam.examId, examType)}
                     canRetake={exam.canRetake}
+                    onViewAttemptHistory={() => openAttemptHistory(exam)}
                   />
                 </Box>
               ))
@@ -522,6 +604,23 @@ export default function ExamHistoryPage() {
           </Box>
         </Card>
       </Box>
+
+      {/* Attempt History Modal */}
+      <AttemptHistoryModal
+        open={attemptHistoryOpen}
+        examName={selectedExam?.title || ""}
+        attempts={selectedExam ? examsByExamId[selectedExam.examId].map((attempt: any) => ({
+          attemptNumber: attempt.attemptNumber,
+          correctAnswers: attempt.correctAnswers,
+          wrongAnswers: attempt.wrongAnswers,
+          unanswered: attempt.unanswered,
+          score: attempt.score,
+          points: attempt.points,
+          result: parseInt(attempt.score) >= parseInt(attempt.points) * 0.5 ? "Pass" : "Fail",
+          completedAt: attempt.completedAt
+        })) : []}
+        onClose={closeAttemptHistory}
+      />
     </Box>
   );
 }
