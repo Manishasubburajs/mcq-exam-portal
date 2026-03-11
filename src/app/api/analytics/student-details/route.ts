@@ -151,13 +151,6 @@ export async function GET(request: Request) {
         }
       }
 
-      // const subjectSummary = Object.values(subjectTopicMap).map((sub) => {
-      //   return {
-      //     subject: sub.subject,
-      //     topics: Object.values(sub.topics),
-      //   };
-      // });
-
       const topicSummary: any[] = [];
 
       for (const sub of Object.values(subjectTopicMap)) {
