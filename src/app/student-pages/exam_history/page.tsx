@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
-import { Box, Typography, Card, Button, useTheme } from "@mui/material";
+import { Box, Typography, Card, Button, useTheme, Tooltip } from "@mui/material";
 import { useRouter } from "next/navigation";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -61,6 +61,7 @@ interface ExamAttempt {
   completedAt: string;
   totalTimeSeconds: number;
   canRetake: boolean;
+  hasReachedRetakeLimit: boolean;
   attemptNumber: number;
   correctAnswers: number;
   wrongAnswers: number;
@@ -84,10 +85,11 @@ interface ExamCardProps {
   onViewResults?: () => void;
   onTakeExam?: (examType: string) => void;
   canRetake?: boolean;
+  hasReachedRetakeLimit?: boolean;
   onViewAttemptHistory?: () => void;
 }
 
-const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, onViewAttemptHistory }: ExamCardProps) => (
+const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, hasReachedRetakeLimit, onViewAttemptHistory }: ExamCardProps) => (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -306,32 +308,49 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, 
             minWidth: { xs: "100%", sm: "320px" },
           }}
         >
-          {canRetake && (
-            <Button
-              variant="outlined"
-              sx={{
-                flex: 1,
-                padding: { xs: "8px 12px", sm: "10px 16px" },
-                height: { xs: "40px", sm: "44px" },
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                textTransform: "none",
-                borderColor: "#6a11cb",
-                color: "#6a11cb",
-                borderRadius: 2,
-                fontSize: { xs: "12px", sm: "13px" },
-                fontWeight: 600,
-                "&:hover": {
-                  backgroundColor: "#6a11cb",
-                  color: "#fff",
-                  transform: "translateY(-2px)"
-                },
-              }}
-              onClick={() => onTakeExam && onTakeExam(meta.examType)}
+          {(canRetake || (hasReachedRetakeLimit && meta.examType === "mock")) && (
+            <Tooltip 
+              title={hasReachedRetakeLimit && meta.examType === "mock" 
+                ? "You have reached the retake limit. Mock exams can only be retaken 2 times." 
+                : ""}
+              placement="top"
+              disableInteractive={false}
             >
-              Retake
-            </Button>
+              <span>
+                <Button
+                  variant="outlined"
+                  disabled={hasReachedRetakeLimit}
+                  sx={{
+                    flex: 1,
+                    padding: { xs: "8px 12px", sm: "10px 16px" },
+                    height: { xs: "40px", sm: "44px" },
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textTransform: "none",
+                    borderColor: hasReachedRetakeLimit ? "#ccc" : "#6a11cb",
+                    color: hasReachedRetakeLimit ? "#ccc" : "#6a11cb",
+                    backgroundColor: hasReachedRetakeLimit ? "#f5f5f5" : "transparent",
+                    borderRadius: 2,
+                    fontSize: { xs: "12px", sm: "13px" },
+                    fontWeight: 600,
+                    "&:hover": !hasReachedRetakeLimit ? {
+                      backgroundColor: "#6a11cb",
+                      color: "#fff",
+                      transform: "translateY(-2px)"
+                    } : {},
+                    "&.Mui-disabled": {
+                      borderColor: "#ccc",
+                      color: "#ccc",
+                      backgroundColor: "#f5f5f5",
+                    },
+                  }}
+                  onClick={() => onTakeExam && onTakeExam(meta.examType)}
+                >
+                  Retake
+                </Button>
+              </span>
+            </Tooltip>
           )}
           <Button
             variant="contained"
@@ -594,6 +613,7 @@ export default function ExamHistoryPage() {
                     onViewResults={() => viewResults(exam.attemptId)}
                     onTakeExam={(examType) => takeExam(exam.attemptId, exam.examId, examType)}
                     canRetake={exam.canRetake}
+                    hasReachedRetakeLimit={exam.hasReachedRetakeLimit}
                     onViewAttemptHistory={() => openAttemptHistory(exam)}
                   />
                 </Box>

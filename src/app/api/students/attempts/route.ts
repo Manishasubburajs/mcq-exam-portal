@@ -81,6 +81,7 @@ export async function GET(req: Request) {
       const subject = exam.exam_subject_configs[0]?.subject?.subject_name || "";
 
       let canRetake = false;
+      let hasReachedRetakeLimit = false;
       if (exam.exam_type === "practice") {
         canRetake = true;
       } else if (exam.exam_type === "mock") {
@@ -93,6 +94,7 @@ export async function GET(req: Request) {
           },
         });
         canRetake = completedCount < 2;
+        hasReachedRetakeLimit = !canRetake;
       } else if (exam.exam_type === "live") {
         canRetake = false;
       }
@@ -110,6 +112,7 @@ export async function GET(req: Request) {
         completedAt: attempt.end_time ? formatDateToDDMMYYYY(attempt.end_time) : "N/A",
         totalTimeSeconds: attempt.total_time_seconds,
         canRetake,
+        hasReachedRetakeLimit,
         attemptNumber: attempt.attempt_number,
         correctAnswers: attempt.correct_answers,
         wrongAnswers: attempt.wrong_answers,
