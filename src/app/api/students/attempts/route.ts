@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyToken } from "@/utils/auth";
 
+function formatDateToDDMMYYYY(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get("authorization");
@@ -74,6 +81,7 @@ export async function GET(req: Request) {
       const subject = exam.exam_subject_configs[0]?.subject?.subject_name || "";
 
       let canRetake = false;
+      let hasReachedRetakeLimit = false;
       if (exam.exam_type === "practice") {
         canRetake = true;
       } else if (exam.exam_type === "mock") {
@@ -86,6 +94,7 @@ export async function GET(req: Request) {
           },
         });
         canRetake = completedCount < 2;
+        hasReachedRetakeLimit = !canRetake;
       } else if (exam.exam_type === "live") {
         canRetake = false;
       }
@@ -100,9 +109,10 @@ export async function GET(req: Request) {
         points: exam.total_marks.toString(),
         examType: exam.exam_type,
         score: attempt.score.toString(),
-        completedAt: attempt.end_time?.toISOString().split('T')[0] || "N/A",
+        completedAt: attempt.end_time ? formatDateToDDMMYYYY(attempt.end_time) : "N/A",
         totalTimeSeconds: attempt.total_time_seconds,
         canRetake,
+        hasReachedRetakeLimit,
         attemptNumber: attempt.attempt_number,
         correctAnswers: attempt.correct_answers,
         wrongAnswers: attempt.wrong_answers,
