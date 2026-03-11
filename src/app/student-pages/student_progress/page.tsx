@@ -42,6 +42,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2"; // cSpell:ignore chartjs
 import { useRouter } from "next/navigation";
+import StudentReviewModal from "@/app/components/StudentReviewModal";
 
 ChartJS.register(
   CategoryScale,
@@ -51,7 +52,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 );
 
 const StudentProgressPage = () => {
@@ -71,6 +72,11 @@ const StudentProgressPage = () => {
     passed: 0,
     failed: 0,
   });
+
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [selectedAttemptId, setSelectedAttemptId] = useState<number | null>(
+    null,
+  );
 
   const chartData = {
     labels: [
@@ -167,7 +173,7 @@ const StudentProgressPage = () => {
 
   const calculateSubjectPerformance = (attempts: any[]) => {
     const practiceExams = attempts.filter(
-      (exam) => exam.examType === "practice"
+      (exam) => exam.examType === "practice",
     );
 
     const subjectMap: Record<string, { obtained: number; total: number }> = {};
@@ -232,7 +238,7 @@ const StudentProgressPage = () => {
 
   const calculatePercentageFromScore = (
     score: number,
-    totalQuestions: number
+    totalQuestions: number,
   ) => {
     if (!totalQuestions || totalQuestions === 0) return 0;
 
@@ -255,7 +261,7 @@ const StudentProgressPage = () => {
       const sumPercentage = attempts.reduce((sum, exam) => {
         const percentage = calculatePercentageFromScore(
           Number(exam.score),
-          exam.questions
+          exam.questions,
         );
         return sum + percentage;
       }, 0);
@@ -263,16 +269,25 @@ const StudentProgressPage = () => {
         totalExams > 0 ? Number((sumPercentage / totalExams).toFixed(2)) : 0;
 
       // Overall Accuracy: Total Correct / Total Attempted (Correct + Wrong)
-      const totalCorrect = attempts.reduce((sum, exam) => sum + Number(exam.correctAnswers), 0);
-      const totalWrong = attempts.reduce((sum, exam) => sum + Number(exam.wrongAnswers), 0);
+      const totalCorrect = attempts.reduce(
+        (sum, exam) => sum + Number(exam.correctAnswers),
+        0,
+      );
+      const totalWrong = attempts.reduce(
+        (sum, exam) => sum + Number(exam.wrongAnswers),
+        0,
+      );
       const totalAttempted = totalCorrect + totalWrong;
-      const overallAccuracy = totalAttempted > 0 ? Number(((totalCorrect / totalAttempted) * 100).toFixed(2)) : 0;
+      const overallAccuracy =
+        totalAttempted > 0
+          ? Number(((totalCorrect / totalAttempted) * 100).toFixed(2))
+          : 0;
 
       // Passed / Failed exams (based on 33% pass rule)
       const passedExams = attempts.filter((exam) => {
         const percentage = calculatePercentageFromScore(
           Number(exam.score),
-          exam.questions
+          exam.questions,
         );
         return percentage >= 33;
       }).length;
@@ -288,6 +303,26 @@ const StudentProgressPage = () => {
     }
   }, [attempts]);
 
+  const getLatestAttempts = (attempts: any[]) => {
+    const examMap: Record<number, any> = {};
+
+    attempts.forEach((attempt) => {
+      const examId = attempt.examId;
+
+      if (
+        !examMap[examId] ||
+        attempt.attemptNumber > examMap[examId].attemptNumber
+      ) {
+        examMap[examId] = attempt;
+      }
+    });
+
+    return Object.values(examMap).sort(
+      (a: any, b: any) =>
+        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
+    );
+  };
+
   useEffect(() => {
     const fetchAttempts = async () => {
       try {
@@ -302,7 +337,8 @@ const StudentProgressPage = () => {
 
         const json = await res.json();
         if (json.success) {
-          setAttempts(json.data);
+          const latestAttempts = getLatestAttempts(json.data);
+          setAttempts(latestAttempts);
           setCurrentPage(1);
         }
       } catch (err) {
@@ -317,13 +353,14 @@ const StudentProgressPage = () => {
 
   const paginatedAttempts = attempts.slice(
     (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
+    currentPage * rowsPerPage,
   );
 
   const totalPages = Math.ceil(attempts.length / rowsPerPage);
 
   const handleReview = (attemptId: number) => {
-    router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
+    setSelectedAttemptId(attemptId);
+    setReviewOpen(true);
   };
 
   return (
@@ -342,7 +379,7 @@ const StudentProgressPage = () => {
       }}
     >
       {/* Stats Cards */}
-       <Box
+      <Box
         sx={{
           display: "flex",
           flexWrap: "wrap",
@@ -358,7 +395,7 @@ const StudentProgressPage = () => {
           },
         }}
       >
-         {[
+        {[
           {
             icon: <TrendingUp />,
             value: `${stats.averageScore}%`,
@@ -423,8 +460,7 @@ const StudentProgressPage = () => {
             </CardContent>
           </Card>
         ))}
-       </Box>
-
+      </Box>
 
       {/* Performance Chart */}
       <Card
@@ -642,7 +678,7 @@ const StudentProgressPage = () => {
                           {(() => {
                             const percentage = calculatePercentageFromScore(
                               Number(exam.score),
-                              exam.questions
+                              exam.questions,
                             );
 
                             return (
@@ -670,7 +706,7 @@ const StudentProgressPage = () => {
                             <Typography variant="body2">
                               {formatTimeTaken(
                                 exam.totalTimeSeconds,
-                                exam.duration
+                                exam.duration,
                               )}
                             </Typography>
                           </Box>
@@ -726,6 +762,12 @@ const StudentProgressPage = () => {
           )}
         </CardContent>
       </Card>
+
+      <StudentReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        attemptId={selectedAttemptId}
+      />
     </Box>
   );
 };
