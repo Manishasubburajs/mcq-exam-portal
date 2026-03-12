@@ -18,6 +18,14 @@ import {
   CircularProgress,
   Pagination,
   Chip,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 import {
   TrendingUp,
@@ -72,23 +80,13 @@ const StudentProgressPage = () => {
     failed: 0,
   });
 
-  const chartData = {
-    labels: [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-    ],
+  // Performance Trend Graph State
+  const [graphData, setGraphData] = useState<any>({
+    labels: [],
     datasets: [
       {
-        label: "Average Score",
-        data: [72, 75, 74, 78, 76, 80, 79, 81, 82, 84],
+        label: "Accuracy",
+        data: [],
         borderColor: "#6a11cb",
         backgroundColor: "rgba(106, 17, 203, 0.1)",
         borderWidth: 3,
@@ -96,15 +94,20 @@ const StudentProgressPage = () => {
         tension: 0.3,
       },
     ],
-  };
+  });
+  const [examType, setExamType] = useState<string>("all");
+  const [quickFilter, setQuickFilter] = useState<string>("30d");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [graphLoading, setGraphLoading] = useState<boolean>(false);
 
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       y: {
-        beginAtZero: false,
-        min: 60,
+        beginAtZero: true,
+        min: 0,
         max: 100,
         ticks: {
           callback: function (value: any) {
@@ -120,12 +123,144 @@ const StudentProgressPage = () => {
       tooltip: {
         callbacks: {
           label: function (context: any) {
-            return "Score: " + context.parsed.y + "%";
+            return "Accuracy: " + context.parsed.y + "%";
           },
         },
       },
     },
   };
+
+  // Date Calculation Functions
+  const calculateDateRange = (filter: string) => {
+    const now = new Date();
+    const to = new Date(now);
+    
+    let from = new Date(now);
+    
+    switch (filter) {
+      case "24h":
+        from.setHours(from.getHours() - 24);
+        break;
+      case "7d":
+        from.setDate(from.getDate() - 7);
+        from.setHours(0, 0, 0, 0);
+        to.setHours(23, 59, 59, 999);
+        break;
+      case "30d":
+        from.setDate(from.getDate() - 30);
+        from.setHours(0, 0, 0, 0);
+        to.setHours(23, 59, 59, 999);
+        break;
+    }
+    
+    return {
+      from: from.toISOString(),
+      to: to.toISOString(),
+    };
+  };
+
+  // API Fetch Function
+  const fetchPerformanceData = async (
+    type: string,
+    from: string,
+    to: string
+  ) => {
+    setGraphLoading(true);
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const params = new URLSearchParams({
+        examType: type,
+        fromDate: from,
+        toDate: to,
+      });
+      
+      const response = await fetch(`/api/students/performance-trend-graph?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        const formattedData = {
+          labels: result.data.map((item: any) => {
+            const date = new Date(item.date);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+          }),
+          datasets: [
+            {
+              label: "Accuracy",
+              data: result.data.map((item: any) => item.accuracy),
+              borderColor: "#6a11cb",
+              backgroundColor: "rgba(106, 17, 203, 0.1)",
+              borderWidth: 3,
+              fill: true,
+              tension: 0.3,
+            },
+          ],
+        };
+        setGraphData(formattedData);
+      }
+    } catch (error) {
+      console.error("Error fetching performance data:", error);
+    } finally {
+      setGraphLoading(false);
+    }
+  };
+
+  // Filter Handlers
+  const handleExamTypeChange = (type: string) => {
+    setExamType(type);
+    const defaultRange = type === "all" ? "30d" : "7d";
+    setQuickFilter(defaultRange);
+    const dateRange = calculateDateRange(defaultRange);
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData(type, dateRange.from, dateRange.to);
+  };
+
+  const handleQuickFilterChange = (filter: string) => {
+    setQuickFilter(filter);
+    const dateRange = calculateDateRange(filter);
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData(examType, dateRange.from, dateRange.to);
+  };
+
+  const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFromDate(e.target.value);
+  };
+
+  const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setToDate(e.target.value);
+  };
+
+  const handleManualDateApply = () => {
+    if (fromDate && toDate) {
+      setQuickFilter(""); // Clear quick filter
+      fetchPerformanceData(examType, fromDate, toDate);
+    }
+  };
+
+  const handleReset = () => {
+    setExamType("all");
+    setQuickFilter("30d");
+    const dateRange = calculateDateRange("30d");
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData("all", dateRange.from, dateRange.to);
+  };
+
+  // Initialize Graph Data
+  useEffect(() => {
+    const dateRange = calculateDateRange("30d");
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData("all", dateRange.from, dateRange.to);
+  }, []);
 
   const getScoreColor = (score: number) => {
     const PASS_PERCENTAGE = 33;
@@ -447,9 +582,95 @@ const StudentProgressPage = () => {
           >
             Performance Trend
           </Typography>
-          <Box sx={{ height: { xs: 250, sm: 280, md: 300 } }}>
-            <Line data={chartData} options={chartOptions} />
+
+          {/* Exam Type Filters */}
+          <Box sx={{ mb: 3 }}>
+            <ToggleButtonGroup
+              value={examType}
+              exclusive
+              onChange={(e, newType) => newType && handleExamTypeChange(newType)}
+              sx={{ mb: 2 }}
+            >
+              <ToggleButton value="all">All</ToggleButton>
+              <ToggleButton value="practice">Practice</ToggleButton>
+              <ToggleButton value="mock">Mock</ToggleButton>
+              <ToggleButton value="live">Live</ToggleButton>
+            </ToggleButtonGroup>
           </Box>
+
+          {/* Quick Date Filters */}
+          <Box sx={{ mb: 3 }}>
+            <ToggleButtonGroup
+              value={quickFilter}
+              exclusive
+              onChange={(e, newFilter) => newFilter && handleQuickFilterChange(newFilter)}
+              sx={{ mb: 2 }}
+            >
+              <ToggleButton value="24h">Last 24 Hours</ToggleButton>
+              <ToggleButton value="7d">Last 7 Days</ToggleButton>
+              <ToggleButton value="30d">Last 30 Days</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {/* Manual Date Range */}
+          <Box sx={{ 
+            mb: 3, 
+            display: "flex", 
+            gap: 2, 
+            flexWrap: "wrap",
+            alignItems: "center"
+          }}>
+            <TextField
+              label="From"
+              type="datetime-local"
+              value={fromDate.slice(0, 16)}
+              onChange={handleFromDateChange}
+              sx={{ minWidth: 200 }}
+            />
+            <TextField
+              label="To"
+              type="datetime-local"
+              value={toDate.slice(0, 16)}
+              onChange={handleToDateChange}
+              sx={{ minWidth: 200 }}
+            />
+            <Button 
+              variant="outlined" 
+              onClick={handleManualDateApply}
+              disabled={!fromDate || !toDate}
+            >
+              Apply
+            </Button>
+            <Button 
+              variant="text" 
+              onClick={handleReset}
+              sx={{ ml: 'auto' }}
+            >
+              Reset
+            </Button>
+          </Box>
+
+          {/* Graph */}
+          <Box sx={{ height: { xs: 250, sm: 280, md: 300 }, mb: 3 }}>
+            {graphLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Line data={graphData} options={chartOptions} />
+            )}
+          </Box>
+
+          {/* Explanation Text */}
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#7f8c8d",
+              textAlign: "center",
+            }}
+          >
+            This graph shows accuracy based on the accuracy of your completed exams.
+          </Typography>
         </CardContent>
       </Card>
 
