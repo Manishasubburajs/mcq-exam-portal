@@ -69,8 +69,10 @@ const StudentProgressPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 5;
   const [subjectPerformance, setSubjectPerformance] = useState<
-    { subject: string; percentage: number }[]
+    { subject_id: number; subject_name: string; accuracy: number; totalCorrect: number; totalAttempted: number }[]
   >([]);
+  const [strongestSubject, setStrongestSubject] = useState<{ name: string; accuracy: number } | null>(null);
+  const [weakestSubject, setWeakestSubject] = useState<{ name: string; accuracy: number } | null>(null);
 
   const [stats, setStats] = useState({
     averageScore: 0,
@@ -375,12 +377,30 @@ const StudentProgressPage = () => {
     return Number(((score / totalMarks) * 100).toFixed(2));
   };
 
-  useEffect(() => {
-    if (attempts.length > 0) {
-      const result = calculateSubjectPerformance(attempts);
-      setSubjectPerformance(result);
+  // Fetch subject performance data from API
+  const fetchSubjectPerformance = async () => {
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await fetch("/api/students/student-subject-performance", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setSubjectPerformance(result.data.subjects);
+        setStrongestSubject(result.data.strongestSubject);
+        setWeakestSubject(result.data.weakestSubject);
+      }
+    } catch (error) {
+      console.error("Error fetching subject performance:", error);
     }
-  }, [attempts]);
+  };
+
+  useEffect(() => {
+    fetchSubjectPerformance();
+  }, []);
 
   useEffect(() => {
     if (attempts.length > 0) {
@@ -733,27 +753,88 @@ const StudentProgressPage = () => {
         }}
       >
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              color: "#2c3e50",
-              mb: 0.5,
-              fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
-            }}
-          >
-            Subject Performance
-          </Typography>
+          <Box sx={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            flexWrap: "wrap",
+            mb: { xs: 2, sm: 3 }
+          }}>
+            <Box>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  color: "#2c3e50",
+                  mb: 0.5,
+                  fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
+                }}
+              >
+                Subject Performance
+              </Typography>
 
-          <Typography
-            variant="body2"
-            sx={{
-              color: "#7f8c8d",
-              mb: { xs: 2, sm: 3 },
-            }}
-          >
-            Based on practice exams only
-          </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "#7f8c8d",
+                }}
+              >
+                Based on all completed exams
+              </Typography>
+            </Box>
+
+            {/* Strongest and Weakest Subjects */}
+            {strongestSubject && weakestSubject && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 3,
+                  alignItems: "center",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 700, 
+                      color: "#2c3e50",
+                      fontSize: { xs: "0.875rem", sm: "1rem" }
+                    }}
+                  >
+                    Strongest Subject:
+                  </Typography>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: "#28a745"
+                    }}
+                  >
+                    {strongestSubject.name}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 700, 
+                      color: "#2c3e50",
+                      fontSize: { xs: "0.875rem", sm: "1rem" }
+                    }}
+                  >
+                    Weakest Subject:
+                  </Typography>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: "#dc3545"
+                    }}
+                  >
+                    {weakestSubject.name}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
 
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
@@ -777,7 +858,7 @@ const StudentProgressPage = () => {
             >
               {subjectPerformance.map((item) => (
                 <Box
-                  key={item.subject}
+                  key={item.subject_id}
                   sx={{ p: 2, bgcolor: "#f8f9fa", borderRadius: 2 }}
                 >
                   <Box
@@ -788,22 +869,22 @@ const StudentProgressPage = () => {
                     }}
                   >
                     <Typography sx={{ fontWeight: 600 }}>
-                      {item.subject}
+                      {item.subject_name}
                     </Typography>
                     <Typography sx={{ fontWeight: 700 }}>
-                      {item.percentage}%
+                      {item.accuracy}%
                     </Typography>
                   </Box>
 
                   <LinearProgress
                     variant="determinate"
-                    value={item.percentage}
+                    value={item.accuracy}
                     sx={{
                       height: 8,
                       borderRadius: 4,
                       bgcolor: "#e9ecef",
                       "& .MuiLinearProgress-bar": {
-                        bgcolor: getProgressColor(item.percentage),
+                        bgcolor: getProgressColor(item.accuracy),
                       },
                     }}
                   />
