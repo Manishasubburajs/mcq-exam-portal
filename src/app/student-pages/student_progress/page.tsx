@@ -699,6 +699,12 @@ const StudentProgressPage = () => {
               <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
                 <CircularProgress />
               </Box>
+            ) : graphData.labels.length === 0 ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+                <Typography textAlign="center" color="text.secondary">
+                  No exam data available for the selected range.
+                </Typography>
+              </Box>
             ) : (
               <Line data={graphData} options={chartOptions} />
             )}
@@ -712,7 +718,7 @@ const StudentProgressPage = () => {
               textAlign: "center",
             }}
           >
-            This graph shows accuracy based on the accuracy of your completed exams.
+            This graph shows how your exam accuracy has changed over time based on completed exams.
           </Typography>
         </CardContent>
       </Card>
