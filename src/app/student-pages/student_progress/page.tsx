@@ -583,71 +583,114 @@ const StudentProgressPage = () => {
             Performance Trend
           </Typography>
 
-          {/* Exam Type Filters */}
-          <Box sx={{ mb: 3 }}>
+          {/* Filters Container */}
+          <Box sx={{ 
+            mb: 3, 
+            display: "flex", 
+            flexWrap: "wrap", 
+            gap: 2, 
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}>
+            {/* Exam Type Filters */}
             <ToggleButtonGroup
               value={examType}
               exclusive
               onChange={(e, newType) => newType && handleExamTypeChange(newType)}
-              sx={{ mb: 2 }}
+              sx={{ 
+                '& .MuiToggleButton-root': {
+                  color: '#666',
+                  '&.Mui-selected': {
+                    backgroundColor: '#6a11cb',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5a0fb8',
+                    },
+                  },
+                }
+              }}
             >
               <ToggleButton value="all">All</ToggleButton>
               <ToggleButton value="practice">Practice</ToggleButton>
               <ToggleButton value="mock">Mock</ToggleButton>
               <ToggleButton value="live">Live</ToggleButton>
             </ToggleButtonGroup>
-          </Box>
 
-          {/* Quick Date Filters */}
-          <Box sx={{ mb: 3 }}>
+            {/* Quick Date Filters */}
             <ToggleButtonGroup
               value={quickFilter}
               exclusive
               onChange={(e, newFilter) => newFilter && handleQuickFilterChange(newFilter)}
-              sx={{ mb: 2 }}
+              sx={{ 
+                '& .MuiToggleButton-root': {
+                  color: '#666',
+                  '&.Mui-selected': {
+                    backgroundColor: '#1a73e8',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#1557b0',
+                    },
+                  },
+                }
+              }}
             >
               <ToggleButton value="24h">Last 24 Hours</ToggleButton>
               <ToggleButton value="7d">Last 7 Days</ToggleButton>
               <ToggleButton value="30d">Last 30 Days</ToggleButton>
             </ToggleButtonGroup>
-          </Box>
 
-          {/* Manual Date Range */}
-          <Box sx={{ 
-            mb: 3, 
-            display: "flex", 
-            gap: 2, 
-            flexWrap: "wrap",
-            alignItems: "center"
-          }}>
-            <TextField
-              label="From"
-              type="datetime-local"
-              value={fromDate.slice(0, 16)}
-              onChange={handleFromDateChange}
-              sx={{ minWidth: 200 }}
-            />
-            <TextField
-              label="To"
-              type="datetime-local"
-              value={toDate.slice(0, 16)}
-              onChange={handleToDateChange}
-              sx={{ minWidth: 200 }}
-            />
-            <Button 
-              variant="outlined" 
-              onClick={handleManualDateApply}
-              disabled={!fromDate || !toDate}
-            >
-              Apply
-            </Button>
-            <Button 
-              variant="text" 
-              onClick={handleReset}
-              sx={{ ml: 'auto' }}
-            >
-              Reset
-            </Button>
+            {/* Manual Date Range */}
+            <Box sx={{ 
+              display: "flex", 
+              gap: 1, 
+              flexWrap: "wrap",
+              alignItems: "center"
+            }}>
+              <TextField
+                label="From"
+                type="datetime-local"
+                value={fromDate.slice(0, 16)}
+                onChange={handleFromDateChange}
+                sx={{ minWidth: 180 }}
+              />
+              <TextField
+                label="To"
+                type="datetime-local"
+                value={toDate.slice(0, 16)}
+                onChange={handleToDateChange}
+                sx={{ minWidth: 180 }}
+              />
+              <Button 
+                variant="contained" 
+                onClick={handleManualDateApply}
+                disabled={!fromDate || !toDate}
+                sx={{ 
+                  backgroundColor: '#28a745',
+                  '&:hover': {
+                    backgroundColor: '#218838',
+                  },
+                  '&.Mui-disabled': {
+                    backgroundColor: '#ccc',
+                  }
+                }}
+              >
+                Apply
+              </Button>
+              <Button 
+                variant="outlined" 
+                onClick={handleReset}
+                sx={{ 
+                  borderColor: '#6c757d',
+                  color: '#6c757d',
+                  '&:hover': {
+                    borderColor: '#5a6268',
+                    backgroundColor: '#e9ecef',
+                  }
+                }}
+              >
+                Reset
+              </Button>
+            </Box>
           </Box>
 
           {/* Graph */}
