@@ -18,6 +18,14 @@ import {
   CircularProgress,
   Pagination,
   Chip,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 import {
   TrendingUp,
@@ -62,8 +70,10 @@ const StudentProgressPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 5;
   const [subjectPerformance, setSubjectPerformance] = useState<
-    { subject: string; percentage: number }[]
+    { subject_id: number; subject_name: string; accuracy: number; totalCorrect: number; totalAttempted: number }[]
   >([]);
+  const [strongestSubject, setStrongestSubject] = useState<{ name: string; accuracy: number } | null>(null);
+  const [weakestSubject, setWeakestSubject] = useState<{ name: string; accuracy: number } | null>(null);
 
   const [stats, setStats] = useState({
     averageScore: 0,
@@ -78,23 +88,13 @@ const StudentProgressPage = () => {
     null,
   );
 
-  const chartData = {
-    labels: [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-    ],
+  // Performance Trend Graph State
+  const [graphData, setGraphData] = useState<any>({
+    labels: [],
     datasets: [
       {
-        label: "Average Score",
-        data: [72, 75, 74, 78, 76, 80, 79, 81, 82, 84],
+        label: "Accuracy",
+        data: [],
         borderColor: "#6a11cb",
         backgroundColor: "rgba(106, 17, 203, 0.1)",
         borderWidth: 3,
@@ -102,15 +102,20 @@ const StudentProgressPage = () => {
         tension: 0.3,
       },
     ],
-  };
+  });
+  const [examType, setExamType] = useState<string>("all");
+  const [quickFilter, setQuickFilter] = useState<string>("30d");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [graphLoading, setGraphLoading] = useState<boolean>(false);
 
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       y: {
-        beginAtZero: false,
-        min: 60,
+        beginAtZero: true,
+        min: 0,
         max: 100,
         ticks: {
           callback: function (value: any) {
@@ -126,12 +131,144 @@ const StudentProgressPage = () => {
       tooltip: {
         callbacks: {
           label: function (context: any) {
-            return "Score: " + context.parsed.y + "%";
+            return "Accuracy: " + context.parsed.y + "%";
           },
         },
       },
     },
   };
+
+  // Date Calculation Functions
+  const calculateDateRange = (filter: string) => {
+    const now = new Date();
+    const to = new Date(now);
+    
+    let from = new Date(now);
+    
+    switch (filter) {
+      case "24h":
+        from.setHours(from.getHours() - 24);
+        break;
+      case "7d":
+        from.setDate(from.getDate() - 7);
+        from.setHours(0, 0, 0, 0);
+        to.setHours(23, 59, 59, 999);
+        break;
+      case "30d":
+        from.setDate(from.getDate() - 30);
+        from.setHours(0, 0, 0, 0);
+        to.setHours(23, 59, 59, 999);
+        break;
+    }
+    
+    return {
+      from: from.toISOString(),
+      to: to.toISOString(),
+    };
+  };
+
+  // API Fetch Function
+  const fetchPerformanceData = async (
+    type: string,
+    from: string,
+    to: string
+  ) => {
+    setGraphLoading(true);
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const params = new URLSearchParams({
+        examType: type,
+        fromDate: from,
+        toDate: to,
+      });
+      
+      const response = await fetch(`/api/students/performance-trend-graph?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        const formattedData = {
+          labels: result.data.map((item: any) => {
+            const date = new Date(item.date);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+          }),
+          datasets: [
+            {
+              label: "Accuracy",
+              data: result.data.map((item: any) => item.accuracy),
+              borderColor: "#6a11cb",
+              backgroundColor: "rgba(106, 17, 203, 0.1)",
+              borderWidth: 3,
+              fill: true,
+              tension: 0.3,
+            },
+          ],
+        };
+        setGraphData(formattedData);
+      }
+    } catch (error) {
+      console.error("Error fetching performance data:", error);
+    } finally {
+      setGraphLoading(false);
+    }
+  };
+
+  // Filter Handlers
+  const handleExamTypeChange = (type: string) => {
+    setExamType(type);
+    const defaultRange = type === "all" ? "30d" : "7d";
+    setQuickFilter(defaultRange);
+    const dateRange = calculateDateRange(defaultRange);
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData(type, dateRange.from, dateRange.to);
+  };
+
+  const handleQuickFilterChange = (filter: string) => {
+    setQuickFilter(filter);
+    const dateRange = calculateDateRange(filter);
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData(examType, dateRange.from, dateRange.to);
+  };
+
+  const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFromDate(e.target.value);
+  };
+
+  const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setToDate(e.target.value);
+  };
+
+  const handleManualDateApply = () => {
+    if (fromDate && toDate) {
+      setQuickFilter(""); // Clear quick filter
+      fetchPerformanceData(examType, fromDate, toDate);
+    }
+  };
+
+  const handleReset = () => {
+    setExamType("all");
+    setQuickFilter("30d");
+    const dateRange = calculateDateRange("30d");
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData("all", dateRange.from, dateRange.to);
+  };
+
+  // Initialize Graph Data
+  useEffect(() => {
+    const dateRange = calculateDateRange("30d");
+    setFromDate(dateRange.from);
+    setToDate(dateRange.to);
+    fetchPerformanceData("all", dateRange.from, dateRange.to);
+  }, []);
 
   const getScoreColor = (score: number) => {
     const PASS_PERCENTAGE = 33;
@@ -246,12 +383,30 @@ const StudentProgressPage = () => {
     return Number(((score / totalMarks) * 100).toFixed(2));
   };
 
-  useEffect(() => {
-    if (attempts.length > 0) {
-      const result = calculateSubjectPerformance(attempts);
-      setSubjectPerformance(result);
+  // Fetch subject performance data from API
+  const fetchSubjectPerformance = async () => {
+    try {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await fetch("/api/students/student-subject-performance", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setSubjectPerformance(result.data.subjects);
+        setStrongestSubject(result.data.strongestSubject);
+        setWeakestSubject(result.data.weakestSubject);
+      }
+    } catch (error) {
+      console.error("Error fetching subject performance:", error);
     }
-  }, [attempts]);
+  };
+
+  useEffect(() => {
+    fetchSubjectPerformance();
+  }, []);
 
   useEffect(() => {
     if (attempts.length > 0) {
@@ -483,9 +638,144 @@ const StudentProgressPage = () => {
           >
             Performance Trend
           </Typography>
-          <Box sx={{ height: { xs: 250, sm: 280, md: 300 } }}>
-            <Line data={chartData} options={chartOptions} />
+
+          {/* Filters Container */}
+          <Box sx={{ 
+            mb: 3, 
+            display: "flex", 
+            flexWrap: "wrap", 
+            gap: 2, 
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}>
+            {/* Exam Type Filters */}
+            <ToggleButtonGroup
+              value={examType}
+              exclusive
+              onChange={(e, newType) => newType && handleExamTypeChange(newType)}
+              sx={{ 
+                '& .MuiToggleButton-root': {
+                  color: '#666',
+                  '&.Mui-selected': {
+                    backgroundColor: '#6a11cb',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5a0fb8',
+                    },
+                  },
+                }
+              }}
+            >
+              <ToggleButton value="all">All</ToggleButton>
+              <ToggleButton value="practice">Practice</ToggleButton>
+              <ToggleButton value="mock">Mock</ToggleButton>
+              <ToggleButton value="live">Live</ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* Quick Date Filters */}
+            <ToggleButtonGroup
+              value={quickFilter}
+              exclusive
+              onChange={(e, newFilter) => newFilter && handleQuickFilterChange(newFilter)}
+              sx={{ 
+                '& .MuiToggleButton-root': {
+                  color: '#666',
+                  '&.Mui-selected': {
+                    backgroundColor: '#1a73e8',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#1557b0',
+                    },
+                  },
+                }
+              }}
+            >
+              <ToggleButton value="24h">Last 24 Hours</ToggleButton>
+              <ToggleButton value="7d">Last 7 Days</ToggleButton>
+              <ToggleButton value="30d">Last 30 Days</ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* Manual Date Range */}
+            <Box sx={{ 
+              display: "flex", 
+              gap: 1, 
+              flexWrap: "wrap",
+              alignItems: "center"
+            }}>
+              <TextField
+                label="From"
+                type="datetime-local"
+                value={fromDate.slice(0, 16)}
+                onChange={handleFromDateChange}
+                sx={{ minWidth: 180 }}
+              />
+              <TextField
+                label="To"
+                type="datetime-local"
+                value={toDate.slice(0, 16)}
+                onChange={handleToDateChange}
+                sx={{ minWidth: 180 }}
+              />
+              <Button 
+                variant="contained" 
+                onClick={handleManualDateApply}
+                disabled={!fromDate || !toDate}
+                sx={{ 
+                  backgroundColor: '#28a745',
+                  '&:hover': {
+                    backgroundColor: '#218838',
+                  },
+                  '&.Mui-disabled': {
+                    backgroundColor: '#ccc',
+                  }
+                }}
+              >
+                Apply
+              </Button>
+              <Button 
+                variant="outlined" 
+                onClick={handleReset}
+                sx={{ 
+                  borderColor: '#6c757d',
+                  color: '#6c757d',
+                  '&:hover': {
+                    borderColor: '#5a6268',
+                    backgroundColor: '#e9ecef',
+                  }
+                }}
+              >
+                Reset
+              </Button>
+            </Box>
           </Box>
+
+          {/* Graph */}
+          <Box sx={{ height: { xs: 250, sm: 280, md: 300 }, mb: 3 }}>
+            {graphLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+                <CircularProgress />
+              </Box>
+            ) : graphData.labels.length === 0 ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+                <Typography textAlign="center" color="text.secondary">
+                  No exam data available for the selected range.
+                </Typography>
+              </Box>
+            ) : (
+              <Line data={graphData} options={chartOptions} />
+            )}
+          </Box>
+
+          {/* Explanation Text */}
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#7f8c8d",
+              textAlign: "center",
+            }}
+          >
+            This graph shows how your exam accuracy has changed over time based on completed exams.
+          </Typography>
         </CardContent>
       </Card>
 
@@ -499,27 +789,88 @@ const StudentProgressPage = () => {
         }}
       >
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              color: "#2c3e50",
-              mb: 0.5,
-              fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
-            }}
-          >
-            Subject Performance
-          </Typography>
+          <Box sx={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            flexWrap: "wrap",
+            mb: { xs: 2, sm: 3 }
+          }}>
+            <Box>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  color: "#2c3e50",
+                  mb: 0.5,
+                  fontSize: { xs: "1.1rem", sm: "1.25rem", md: "1.5rem" },
+                }}
+              >
+                Subject Performance
+              </Typography>
 
-          <Typography
-            variant="body2"
-            sx={{
-              color: "#7f8c8d",
-              mb: { xs: 2, sm: 3 },
-            }}
-          >
-            Based on practice exams only
-          </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "#7f8c8d",
+                }}
+              >
+                Based on all completed exams
+              </Typography>
+            </Box>
+
+            {/* Strongest and Weakest Subjects */}
+            {strongestSubject && weakestSubject && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 3,
+                  alignItems: "center",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 700, 
+                      color: "#2c3e50",
+                      fontSize: { xs: "0.875rem", sm: "1rem" }
+                    }}
+                  >
+                    Strongest Subject:
+                  </Typography>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: "#28a745"
+                    }}
+                  >
+                    {strongestSubject.name}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 700, 
+                      color: "#2c3e50",
+                      fontSize: { xs: "0.875rem", sm: "1rem" }
+                    }}
+                  >
+                    Weakest Subject:
+                  </Typography>
+                  <Typography 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: "#dc3545"
+                    }}
+                  >
+                    {weakestSubject.name}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
 
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
@@ -543,7 +894,7 @@ const StudentProgressPage = () => {
             >
               {subjectPerformance.map((item) => (
                 <Box
-                  key={item.subject}
+                  key={item.subject_id}
                   sx={{ p: 2, bgcolor: "#f8f9fa", borderRadius: 2 }}
                 >
                   <Box
@@ -554,22 +905,22 @@ const StudentProgressPage = () => {
                     }}
                   >
                     <Typography sx={{ fontWeight: 600 }}>
-                      {item.subject}
+                      {item.subject_name}
                     </Typography>
                     <Typography sx={{ fontWeight: 700 }}>
-                      {item.percentage}%
+                      {item.accuracy}%
                     </Typography>
                   </Box>
 
                   <LinearProgress
                     variant="determinate"
-                    value={item.percentage}
+                    value={item.accuracy}
                     sx={{
                       height: 8,
                       borderRadius: 4,
                       bgcolor: "#e9ecef",
                       "& .MuiLinearProgress-bar": {
-                        bgcolor: getProgressColor(item.percentage),
+                        bgcolor: getProgressColor(item.accuracy),
                       },
                     }}
                   />
