@@ -99,7 +99,7 @@ export async function GET(req: Request) {
           wrong_answers: attempt.wrong_answers,
           unanswered: attempt.unanswered,
           accuracy: attempt.accuracy,
-          result: attempt.result,
+          result: attempt.result || "fail",
           status: attempt.status,
           attempt_number: attempt.attempt_number,
         },
