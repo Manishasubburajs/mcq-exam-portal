@@ -2,7 +2,14 @@
 
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
-import { Box, Typography, Card, Button, useTheme, Tooltip } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Card,
+  Button,
+  useTheme,
+  Tooltip,
+} from "@mui/material";
 import { useRouter } from "next/navigation";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -66,6 +73,7 @@ interface ExamAttempt {
   correctAnswers: number;
   wrongAnswers: number;
   unanswered: number;
+  result: string;
 }
 
 interface ExamMeta {
@@ -89,7 +97,16 @@ interface ExamCardProps {
   onViewAttemptHistory?: () => void;
 }
 
-const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, hasReachedRetakeLimit, onViewAttemptHistory }: ExamCardProps) => (
+const ExamCard = ({
+  title,
+  subject,
+  meta,
+  onViewResults,
+  onTakeExam,
+  canRetake,
+  hasReachedRetakeLimit,
+  onViewAttemptHistory,
+}: ExamCardProps) => (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -143,8 +160,8 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, 
             meta.examType === "practice"
               ? "#3b82f6"
               : meta.examType === "mock"
-              ? "#f59e0b"
-              : "#ef4444",
+                ? "#f59e0b"
+                : "#ef4444",
           color: "#fff",
           borderRadius: "12px",
           padding: "4px 10px",
@@ -308,11 +325,14 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, 
             minWidth: { xs: "100%", sm: "320px" },
           }}
         >
-          {(canRetake || (hasReachedRetakeLimit && meta.examType === "mock")) && (
-            <Tooltip 
-              title={hasReachedRetakeLimit && meta.examType === "mock" 
-                ? "You have reached the retake limit. Mock exams can only be retaken 2 times." 
-                : ""}
+          {(canRetake ||
+            (hasReachedRetakeLimit && meta.examType === "mock")) && (
+            <Tooltip
+              title={
+                hasReachedRetakeLimit && meta.examType === "mock"
+                  ? "You have reached the retake limit. Mock exams can only be retaken 2 times."
+                  : ""
+              }
               placement="top"
               disableInteractive={false}
             >
@@ -330,15 +350,19 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, 
                     textTransform: "none",
                     borderColor: hasReachedRetakeLimit ? "#ccc" : "#6a11cb",
                     color: hasReachedRetakeLimit ? "#ccc" : "#6a11cb",
-                    backgroundColor: hasReachedRetakeLimit ? "#f5f5f5" : "transparent",
+                    backgroundColor: hasReachedRetakeLimit
+                      ? "#f5f5f5"
+                      : "transparent",
                     borderRadius: 2,
                     fontSize: { xs: "12px", sm: "13px" },
                     fontWeight: 600,
-                    "&:hover": !hasReachedRetakeLimit ? {
-                      backgroundColor: "#6a11cb",
-                      color: "#fff",
-                      transform: "translateY(-2px)"
-                    } : {},
+                    "&:hover": !hasReachedRetakeLimit
+                      ? {
+                          backgroundColor: "#6a11cb",
+                          color: "#fff",
+                          transform: "translateY(-2px)",
+                        }
+                      : {},
                     "&.Mui-disabled": {
                       borderColor: "#ccc",
                       color: "#ccc",
@@ -356,7 +380,7 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, 
             variant="contained"
             sx={{
               flex: canRetake || onViewAttemptHistory ? 1 : "none",
-              width: (!canRetake && !onViewAttemptHistory) ? "100%" : "auto",
+              width: !canRetake && !onViewAttemptHistory ? "100%" : "auto",
               padding: { xs: "8px 12px", sm: "10px 16px" },
               height: { xs: "40px", sm: "44px" },
               display: "inline-flex",
@@ -395,7 +419,7 @@ const ExamCard = ({ title, subject, meta, onViewResults, onTakeExam, canRetake, 
                 "&:hover": {
                   backgroundColor: "#6a11cb",
                   color: "#fff",
-                  transform: "translateY(-2px)"
+                  transform: "translateY(-2px)",
                 },
               }}
               onClick={onViewAttemptHistory}
@@ -453,9 +477,14 @@ export default function ExamHistoryPage() {
     router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
   };
 
-  const takeExam = async (attemptId: number, examId: number, examType: string) => {
+  const takeExam = async (
+    attemptId: number,
+    examId: number,
+    examType: string,
+  ) => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await fetch("/api/students/retake", {
         method: "POST",
         headers: {
@@ -472,7 +501,7 @@ export default function ExamHistoryPage() {
         // Remove any saved answers or question times for previous attempts
         sessionStorage.removeItem(`exam_${examId}_userAnswers`);
         sessionStorage.removeItem(`exam_${examId}_questionTimes`);
-        
+
         // For mock exams (live exams don't allow retake), enter fullscreen before navigating
         if (examType === "mock") {
           const enterFullscreen = async () => {
@@ -492,11 +521,13 @@ export default function ExamHistoryPage() {
               // Continue without fullscreen if request fails
             }
           };
-          
+
           await enterFullscreen();
         }
-        
-        router.push(`/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`);
+
+        router.push(
+          `/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`,
+        );
       } else {
         alert(data.message || "Failed to create retake");
       }
@@ -517,17 +548,20 @@ export default function ExamHistoryPage() {
   };
 
   // Group attempts by exam id
-  const examsByExamId = completedExams.reduce((groups, attempt) => {
-    const { examId } = attempt;
-    if (!groups[examId]) {
-      groups[examId] = [];
-    }
-    groups[examId].push(attempt);
-    return groups;
-  }, {} as Record<number, ExamAttempt[]>);
+  const examsByExamId = completedExams.reduce(
+    (groups, attempt) => {
+      const { examId } = attempt;
+      if (!groups[examId]) {
+        groups[examId] = [];
+      }
+      groups[examId].push(attempt);
+      return groups;
+    },
+    {} as Record<number, ExamAttempt[]>,
+  );
 
   // For each exam, keep only the latest attempt
-  const latestAttempts = Object.values(examsByExamId).map(examAttempts => {
+  const latestAttempts = Object.values(examsByExamId).map((examAttempts) => {
     return examAttempts.reduce((latest, current) => {
       return current.attemptNumber > latest.attemptNumber ? current : latest;
     });
@@ -611,10 +645,14 @@ export default function ExamHistoryPage() {
                       attemptNumber: exam.attemptNumber,
                     }}
                     onViewResults={() => viewResults(exam.attemptId)}
-                    onTakeExam={(examType) => takeExam(exam.attemptId, exam.examId, examType)}
+                    onTakeExam={(examType) =>
+                      takeExam(exam.attemptId, exam.examId, examType)
+                    }
                     canRetake={exam.canRetake}
                     hasReachedRetakeLimit={exam.hasReachedRetakeLimit}
-                    onViewAttemptHistory={() => openAttemptHistory(exam)}
+                    onViewAttemptHistory={
+                      exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
+                    }
                   />
                 </Box>
               ))
@@ -629,16 +667,7 @@ export default function ExamHistoryPage() {
       <AttemptHistoryModal
         open={attemptHistoryOpen}
         examName={selectedExam?.title || ""}
-        attempts={selectedExam ? examsByExamId[selectedExam.examId].map((attempt: any) => ({
-          attemptNumber: attempt.attemptNumber,
-          correctAnswers: attempt.correctAnswers,
-          wrongAnswers: attempt.wrongAnswers,
-          unanswered: attempt.unanswered,
-          score: attempt.score,
-          points: attempt.points,
-          result: parseInt(attempt.score) >= parseInt(attempt.points) * 0.5 ? "Pass" : "Fail",
-          completedAt: attempt.completedAt
-        })) : []}
+        examId={selectedExam?.examId || 0}
         onClose={closeAttemptHistory}
       />
     </Box>
