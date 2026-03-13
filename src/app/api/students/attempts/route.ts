@@ -31,6 +31,7 @@ export async function GET(req: Request) {
     const studentId = decoded.userId;
     const { searchParams } = new URL(req.url);
     const attemptId = searchParams.get("attemptId");
+    const examId = searchParams.get("examId");
 
     // If attemptId is provided, fetch single attempt
     if (attemptId) {
@@ -54,7 +55,45 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, data: attempt });
     }
 
-    // Fetch completed attempts
+    // If examId is provided, fetch all attempts for that exam
+    if (examId) {
+      const attempts = await prisma.student_exam_attempts.findMany({
+        where: {
+          student_id: studentId,
+          exam_id: Number(examId),
+          status: "completed",
+        },
+        include: {
+          exam: {
+            include: {
+              exam_subject_configs: {
+                include: {
+                  subject: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          end_time: "desc", // Most recent first
+        },
+      });
+
+      const formattedAttempts = attempts.map(attempt => ({
+        attemptNumber: attempt.attempt_number,
+        correctAnswers: attempt.correct_answers,
+        wrongAnswers: attempt.wrong_answers,
+        unanswered: attempt.unanswered,
+        score: attempt.score.toString(),
+        points: attempt.exam.total_marks.toString(),
+        result: attempt.result || "fail",
+        completedAt: attempt.end_time ? formatDateToDDMMYYYY(attempt.end_time) : "N/A",
+      }));
+
+      return NextResponse.json({ success: true, data: formattedAttempts });
+    }
+
+    // Fetch all completed attempts
     const attempts = await prisma.student_exam_attempts.findMany({
       where: {
         student_id: studentId,
@@ -117,6 +156,7 @@ export async function GET(req: Request) {
         correctAnswers: attempt.correct_answers,
         wrongAnswers: attempt.wrong_answers,
         unanswered: attempt.unanswered,
+        result: attempt.result || "fail", 
       };
     }));
 
