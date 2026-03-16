@@ -110,6 +110,8 @@ export async function GET(req: Request) {
           title: exam.exam_title,
           duration: exam.time_limit_minutes,
           totalQuestions: storedQuestions.length,
+          points: exam.total_marks,
+          examType: exam.exam_type,
           shuffle: assignment.shuffle_questions,
           questions: storedQuestions.map((q) => ({
             id: q.questions.question_id,
@@ -184,6 +186,8 @@ export async function GET(req: Request) {
         title: exam.exam_title,
         duration: exam.time_limit_minutes,
         totalQuestions: questions.length,
+        points: exam.total_marks,
+        examType: exam.exam_type,
         shuffle: assignment.shuffle_questions,
         questions,
       },
