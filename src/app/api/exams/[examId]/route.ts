@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import jwt from "jsonwebtoken";
 
 /* ===========================
     GET: Fetch single exam details
@@ -40,7 +41,7 @@ export async function GET(
       const now = new Date();
       const end = new Date(exam.scheduled_end);
       if (now > end) {
-        status = "inactive"; 
+        status = "inactive";
       } else {
         status = "active";
       }
@@ -86,6 +87,30 @@ export async function PUT(
   { params }: { params: { examId: string } },
 ) {
   try {
+    const authHeader = req.headers.get("Authorization");
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    let decoded: any;
+
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: "Invalid token" },
+        { status: 401 },
+      );
+    }
+
+    const userId = decoded.userId;
+
     const examId = parseInt(params.examId);
     const body = await req.json();
 
@@ -184,6 +209,7 @@ export async function PUT(
 
           question_count: totalQuestions,
           updated_at: new Date(),
+          updated_by: userId,
         },
       });
 

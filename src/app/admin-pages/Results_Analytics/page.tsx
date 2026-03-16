@@ -491,6 +491,20 @@ const ResultsAnalytics = () => {
               >
                 <CircularProgress />
               </Box>
+            ) : !examActivityData ||
+              !examActivityData.labels?.length ||
+              !examActivityData.datasets?.some((d: any) => d.data?.length) ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  color: "text.secondary",
+                }}
+              >
+                No exam activity available
+              </Box>
             ) : (
               <Bar
                 data={
@@ -560,6 +574,20 @@ const ResultsAnalytics = () => {
                 }}
               >
                 <CircularProgress />
+              </Box>
+            ) : !performanceTrend ||
+              !performanceTrend.labels?.length ||
+              !performanceTrend.datasets?.[0]?.data?.length ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  color: "text.secondary",
+                }}
+              >
+                No performance data available
               </Box>
             ) : (
               <Line
@@ -637,7 +665,12 @@ const ResultsAnalytics = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "grey.50" }}>
-                  <TableCell sx={{ fontWeight: "bold" }}>Rank</TableCell>
+                  {exam !== "all" && examType !== "all" ? (
+                    <TableCell sx={{ fontWeight: "bold" }}>Rank</TableCell>
+                  ) : (
+                    <TableCell sx={{ fontWeight: "bold" }}>S.No</TableCell>
+                  )}
+
                   <TableCell sx={{ fontWeight: "bold" }}>Username</TableCell>
 
                   {exam !== "all" && examType !== "all" ? (
@@ -675,12 +708,14 @@ const ResultsAnalytics = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  studentResults.map((student) => (
+                  studentResults.map((student, index) => (
                     <TableRow
                       key={`${student.studentId}-${student.rank}`}
                       hover
                     >
-                      <TableCell>{student.rank}</TableCell>
+                      <TableCell>
+                        {student.rank ?? (currentPage - 1) * 10 + index + 1}
+                      </TableCell>
                       <TableCell>{student.username}</TableCell>
 
                       {exam !== "all" && examType !== "all" ? (

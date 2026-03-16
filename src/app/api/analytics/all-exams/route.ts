@@ -130,8 +130,7 @@ export async function GET(request: Request) {
     const userMap = new Map(users.map((u) => [u.user_id, u.username]));
 
     // STEP 7: Final results
-    const results = paginated.map((r, index) => ({
-      rank: skip + index + 1,
+    const results = paginated.map((r) => ({
       studentId: r.studentId,
       username: userMap.get(r.studentId) || "Unknown",
       totalExamsAttempted: r.totalExamsAttempted,

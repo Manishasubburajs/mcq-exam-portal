@@ -6,13 +6,7 @@ import {
   Avatar,
   CircularProgress,
 } from "@mui/material";
-import {
-  School,
-  Assignment,
-  HelpOutline,
-  TrendingUp,
-} from "@mui/icons-material";
-import styles from "./StatsCard.module.css";
+import { School, Assignment, HelpOutline, Book } from "@mui/icons-material";
 
 interface Stat {
   title: string;
@@ -30,53 +24,81 @@ const StatsCard: React.FC<Props> = ({ stat, loading }) => {
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case "School":
-        return <School sx={{ fontSize: 28, color: "white" }} />;
+        return (
+          <School
+            sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: "white" }}
+          />
+        );
       case "Assignment":
-        return <Assignment sx={{ fontSize: 28, color: "white" }} />;
+        return (
+          <Assignment
+            sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: "white" }}
+          />
+        );
       case "HelpOutline":
-        return <HelpOutline sx={{ fontSize: 28, color: "white" }} />;
-      case "TrendingUp":
-        return <TrendingUp sx={{ fontSize: 28, color: "white" }} />;
+        return (
+          <HelpOutline
+            sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: "white" }}
+          />
+        );
+      case "Book":
+        return (
+          <Book sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: "white" }} />
+        );
       default:
-        return <School sx={{ fontSize: 28, color: "white" }} />;
+        return (
+          <School
+            sx={{ fontSize: { xs: 24, sm: 28, md: 32 }, color: "white" }}
+          />
+        );
     }
   };
 
   return (
     <Paper
       elevation={1}
-      className={styles.statCard}
       sx={{
         display: "flex",
         alignItems: "center",
-        gap: 2,
+        gap: { xs: 1, sm: 2 },
+        padding: { xs: 1.5, sm: 2, md: 3 },
+        borderRadius: 2,
+        flex: 1,
+        backgroundColor: "background.paper",
       }}
     >
       <Avatar
         sx={{
-          width: 50,
-          height: 50,
+          width: { xs: 40, sm: 50, md: 60 },
+          height: { xs: 40, sm: 50, md: 60 },
           background: stat.bgColor,
           boxShadow: 3,
-          color: "#fff",
         }}
       >
         {getIcon(stat.icon)}
       </Avatar>
 
       <Box>
-        <Typography variant="h6" color="text.primary">
+        <Typography
+          variant="h6"
+          color="text.primary"
+          sx={{ fontSize: { xs: 14, sm: 16, md: 18 } }}
+        >
           {loading ? (
-            <>
-              <CircularProgress size={18} color="inherit" sx={{ mr: 1 }} />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CircularProgress size={16} color="inherit" />
               Loading...
-            </>
+            </Box>
           ) : (
             stat.title
           )}
         </Typography>
 
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontSize: { xs: 12, sm: 13, md: 14 } }}
+        >
           {stat.subtitle}
         </Typography>
       </Box>
