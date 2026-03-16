@@ -598,8 +598,8 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
       description,
       examType,
       duration,
-      startTime,
-      endTime,
+      startTime: startTime ? new Date(startTime).toISOString() : null,
+      endTime: endTime ? new Date(endTime).toISOString() : null,
       topicCounts,
     };
 

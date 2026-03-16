@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
@@ -29,12 +30,25 @@ export async function GET(
 
     // Date filter
     if (dateRange) {
-      const now = new Date();
-      let startDate = new Date();
-      if (dateRange === "week") startDate.setDate(now.getDate() - 7);
-      else if (dateRange === "month") startDate.setMonth(now.getMonth() - 1);
-      else if (dateRange === "quarter") startDate.setMonth(now.getMonth() - 3);
-      where.start_time = { gte: startDate };
+      // IST offset in minutes
+      const IST_OFFSET = 5 * 60 + 30; // 5:30 hours
+
+      const nowUTC = new Date();
+      const nowIST = new Date(nowUTC.getTime() + IST_OFFSET * 60 * 1000);
+
+      let startDateIST = new Date(nowIST);
+      if (dateRange === "week") startDateIST.setDate(nowIST.getDate() - 7);
+      else if (dateRange === "month")
+        startDateIST.setMonth(nowIST.getMonth() - 1);
+      else if (dateRange === "quarter")
+        startDateIST.setMonth(nowIST.getMonth() - 3);
+
+      // Convert back to UTC for DB filter
+      const startDateUTC = new Date(
+        startDateIST.getTime() - IST_OFFSET * 60 * 1000,
+      );
+
+      where.start_time = { gte: startDateUTC };
     }
 
     // Get latest attempt per student for this exam

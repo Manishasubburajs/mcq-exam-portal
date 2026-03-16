@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
     }
 
     const validExamTypes = ["live", "mock", "practice"] as const;
+
     const examType = validExamTypes.includes(examTypeParam as any)
       ? (examTypeParam as (typeof validExamTypes)[number])
       : undefined;
@@ -50,9 +52,8 @@ export async function GET(request: Request) {
     // ✅ 2️⃣ Fetch latest attempts
     const latestAttempts = await prisma.student_exam_attempts.findMany({
       where: {
-        status: "completed",
+        ...baseWhere,
         OR: grouped.map((g) => ({
-          student_id: studentId,
           exam_id: g.exam_id,
           attempt_number: g._max.attempt_number!,
         })),
@@ -68,13 +69,13 @@ export async function GET(request: Request) {
     const results = [];
 
     for (const attempt of latestAttempts) {
-      // 🔥 Get ALL questions of this exam
-      const examQuestions = await prisma.exam_questions.findMany({
+      // ✅ Get actual questions shown to student
+      const examQuestions = await prisma.student_exam_questions.findMany({
         where: {
-          exam_id: attempt.exam_id,
+          attempt_id: attempt.attempt_id,
         },
         include: {
-          question: {
+          questions: {
             include: {
               subject: true,
               topic: true,
@@ -83,53 +84,51 @@ export async function GET(request: Request) {
         },
       });
 
-      // 🔥 Get student answers
+      // ✅ Get student answers
       const answers = await prisma.student_answers.findMany({
         where: {
           attempt_id: attempt.attempt_id,
         },
       });
 
-      // 🔥 Convert answers → map
-      const answerMap: Record<number, any> = {};
+      // ✅ Convert answers to map
+      const answerMap = new Map<number, any>();
       for (const ans of answers) {
-        answerMap[ans.question_id] = ans;
+        answerMap.set(ans.question_id, ans);
       }
 
-      // 🔥 Subject grouping
-      const subjectTopicMap: Record<
+      // ✅ Subject → Topic grouping
+      const topicStats: Record<
         string,
-        {
-          subject: string;
-          topics: Record<
-            string,
-            {
-              topic: string;
-              total: number;
-              correct: number;
-              wrong: number;
-              unanswered: number;
-            }
-          >;
-        }
+        Record<
+          string,
+          {
+            subject: string;
+            topic: string;
+            total: number;
+            correct: number;
+            wrong: number;
+            unanswered: number;
+          }
+        >
       > = {};
 
       for (const eq of examQuestions) {
-        const subjectName = eq.question.subject.subject_name;
-        const topicName = eq.question.topic?.topic_name;
-
+        const question = eq.questions;
         const questionId = eq.question_id;
-        const studentAnswer = answerMap[questionId];
 
-        if (!subjectTopicMap[subjectName]) {
-          subjectTopicMap[subjectName] = {
-            subject: subjectName,
-            topics: {},
-          };
+        const subjectName = question.subject.subject_name;
+        const topicName = question.topic?.topic_name ?? "General";
+
+        const studentAnswer = answerMap.get(questionId);
+
+        if (!topicStats[subjectName]) {
+          topicStats[subjectName] = {};
         }
 
-        if (!subjectTopicMap[subjectName].topics[topicName]) {
-          subjectTopicMap[subjectName].topics[topicName] = {
+        if (!topicStats[subjectName][topicName]) {
+          topicStats[subjectName][topicName] = {
+            subject: subjectName,
             topic: topicName,
             total: 0,
             correct: 0,
@@ -138,31 +137,26 @@ export async function GET(request: Request) {
           };
         }
 
-        const topicData = subjectTopicMap[subjectName].topics[topicName];
+        const stats = topicStats[subjectName][topicName];
 
-        topicData.total += 1;
+        stats.total++;
 
-        if (!studentAnswer) {
-          topicData.unanswered += 1;
-        } else if (studentAnswer.is_correct) {
-          topicData.correct += 1;
-        } else {
-          topicData.wrong += 1;
+        if (studentAnswer) {
+          if (studentAnswer.is_correct) {
+            stats.correct++;
+          } else {
+            stats.wrong++;
+          }
         }
       }
 
+      // ✅ Convert object → array
       const topicSummary: any[] = [];
 
-      for (const sub of Object.values(subjectTopicMap)) {
-        for (const topic of Object.values(sub.topics)) {
-          topicSummary.push({
-            subject: sub.subject,
-            topic: topic.topic,
-            total: topic.total,
-            correct: topic.correct,
-            wrong: topic.wrong,
-            unanswered: topic.unanswered,
-          });
+      for (const subject of Object.values(topicStats)) {
+        for (const topic of Object.values(subject)) {
+          topic.unanswered = topic.total - (topic.correct + topic.wrong);
+          topicSummary.push(topic);
         }
       }
 
@@ -182,7 +176,6 @@ export async function GET(request: Request) {
           : "0 min 0 sec",
         accuracy: attempt.accuracy?.toFixed(2),
         result: attempt.result,
-        // subjectSummary,
         topicSummary,
       });
     }
@@ -192,6 +185,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Student Details Error:", error);
+
     return NextResponse.json(
       { error: "Failed to fetch student details" },
       { status: 500 },
