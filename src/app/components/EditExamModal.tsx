@@ -664,6 +664,9 @@ export default function EditExamModal({
     if (isSubmitting) return;
     setIsSubmitting(true);
 
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
     const payload = {
       examTitle,
       description,
@@ -679,7 +682,10 @@ export default function EditExamModal({
       const method = isEdit ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();

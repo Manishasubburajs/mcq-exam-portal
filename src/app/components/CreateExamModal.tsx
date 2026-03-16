@@ -593,6 +593,9 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     if (isSubmitting) return; // 🚀 Prevent double click
     setIsSubmitting(true); // 🔒 Lock button immediately
 
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
     const payload = {
       examTitle,
       description,
@@ -606,7 +609,10 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
     try {
       const res = await fetch("/api/exams", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
