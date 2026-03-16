@@ -74,7 +74,28 @@ export async function GET(
     });
 
     const totalRecords = latestAttempts.length;
-    const paginatedAttempts = latestAttempts.slice(skip, skip + limit);
+
+    // Rank calculation
+    let previousScore: number | null = null;
+    let currentRank = 0;
+
+    const rankedAttempts = latestAttempts.map((attempt, index) => {
+      const score = Number(attempt.score ?? 0);
+
+      if (previousScore === null || score < previousScore) {
+        currentRank = index + 1;
+      }
+
+      previousScore = score;
+
+      return {
+        ...attempt,
+        rank: currentRank,
+      };
+    });
+
+    // Pagination after ranking
+    const paginatedAttempts = rankedAttempts.slice(skip, skip + limit);
 
     const userIds = paginatedAttempts.map((a) => a.student_id);
     const usersList = await prisma.users.findMany({
@@ -85,7 +106,7 @@ export async function GET(
     const results = paginatedAttempts.map((attempt, index) => {
       const user = userMap.get(attempt.student_id);
       return {
-        rank: skip + index + 1,
+        rank: attempt.rank,
         studentId: attempt.student_id,
         username: user?.username,
         score: Number(attempt.score ?? 0),

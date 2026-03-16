@@ -75,8 +75,8 @@ export default function Home() {
     },
     {
       title: "0%",
-      subtitle: "Average Score",
-      icon: "TrendingUp",
+      subtitle: "Total Subjects",
+      icon: "Book",
       color: "white",
       bgColor: "linear-gradient(135deg, #f44336, #ef5350)",
     },
@@ -112,6 +112,14 @@ export default function Home() {
         totalQuestions = questionsData.length;
       }
 
+      // Fetch subjects count
+      const subjectsRes = await fetch("/api/subjects");
+      const subjectsData = await subjectsRes.json();
+      let totalSubjects = 0;
+      if (subjectsData.success && Array.isArray(subjectsData.data)) {
+        totalSubjects = subjectsData.data.length;
+      }
+
       setStats((prevStats) =>
         prevStats.map((stat) => {
           if (stat.subtitle === "Total Students") {
@@ -120,6 +128,8 @@ export default function Home() {
             return { ...stat, title: activeExamsCount.toString() };
           } else if (stat.subtitle === "Questions in Bank") {
             return { ...stat, title: totalQuestions.toString() };
+          } else if (stat.subtitle === "Total Subjects") {
+            return { ...stat, title: totalSubjects.toString() };
           }
           return stat;
         }),
@@ -307,13 +317,12 @@ export default function Home() {
         />
       )}
       <Box
-        className={`main-content ${
-          sidebarOpen ? "sidebar-open" : "sidebar-closed"
-        }`}
+        className={`main-content ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}
         sx={{
-          ml: sidebarOpen && !isMobile && !isTablet ? "220px" : 0,
-          // transition: "margin-left 0.3s ease",
-          paddingTop: { xs: "50px", md: "80px" },
+          ml: sidebarOpen && isDesktop ? "220px" : 0,
+          transition: "margin-left 0.3s ease",
+          pt: { xs: "50px", md: "80px" },
+          px: { xs: 2, sm: 3, md: 4 },
         }}
       >
         <Header
@@ -338,8 +347,9 @@ export default function Home() {
               xs: "1fr",
               sm: "1fr",
               md: "repeat(2, 1fr)",
+              lg: "repeat(2, 1fr)",
             },
-            gap: 2,
+            gap: { xs: 2, sm: 2, md: 3 },
             mb: 4,
           }}
         >
@@ -357,6 +367,21 @@ export default function Home() {
                 }}
               >
                 <Typography>Loading chart...</Typography>
+              </Box>
+            ) : !examActivityData ||
+              !examActivityData.labels?.length ||
+              !examActivityData.datasets?.some((d: any) => d.data?.length) ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  color: "text.secondary",
+                  fontSize: 14,
+                }}
+              >
+                No exam activity available 
               </Box>
             ) : (
               <Bar
@@ -385,6 +410,21 @@ export default function Home() {
                 }}
               >
                 <Typography>Loading chart...</Typography>
+              </Box>
+            ) : !performanceTrend ||
+              !performanceTrend.labels?.length ||
+              !performanceTrend.datasets?.[0]?.data?.length ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  color: "text.secondary",
+                  fontSize: 14,
+                }}
+              >
+                No performance data available
               </Box>
             ) : (
               <Line
