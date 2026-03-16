@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { shuffleArray } from "@/utils/shuffle";
+import jwt from "jsonwebtoken";
 
 /* ===========================
    GET: Fetch exams list
@@ -87,6 +88,30 @@ export async function GET() {
 =========================== */
 export async function POST(req: Request) {
   try {
+    const authHeader = req.headers.get("Authorization");
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    let decoded: any;
+
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: "Invalid token" },
+        { status: 401 },
+      );
+    }
+
+    const userId = decoded.userId;
+
     const body = await req.json();
 
     const {
@@ -154,6 +179,7 @@ export async function POST(req: Request) {
             question_count: totalQuestions,
             total_marks: 0, // will update later
             is_active: true,
+            created_by: userId,
           },
         });
 
