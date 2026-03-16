@@ -291,7 +291,11 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 >
                                   You
                                 </TableCell>
-                                <TableCell>{rank ?? "-"}</TableCell>
+                                <TableCell>
+                                  {exam.result?.toLowerCase() === "pass"
+                                    ? (rank ?? "-")
+                                    : "-"}
+                                </TableCell>
                                 <TableCell>{exam.examTitle}</TableCell>
                                 <TableCell>{exam.score ?? "-"}</TableCell>
                                 <TableCell>

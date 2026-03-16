@@ -1645,7 +1645,7 @@ export default function QuestionBankPage() {
                             Bulk Upload
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Upload multiple questions from CSV or Excel file
+                            Upload multiple questions from a CSV file.
                           </Typography>
                         </Box>
                       }
