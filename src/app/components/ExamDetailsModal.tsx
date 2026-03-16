@@ -61,6 +61,18 @@ interface Props {
 export default function ExamDetailsModal({ open, onClose, exam }: Props) {
   if (!exam) return null;
 
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString("en-IN", {
+      // timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const getExamTypeIcon = (type: string) => {
     switch (type) {
       case "practice":
@@ -185,7 +197,7 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
                 Created At
               </Typography>
               <Typography fontWeight={600}>
-                {new Date(exam.created_at).toLocaleDateString()}
+                {formatDateTime(exam.created_at)}
               </Typography>
             </Grid>
           </Grid>
@@ -224,9 +236,7 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
                           Start Time
                         </Typography>
                         <Typography variant="body1">
-                          {new Date(exam.scheduled_start).toLocaleDateString()}{" "}
-                          at{" "}
-                          {new Date(exam.scheduled_start).toLocaleTimeString()}
+                          {formatDateTime(exam.scheduled_start)}
                         </Typography>
                       </CardContent>
                     </Card>
@@ -244,8 +254,7 @@ export default function ExamDetailsModal({ open, onClose, exam }: Props) {
                           End Time
                         </Typography>
                         <Typography variant="body1">
-                          {new Date(exam.scheduled_end).toLocaleDateString()} at{" "}
-                          {new Date(exam.scheduled_end).toLocaleTimeString()}
+                          {formatDateTime(exam.scheduled_end)}
                         </Typography>
                       </CardContent>
                     </Card>

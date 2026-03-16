@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Paper, Typography, useMediaQuery } from "@mui/material";
+import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,16 +13,15 @@ import {
   Tooltip,
   Legend,
   ArcElement,
+  SubTitle,
 } from "chart.js";
 // cSpell:ignore chartjs
-import { Bar, Line, Doughnut } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 
 import dynamic from "next/dynamic";
 import Sidebar from "../components/Sidebar";
 import StatsCard from "../components/StatsCard";
 import ChartContainer from "../components/ChartContainer";
-import ActivityList from "../components/ActivityList";
-import QuickActionCard from "../components/QuickActionCard";
 
 const Header = dynamic(() => import("../components/Header"), { ssr: false });
 
@@ -36,6 +35,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   ArcElement,
+  SubTitle,
 );
 
 export default function Home() {
@@ -45,6 +45,11 @@ export default function Home() {
   const isTablet = useMediaQuery("(min-width:768px) and (max-width:1023px)");
   const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
+  const [examActivityData, setExamActivityData] = useState<any>(null);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [performanceTrend, setPerformanceTrend] = useState<any>(null);
+  const [trendLoading, setTrendLoading] = useState(false);
 
   const [stats, setStats] = useState([
     {
@@ -76,21 +81,6 @@ export default function Home() {
       bgColor: "linear-gradient(135deg, #f44336, #ef5350)",
     },
   ]);
-
-  useEffect(() => {
-    // Check if user is logged in and is admin
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
-    const role = localStorage.getItem("role") || sessionStorage.getItem("role");
-
-    if (!token || role !== "admin") {
-      router.push("/");
-      return;
-    }
-
-    setSidebarOpen(isDesktop);
-    fetchStats();
-  }, [isDesktop, isTablet, router]);
 
   const fetchStats = async () => {
     try {
@@ -141,25 +131,94 @@ export default function Home() {
     }
   };
 
-  const examActivityData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        label: "Exams Taken",
-        data: [45, 62, 58, 71, 84, 52, 38],
-        backgroundColor: "rgba(106, 17, 203, 0.7)",
-        borderColor: "rgba(106, 17, 203, 1)",
-        borderWidth: 1,
-      },
-      {
-        label: "Exams Created",
-        data: [3, 5, 4, 7, 6, 2, 1],
-        backgroundColor: "rgba(37, 117, 252, 0.7)",
-        borderColor: "rgba(37, 117, 252, 1)",
-        borderWidth: 1,
-      },
-    ],
+  const fetchExamActivity = async () => {
+    try {
+      setChartLoading(true);
+
+      const res = await fetch("/api/analytics/exam-activity?dateRange=week");
+      const data = await res.json();
+
+      setExamActivityData({
+        labels: data.labels,
+        datasets: [
+          {
+            label: "Live",
+            data: data.datasets.live,
+            backgroundColor: theme.palette.error.main,
+          },
+          {
+            label: "Mock",
+            data: data.datasets.mock,
+            backgroundColor: theme.palette.secondary.main,
+          },
+          {
+            label: "Practice",
+            data: data.datasets.practice,
+            backgroundColor: theme.palette.primary.main,
+          },
+        ],
+      });
+    } catch (error) {
+      console.error("Dashboard chart error:", error);
+    } finally {
+      setChartLoading(false);
+    }
   };
+
+  const fetchPerformanceTrend = async () => {
+    try {
+      setTrendLoading(true);
+
+      const res = await fetch(
+        `/api/analytics/performance-trend?dateRange=week`,
+      );
+      const data = await res.json();
+
+      setPerformanceTrend({
+        labels: data.labels,
+        datasets: [
+          {
+            label: "Average Accuracy %",
+            data: data.data,
+            borderColor: theme.palette.primary.main,
+            backgroundColor: theme.palette.primary.light,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+          },
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to fetch performance trend:", error);
+    } finally {
+      setTrendLoading(false);
+    }
+  };
+
+  const getExamChartSubtitle = () => {
+    return "Exam activity for the last 7 days";
+  };
+
+  const getPerformChartSubtitle = () => {
+    return "Average accuracy for last 7 days";
+  };
+
+  useEffect(() => {
+    // Check if user is logged in and is admin
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const role = localStorage.getItem("role") || sessionStorage.getItem("role");
+
+    if (!token || role !== "admin") {
+      router.push("/");
+      return;
+    }
+
+    setSidebarOpen(isDesktop);
+    fetchStats();
+    fetchExamActivity();
+    fetchPerformanceTrend();
+  }, [isDesktop, isTablet, router]);
 
   const examActivityOptions = {
     responsive: true,
@@ -172,191 +231,60 @@ export default function Home() {
       x: { ticks: { font: { size: 9 } } },
     },
     plugins: {
-      legend: {
-        display: false,
+      legend: { display: true, position: "bottom" as const },
+      subtitle: {
+        display: true,
+        text: getExamChartSubtitle(),
+        font: { size: 11 },
+        padding: { bottom: 10 },
+        color: "#6b7280",
       },
-    },
-    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } },
-  };
-
-  const subjectPerformanceData = {
-    labels: ["Mathematics", "Science", "History", "English", "Geography"],
-    datasets: [
-      {
-        data: [85, 78, 72, 80, 75],
-        backgroundColor: [
-          "rgba(106, 17, 203, 0.7)",
-          "rgba(37, 117, 252, 0.7)",
-          "rgba(255, 193, 7, 0.7)",
-          "rgba(40, 167, 69, 0.7)",
-          "rgba(220, 53, 69, 0.7)",
-        ],
-        borderColor: [
-          "rgba(106, 17, 203, 1)",
-          "rgba(37, 117, 252, 1)",
-          "rgba(255, 193, 7, 1)",
-          "rgba(40, 167, 69, 1)",
-          "rgba(220, 53, 69, 1)",
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const subjectPerformanceOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom" as const,
-        labels: {
-          font: {
-            size: 10,
+      tooltip: {
+        callbacks: {
+          label: function (context: any) {
+            return `${context.dataset.label}: ${context.raw} exams taken`;
           },
-          padding: 8,
         },
       },
     },
-    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } },
-  };
-
-  const performanceTrendData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
-    datasets: [
-      {
-        label: "Average Score",
-        data: [72, 75, 78, 76, 80, 82, 85],
-        borderColor: "rgba(106, 17, 203, 1)",
-        backgroundColor: "rgba(106, 17, 203, 0.1)",
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-      },
-      {
-        label: "Pass Rate",
-        data: [68, 72, 75, 73, 78, 80, 83],
-        borderColor: "rgba(37, 117, 252, 1)",
-        backgroundColor: "rgba(37, 117, 252, 0.1)",
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-      },
-    ],
   };
 
   const performanceTrendOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom" as const,
-        labels: {
-          font: {
-            size: 10,
-          },
-          padding: 8,
-        },
-      },
-    },
     scales: {
       y: {
         beginAtZero: true,
         max: 100,
         ticks: {
-          font: {
-            size: 9,
-          },
+          font: { size: 9 },
         },
       },
       x: {
         ticks: {
-          font: {
-            size: 9,
+          font: { size: 9 },
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        position: "bottom" as const,
+      },
+      subtitle: {
+        display: true,
+        text: getPerformChartSubtitle(),
+        font: { size: 11 },
+        padding: { bottom: 10 },
+        color: "#6b7280",
+      },
+      tooltip: {
+        callbacks: {
+          label: function (context: any) {
+            return `Accuracy: ${context.raw}%`;
           },
         },
       },
     },
-    layout: { padding: { top: 10, right: 10, bottom: 10, left: 10 } },
-  };
-
-  const activities = [
-    {
-      icon: "Assignment",
-      title: 'New exam "Advanced Calculus" created',
-      time: "10 minutes ago • By Dr. Smith",
-      color: "white",
-      bgColor: "primary.main",
-    },
-    {
-      icon: "PersonAdd",
-      title: "15 new students registered",
-      time: "1 hour ago • System",
-      color: "white",
-      bgColor: "success.main",
-    },
-    {
-      icon: "Backup",
-      title: "System backup completed successfully",
-      time: "3 hours ago • Automated",
-      color: "white",
-      bgColor: "info.main",
-    },
-    {
-      icon: "Publish",
-      title: "Chemistry Midterm results published",
-      time: "5 hours ago • By Dr. Johnson",
-      color: "white",
-      bgColor: "secondary.main",
-    },
-    {
-      icon: "ReportProblem",
-      title: "3 exam attempts flagged for review",
-      time: "Yesterday • System",
-      color: "white",
-      bgColor: "warning.main",
-    },
-  ];
-
-  const actions = [
-    {
-      icon: "AddCircle",
-      title: "Create Exam",
-      description: "Set up a new examination",
-    },
-    {
-      icon: "Person",
-      title: "Manage Users",
-      description: "Add or modify user accounts",
-    },
-    {
-      icon: "HelpOutline",
-      title: "Question Bank",
-      description: "Manage question database",
-    },
-    {
-      icon: "BarChart",
-      title: "View Reports",
-      description: "Generate detailed analytics",
-    },
-    {
-      icon: "Settings",
-      title: "System Settings",
-      description: "Configure portal settings",
-    },
-    {
-      icon: "Download",
-      title: "Export Data",
-      description: "Download reports and data",
-    },
-  ];
-
-  const handleActionClick = (title: string) => {
-    if (title === "System Settings") {
-      router.push("/admin-pages/Settings");
-    } else {
-      alert(`Navigating to: ${title}`);
-      // In a real application, this would redirect to the appropriate page
-    }
   };
 
   return (
@@ -384,7 +312,7 @@ export default function Home() {
         }`}
         sx={{
           ml: sidebarOpen && !isMobile && !isTablet ? "220px" : 0,
-          transition: "margin-left 0.3s ease",
+          // transition: "margin-left 0.3s ease",
           paddingTop: { xs: "50px", md: "80px" },
         }}
       >
@@ -419,26 +347,56 @@ export default function Home() {
             title="Exam Activity Overview"
             minHeight={{ xs: 240, sm: 300, md: 380 }}
           >
-            <Bar data={examActivityData} options={examActivityOptions} />
+            {chartLoading ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
+                <Typography>Loading chart...</Typography>
+              </Box>
+            ) : (
+              <Bar
+                data={
+                  examActivityData || {
+                    labels: [],
+                    datasets: [],
+                  }
+                }
+                options={examActivityOptions}
+              />
+            )}
           </ChartContainer>
 
           <ChartContainer
             title="Performance Trend"
             minHeight={{ xs: 240, sm: 300, md: 380 }}
           >
-            <Line
-              data={performanceTrendData}
-              options={{
-                ...performanceTrendOptions,
-                plugins: {
-                  ...performanceTrendOptions.plugins,
-                  legend: {
-                    ...performanceTrendOptions.plugins.legend,
-                    labels: { font: { size: 12 } },
-                  },
-                },
-              }}
-            />
+            {trendLoading ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
+                <Typography>Loading chart...</Typography>
+              </Box>
+            ) : (
+              <Line
+                data={
+                  performanceTrend || {
+                    labels: [],
+                    datasets: [],
+                  }
+                }
+                options={performanceTrendOptions}
+              />
+            )}
           </ChartContainer>
         </Box>
       </Box>

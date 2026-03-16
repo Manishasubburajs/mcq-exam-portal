@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
       where: {
         student_id: attempt.student_id,
         exam_id: attempt.exam_id,
+        status: "completed",
       },
     });
 
@@ -76,16 +78,17 @@ export async function GET(request: Request) {
       where: {
         student_id: topper.student_id,
         exam_id: attempt.exam_id,
+        status: "completed",
       },
     });
 
     // 2️⃣ Get exam questions
-    const examQuestions = await prisma.exam_questions.findMany({
+    const examQuestions = await prisma.student_exam_questions.findMany({
       where: {
-        exam_id: attempt.exam_id,
+        attempt_id: attempt.attempt_id,
       },
       include: {
-        question: {
+        questions: {
           include: {
             subject: true,
             topic: true,
@@ -97,50 +100,48 @@ export async function GET(request: Request) {
     // 3️⃣ Get student answers
     const answers = await prisma.student_answers.findMany({
       where: {
-        attempt_id: attemptId,
+        attempt_id: attempt.attempt_id,
       },
     });
 
     // Convert answers → map
-    const answerMap: Record<number, any> = {};
-    answers.forEach((ans) => {
-      answerMap[ans.question_id] = ans;
-    });
+    const answerMap = new Map<number, any>();
+    for (const ans of answers) {
+      answerMap.set(ans.question_id, ans);
+    }
 
     // 4️⃣ Build subject + topic summary
-    const subjectTopicMap: Record<
+    const topicStats: Record<
       string,
-      {
-        subject: string;
-        topics: Record<
-          string,
-          {
-            topic: string;
-            total: number;
-            correct: number;
-            wrong: number;
-            unanswered: number;
-          }
-        >;
-      }
+      Record<
+        string,
+        {
+          subject: string;
+          topic: string;
+          total: number;
+          correct: number;
+          wrong: number;
+          unanswered: number;
+        }
+      >
     > = {};
 
     for (const eq of examQuestions) {
-      const subjectName = eq.question.subject.subject_name;
-      const topicName = eq.question.topic?.topic_name ?? "General";
-
+      const question = eq.questions;
       const questionId = eq.question_id;
-      const studentAnswer = answerMap[questionId];
 
-      if (!subjectTopicMap[subjectName]) {
-        subjectTopicMap[subjectName] = {
-          subject: subjectName,
-          topics: {},
-        };
+      const subjectName = question.subject.subject_name;
+      const topicName = question.topic?.topic_name ?? "General";
+
+      const studentAnswer = answerMap.get(questionId);
+
+      if (!topicStats[subjectName]) {
+        topicStats[subjectName] = {};
       }
 
-      if (!subjectTopicMap[subjectName].topics[topicName]) {
-        subjectTopicMap[subjectName].topics[topicName] = {
+      if (!topicStats[subjectName][topicName]) {
+        topicStats[subjectName][topicName] = {
+          subject: subjectName,
           topic: topicName,
           total: 0,
           correct: 0,
@@ -149,32 +150,26 @@ export async function GET(request: Request) {
         };
       }
 
-      const topicData = subjectTopicMap[subjectName].topics[topicName];
+      const stats = topicStats[subjectName][topicName];
 
-      topicData.total += 1;
+      stats.total++;
 
-      if (!studentAnswer) {
-        topicData.unanswered += 1;
-      } else if (studentAnswer.is_correct) {
-        topicData.correct += 1;
-      } else {
-        topicData.wrong += 1;
+      if (studentAnswer) {
+        if (studentAnswer.is_correct) {
+          stats.correct++;
+        } else {
+          stats.wrong++;
+        }
       }
     }
 
     // Convert map → array
     const topicSummary: any[] = [];
 
-    for (const sub of Object.values(subjectTopicMap)) {
-      for (const topic of Object.values(sub.topics)) {
-        topicSummary.push({
-          subject: sub.subject,
-          topic: topic.topic,
-          total: topic.total,
-          correct: topic.correct,
-          wrong: topic.wrong,
-          unanswered: topic.unanswered,
-        });
+    for (const subject of Object.values(topicStats)) {
+      for (const topic of Object.values(subject)) {
+        topic.unanswered = topic.total - (topic.correct + topic.wrong);
+        topicSummary.push(topic);
       }
     }
 
@@ -213,6 +208,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Student Review Error:", error);
+
     return NextResponse.json(
       { error: "Failed to fetch review details" },
       { status: 500 },
