@@ -5,7 +5,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 const MARK_PER_Q = 2;
 const NEGATIVE = 0.66;
-const PASS_PERCENTAGE = 35;
+const PASS_PERCENTAGE = 45;
 
 export async function POST(req: Request) {
   try {
