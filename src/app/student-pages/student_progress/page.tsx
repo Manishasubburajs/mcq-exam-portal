@@ -70,10 +70,22 @@ const StudentProgressPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 5;
   const [subjectPerformance, setSubjectPerformance] = useState<
-    { subject_id: number; subject_name: string; accuracy: number; totalCorrect: number; totalAttempted: number }[]
+    {
+      subject_id: number;
+      subject_name: string;
+      accuracy: number;
+      totalCorrect: number;
+      totalAttempted: number;
+    }[]
   >([]);
-  const [strongestSubject, setStrongestSubject] = useState<{ name: string; accuracy: number } | null>(null);
-  const [weakestSubject, setWeakestSubject] = useState<{ name: string; accuracy: number } | null>(null);
+  const [strongestSubject, setStrongestSubject] = useState<{
+    name: string;
+    accuracy: number;
+  } | null>(null);
+  const [weakestSubject, setWeakestSubject] = useState<{
+    name: string;
+    accuracy: number;
+  } | null>(null);
 
   const [stats, setStats] = useState({
     averageScore: 0,
@@ -142,9 +154,9 @@ const StudentProgressPage = () => {
   const calculateDateRange = (filter: string) => {
     const now = new Date();
     const to = new Date(now);
-    
+
     let from = new Date(now);
-    
+
     switch (filter) {
       case "24h":
         from.setHours(from.getHours() - 24);
@@ -160,7 +172,7 @@ const StudentProgressPage = () => {
         to.setHours(23, 59, 59, 999);
         break;
     }
-    
+
     return {
       from: from.toISOString(),
       to: to.toISOString(),
@@ -171,30 +183,34 @@ const StudentProgressPage = () => {
   const fetchPerformanceData = async (
     type: string,
     from: string,
-    to: string
+    to: string,
   ) => {
     setGraphLoading(true);
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
       const params = new URLSearchParams({
         examType: type,
         fromDate: from,
         toDate: to,
       });
-      
-      const response = await fetch(`/api/students/performance-trend-graph?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+
+      const response = await fetch(
+        `/api/students/performance-trend-graph?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
       const result = await response.json();
-      
+
       if (result.success) {
         const formattedData = {
           labels: result.data.map((item: any) => {
             const date = new Date(item.date);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, "0");
+            const month = String(date.getMonth() + 1).padStart(2, "0");
             const year = date.getFullYear();
             return `${day}-${month}-${year}`;
           }),
@@ -270,11 +286,6 @@ const StudentProgressPage = () => {
     fetchPerformanceData("all", dateRange.from, dateRange.to);
   }, []);
 
-  const getScoreColor = (score: number) => {
-    const PASS_PERCENTAGE = 33;
-    return score >= PASS_PERCENTAGE ? "#28a745" : "#dc3545";
-  };
-
   const getProgressColor = (percentage: number) => {
     const PASS_PERCENTAGE = 33;
     return percentage >= PASS_PERCENTAGE ? "#28a745" : "#dc3545";
@@ -344,11 +355,6 @@ const StudentProgressPage = () => {
     });
   };
 
-  const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split("-");
-    return `${day}-${month}-${year}`;
-  };
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -386,14 +392,18 @@ const StudentProgressPage = () => {
   // Fetch subject performance data from API
   const fetchSubjectPerformance = async () => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      const response = await fetch("/api/students/student-subject-performance", {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+      const response = await fetch(
+        "/api/students/student-subject-performance",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
       const result = await response.json();
-      
+
       if (result.success) {
         setSubjectPerformance(result.data.subjects);
         setStrongestSubject(result.data.strongestSubject);
@@ -472,10 +482,7 @@ const StudentProgressPage = () => {
       }
     });
 
-    return Object.values(examMap).sort(
-      (a: any, b: any) =>
-        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
-    );
+    return Object.values(examMap);
   };
 
   useEffect(() => {
@@ -640,30 +647,34 @@ const StudentProgressPage = () => {
           </Typography>
 
           {/* Filters Container */}
-          <Box sx={{ 
-            mb: 3, 
-            display: "flex", 
-            flexWrap: "wrap", 
-            gap: 2, 
-            alignItems: "center",
-            justifyContent: "space-between"
-          }}>
+          <Box
+            sx={{
+              mb: 3,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 2,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
             {/* Exam Type Filters */}
             <ToggleButtonGroup
               value={examType}
               exclusive
-              onChange={(e, newType) => newType && handleExamTypeChange(newType)}
-              sx={{ 
-                '& .MuiToggleButton-root': {
-                  color: '#666',
-                  '&.Mui-selected': {
-                    backgroundColor: '#6a11cb',
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: '#5a0fb8',
+              onChange={(e, newType) =>
+                newType && handleExamTypeChange(newType)
+              }
+              sx={{
+                "& .MuiToggleButton-root": {
+                  color: "#666",
+                  "&.Mui-selected": {
+                    backgroundColor: "#6a11cb",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "#5a0fb8",
                     },
                   },
-                }
+                },
               }}
             >
               <ToggleButton value="all">All</ToggleButton>
@@ -676,18 +687,20 @@ const StudentProgressPage = () => {
             <ToggleButtonGroup
               value={quickFilter}
               exclusive
-              onChange={(e, newFilter) => newFilter && handleQuickFilterChange(newFilter)}
-              sx={{ 
-                '& .MuiToggleButton-root': {
-                  color: '#666',
-                  '&.Mui-selected': {
-                    backgroundColor: '#1a73e8',
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: '#1557b0',
+              onChange={(e, newFilter) =>
+                newFilter && handleQuickFilterChange(newFilter)
+              }
+              sx={{
+                "& .MuiToggleButton-root": {
+                  color: "#666",
+                  "&.Mui-selected": {
+                    backgroundColor: "#1a73e8",
+                    color: "white",
+                    "&:hover": {
+                      backgroundColor: "#1557b0",
                     },
                   },
-                }
+                },
               }}
             >
               <ToggleButton value="24h">Last 24 Hours</ToggleButton>
@@ -696,12 +709,14 @@ const StudentProgressPage = () => {
             </ToggleButtonGroup>
 
             {/* Manual Date Range */}
-            <Box sx={{ 
-              display: "flex", 
-              gap: 1, 
-              flexWrap: "wrap",
-              alignItems: "center"
-            }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
               <TextField
                 label="From"
                 type="datetime-local"
@@ -716,32 +731,32 @@ const StudentProgressPage = () => {
                 onChange={handleToDateChange}
                 sx={{ minWidth: 180 }}
               />
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={handleManualDateApply}
                 disabled={!fromDate || !toDate}
-                sx={{ 
-                  backgroundColor: '#28a745',
-                  '&:hover': {
-                    backgroundColor: '#218838',
+                sx={{
+                  backgroundColor: "#28a745",
+                  "&:hover": {
+                    backgroundColor: "#218838",
                   },
-                  '&.Mui-disabled': {
-                    backgroundColor: '#ccc',
-                  }
+                  "&.Mui-disabled": {
+                    backgroundColor: "#ccc",
+                  },
                 }}
               >
                 Apply
               </Button>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 onClick={handleReset}
-                sx={{ 
-                  borderColor: '#6c757d',
-                  color: '#6c757d',
-                  '&:hover': {
-                    borderColor: '#5a6268',
-                    backgroundColor: '#e9ecef',
-                  }
+                sx={{
+                  borderColor: "#6c757d",
+                  color: "#6c757d",
+                  "&:hover": {
+                    borderColor: "#5a6268",
+                    backgroundColor: "#e9ecef",
+                  },
                 }}
               >
                 Reset
@@ -752,11 +767,25 @@ const StudentProgressPage = () => {
           {/* Graph */}
           <Box sx={{ height: { xs: 250, sm: 280, md: 300 }, mb: 3 }}>
             {graphLoading ? (
-              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
                 <CircularProgress />
               </Box>
             ) : graphData.labels.length === 0 ? (
-              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
                 <Typography textAlign="center" color="text.secondary">
                   No exam data available for the selected range.
                 </Typography>
@@ -774,7 +803,8 @@ const StudentProgressPage = () => {
               textAlign: "center",
             }}
           >
-            This graph shows how your exam accuracy has changed over time based on completed exams.
+            This graph shows how your exam accuracy has changed over time based
+            on completed exams.
           </Typography>
         </CardContent>
       </Card>
@@ -789,13 +819,15 @@ const StudentProgressPage = () => {
         }}
       >
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
-          <Box sx={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            flexWrap: "wrap",
-            mb: { xs: 2, sm: 3 }
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              mb: { xs: 2, sm: 3 },
+            }}
+          >
             <Box>
               <Typography
                 variant="h6"
@@ -830,19 +862,19 @@ const StudentProgressPage = () => {
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography 
-                    sx={{ 
-                      fontWeight: 700, 
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
                       color: "#2c3e50",
-                      fontSize: { xs: "0.875rem", sm: "1rem" }
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
                     }}
                   >
                     Strongest Subject:
                   </Typography>
-                  <Typography 
-                    sx={{ 
-                      fontWeight: 600, 
-                      color: "#28a745"
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      color: "#28a745",
                     }}
                   >
                     {strongestSubject.name}
@@ -850,19 +882,19 @@ const StudentProgressPage = () => {
                 </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography 
-                    sx={{ 
-                      fontWeight: 700, 
+                  <Typography
+                    sx={{
+                      fontWeight: 700,
                       color: "#2c3e50",
-                      fontSize: { xs: "0.875rem", sm: "1rem" }
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
                     }}
                   >
                     Weakest Subject:
                   </Typography>
-                  <Typography 
-                    sx={{ 
-                      fontWeight: 600, 
-                      color: "#dc3545"
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      color: "#dc3545",
                     }}
                   >
                     {weakestSubject.name}
@@ -1024,7 +1056,7 @@ const StudentProgressPage = () => {
                             }
                           />
                         </TableCell>
-                        <TableCell>{formatDate(exam.completedAt)}</TableCell>
+                        <TableCell>{exam.completedAt}</TableCell>
                         <TableCell>
                           {(() => {
                             const percentage = calculatePercentageFromScore(
@@ -1036,7 +1068,6 @@ const StudentProgressPage = () => {
                               <Typography
                                 sx={{
                                   fontWeight: 600,
-                                  color: getScoreColor(percentage),
                                 }}
                               >
                                 {percentage}%
