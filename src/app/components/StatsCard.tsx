@@ -54,8 +54,8 @@ const StatsCard: React.FC<Props> = ({ stat, loading }) => {
     >
       <Avatar
         sx={{
-          width: 60,
-          height: 60,
+          width: 50,
+          height: 50,
           background: stat.bgColor,
           boxShadow: 3,
           color: "#fff",

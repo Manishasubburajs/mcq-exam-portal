@@ -128,14 +128,15 @@ const StudentReviewModal = ({ open, onClose, attemptId }: Props) => {
                     Default
                   </Typography>
 
-                  {reviewData?.rank === 1 && (
-                    <Chip
-                      label="🏆 Topper"
-                      color="warning"
-                      size="small"
-                      sx={{ fontWeight: "bold" }}
-                    />
-                  )}
+                  {reviewData.result?.toLowerCase() === "pass" &&
+                    reviewData?.rank === 1 && (
+                      <Chip
+                        label="🏆 Topper"
+                        color="warning"
+                        size="small"
+                        sx={{ fontWeight: "bold" }}
+                      />
+                    )}
                 </Box>
                 <Table
                   sx={{
@@ -176,7 +177,11 @@ const StudentReviewModal = ({ open, onClose, attemptId }: Props) => {
                       >
                         You
                       </TableCell>
-                      <TableCell>{reviewData.rank ?? "-"}</TableCell>
+                      <TableCell>
+                        {reviewData.result?.toLowerCase() === "pass"
+                          ? (reviewData.rank ?? "-")
+                          : "-"}
+                      </TableCell>
                       <TableCell>{reviewData.examTitle}</TableCell>
                       <TableCell>{reviewData.score ?? "-"}</TableCell>
                       <TableCell>
@@ -205,50 +210,56 @@ const StudentReviewModal = ({ open, onClose, attemptId }: Props) => {
                         />
                       </TableCell>
                     </TableRow>
-                    {!(reviewData?.rank === 1) && (
-                      <TableRow hover>
-                        <TableCell
-                          sx={{
-                            backgroundColor: "grey.50",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          Topper
-                        </TableCell>
-                        <TableCell>1</TableCell>
-                        <TableCell>{reviewData.examTitle}</TableCell>
-                        <TableCell>{reviewData.topperScore ?? "-"}</TableCell>
-                        <TableCell>
-                          {reviewData.topperAccuracy !== undefined &&
-                          reviewData.topperAccuracy !== null
-                            ? `${reviewData.topperAccuracy}%`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>{reviewData.topperCorrect ?? "-"}</TableCell>
-                        <TableCell>
-                          {reviewData.topperIncorrect ?? "-"}
-                        </TableCell>
-                        <TableCell>
-                          {reviewData.topperUnanswered ?? "-"}
-                        </TableCell>
-                        <TableCell>{reviewData.topperAttempt}</TableCell>
-                        <TableCell>{reviewData.topperTime ?? "-"}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={
-                              reviewData.topperResult?.charAt(0).toUpperCase() +
-                              reviewData.topperResult?.slice(1)
-                            }
-                            color={
-                              reviewData.topperResult?.toLowerCase() === "pass"
-                                ? "success"
-                                : "error"
-                            }
-                            size="small"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    )}
+                    {reviewData.topperResult?.toLowerCase() === "pass" &&
+                      reviewData.rank !== 1 && (
+                        <TableRow hover>
+                          <TableCell
+                            sx={{
+                              backgroundColor: "grey.50",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Topper
+                          </TableCell>
+                          <TableCell>1</TableCell>
+                          <TableCell>{reviewData.examTitle}</TableCell>
+                          <TableCell>{reviewData.topperScore ?? "-"}</TableCell>
+                          <TableCell>
+                            {reviewData.topperAccuracy !== undefined &&
+                            reviewData.topperAccuracy !== null
+                              ? `${reviewData.topperAccuracy}%`
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {reviewData.topperCorrect ?? "-"}
+                          </TableCell>
+                          <TableCell>
+                            {reviewData.topperIncorrect ?? "-"}
+                          </TableCell>
+                          <TableCell>
+                            {reviewData.topperUnanswered ?? "-"}
+                          </TableCell>
+                          <TableCell>{reviewData.topperAttempt}</TableCell>
+                          <TableCell>{reviewData.topperTime ?? "-"}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                reviewData.topperResult
+                                  ?.charAt(0)
+                                  .toUpperCase() +
+                                reviewData.topperResult?.slice(1)
+                              }
+                              color={
+                                reviewData.topperResult?.toLowerCase() ===
+                                "pass"
+                                  ? "success"
+                                  : "error"
+                              }
+                              size="small"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )}
                   </TableBody>
                 </Table>
               </Box>

@@ -25,6 +25,7 @@ import {
   CardContent,
   useMediaQuery,
   Avatar,
+  useTheme,
 } from "@mui/material";
 import {
   Chart as ChartJS,
@@ -37,6 +38,7 @@ import {
   Tooltip,
   Legend,
   ArcElement,
+  SubTitle,
 } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 import { Visibility } from "@mui/icons-material";
@@ -55,6 +57,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   ArcElement,
+  SubTitle,
 );
 
 interface PerformanceData {
@@ -88,6 +91,7 @@ const ResultsAnalytics = () => {
     setSidebarOpen(isDesktop);
   }, [isDesktop]);
 
+  const theme = useTheme();
   const [examType, setExamType] = useState("all");
   const [exam, setExam] = useState("all");
   const [dateRange, setDateRange] = useState("month");
@@ -106,35 +110,10 @@ const ResultsAnalytics = () => {
   const [modalData, setModalData] = useState<any[]>([]);
   const [modalStudentName, setModalStudentName] = useState<string>("");
   const [modalRank, setModalRank] = useState<number | null>(null);
-
-  const examActivityData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        label: "Exams",
-        data: [45, 52, 48, 61, 55, 67],
-        backgroundColor: "rgba(106, 17, 203, 0.7)",
-        borderColor: "rgba(106, 17, 203, 1)",
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const performanceTrendData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        label: "Average Score",
-        data: [75, 78, 80, 82, 79, 85],
-        borderColor: "rgba(106, 17, 203, 1)",
-        backgroundColor: "rgba(106, 17, 203, 0.1)",
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-      },
-    ],
-  };
-
+  const [examActivityData, setExamActivityData] = useState<any>(null);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [performanceTrend, setPerformanceTrend] = useState<any>(null);
+  const [trendLoading, setTrendLoading] = useState(false);
   const [studentResults, setStudentResults] = useState<StudentResult[]>([]);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -233,6 +212,124 @@ const ResultsAnalytics = () => {
 
     fetchAnalytics();
   }, [examType, exam, dateRange, currentPage]);
+
+  const fetchExamActivity = async () => {
+    try {
+      setChartLoading(true);
+
+      const query = new URLSearchParams({
+        examType,
+        examId: exam,
+        dateRange,
+      }).toString();
+
+      const res = await fetch(`/api/analytics/exam-activity?${query}`);
+      const data = await res.json();
+
+      const datasets: any[] = [];
+
+      if (examType === "all") {
+        datasets.push(
+          {
+            label: "Live",
+            data: data.datasets.live,
+            backgroundColor: theme.palette.error.main,
+          },
+          {
+            label: "Mock",
+            data: data.datasets.mock,
+            backgroundColor: theme.palette.secondary.main,
+          },
+          {
+            label: "Practice",
+            data: data.datasets.practice,
+            backgroundColor: theme.palette.primary.main,
+          },
+        );
+      } else {
+        const colorMap: any = {
+          live: theme.palette.error.main,
+          mock: theme.palette.secondary.main,
+          practice: theme.palette.primary.main,
+        };
+
+        datasets.push({
+          label: examType.charAt(0).toUpperCase() + examType.slice(1),
+          data: data.datasets[examType],
+          backgroundColor: colorMap[examType],
+        });
+      }
+
+      setExamActivityData({
+        labels: data.labels,
+        ranges: data.ranges,
+        datasets,
+      });
+    } catch (error) {
+      console.error("Failed to fetch exam activity:", error);
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
+  const fetchPerformanceTrend = async () => {
+    try {
+      setTrendLoading(true);
+
+      const query = new URLSearchParams({
+        examType,
+        examId: exam,
+        dateRange,
+      }).toString();
+
+      const res = await fetch(`/api/analytics/performance-trend?${query}`);
+      const data = await res.json();
+
+      setPerformanceTrend({
+        labels: data.labels,
+        weekRanges: data.weekRanges,
+        datasets: [
+          {
+            label: "Average Accuracy %",
+            data: data.data,
+            borderColor: theme.palette.primary.main,
+            backgroundColor: theme.palette.primary.light,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+          },
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to fetch performance trend:", error);
+    } finally {
+      setTrendLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExamActivity();
+  }, [examType, exam, dateRange]);
+
+  useEffect(() => {
+    fetchPerformanceTrend();
+  }, [examType, exam, dateRange]);
+
+  const getExamChartSubtitle = () => {
+    if (dateRange === "week") return "Exam activity for the last 7 days";
+    if (dateRange === "month") return "Exam activity for the last 30 days";
+    if (dateRange === "quarter")
+      return "Exam activity for the last 3 months (weekly range)";
+    return "";
+  };
+
+  const getPerformChartSubtitle = () => {
+    if (dateRange === "week") return "Average accuracy for last 7 days";
+    if (dateRange === "month") return "Average accuracy for last 30 days";
+    if (dateRange === "quarter")
+      return "Average accuracy for last 3 months (weekly range)";
+    return "";
+  };
 
   return (
     <Box
@@ -374,7 +471,6 @@ const ResultsAnalytics = () => {
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
-              sm: "repeat(2, 1fr)",
             },
             gap: 2,
             marginBottom: "30px",
@@ -384,54 +480,143 @@ const ResultsAnalytics = () => {
             title="Exam Activity Overview"
             minHeight={{ xs: 240, sm: 220, md: 280 }}
           >
-            <Bar
-              data={examActivityData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: { font: { size: 9 } },
+            {chartLoading ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Bar
+                data={
+                  examActivityData || {
+                    datasets: [],
+                    labels: [],
+                  }
+                }
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: {
+                        font: { size: 9 },
+                      },
+                    },
+                    x: {
+                      ticks: {
+                        font: { size: 9 },
+                      },
+                    },
                   },
-                  x: { ticks: { font: { size: 9 } } },
-                },
-                plugins: { legend: { display: false } },
-                layout: {
-                  padding: { top: 10, right: 10, bottom: 10, left: 10 },
-                },
-              }}
-            />
+                  plugins: {
+                    legend: { display: true, position: "bottom" },
+                    subtitle: {
+                      display: true,
+                      text: getExamChartSubtitle(),
+                      font: { size: 11 },
+                      padding: { bottom: 10 },
+                      color: "#6b7280",
+                    },
+                    tooltip: {
+                      callbacks: {
+                        title: function (context: any) {
+                          const index = context[0].dataIndex;
+
+                          if (examActivityData?.ranges?.length) {
+                            return examActivityData.ranges[index];
+                          }
+
+                          return context[0].label;
+                        },
+                        label: function (context: any) {
+                          return `${context.dataset.label}: ${context.raw} exams taken`;
+                        },
+                      },
+                    },
+                  },
+                }}
+              />
+            )}
           </ChartContainer>
 
           <ChartContainer
             title="Performance Trend"
             minHeight={{ xs: 240, sm: 220, md: 280 }}
           >
-            <Line
-              data={performanceTrendData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: "bottom" as const,
-                    labels: { font: { size: 9 }, padding: 8 },
+            {trendLoading ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Line
+                data={
+                  performanceTrend || {
+                    labels: [],
+                    datasets: [],
+                  }
+                }
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      max: 100,
+                      ticks: {
+                        font: { size: 9 },
+                      },
+                    },
+                    x: {
+                      ticks: {
+                        font: { size: 9 },
+                      },
+                    },
                   },
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    max: 100,
-                    ticks: { font: { size: 9 } },
+                  plugins: {
+                    legend: {
+                      position: "bottom",
+                    },
+                    subtitle: {
+                      display: true,
+                      text: getPerformChartSubtitle(),
+                      font: { size: 11 },
+                      padding: { bottom: 10 },
+                      color: "#6b7280",
+                    },
+                    tooltip: {
+                      callbacks: {
+                        title: function (context: any) {
+                          const index = context[0].dataIndex;
+
+                          if (performanceTrend?.weekRanges?.length) {
+                            return performanceTrend.weekRanges[index];
+                          }
+
+                          return context[0].label;
+                        },
+                        label: function (context: any) {
+                          return `Accuracy: ${context.raw}%`;
+                        },
+                      },
+                    },
                   },
-                  x: { ticks: { font: { size: 9 } } },
-                },
-                layout: {
-                  padding: { top: 10, right: 10, bottom: 10, left: 10 },
-                },
-              }}
-            />
+                }}
+              />
+            )}
           </ChartContainer>
         </Box>
 

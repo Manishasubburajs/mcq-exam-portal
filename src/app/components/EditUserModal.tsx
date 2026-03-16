@@ -360,6 +360,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               onChange={(e) =>
                 setEditUser({ ...editUser, status: e.target.value })
               }
+              disabled={editUser.role === "admin"}
             >
               <MenuItem value="active">Active</MenuItem>
               <MenuItem value="inactive">Inactive</MenuItem>
