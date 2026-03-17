@@ -24,7 +24,6 @@ import {
   Tooltip,
   Alert,
   Snackbar,
-  AlertTitle,
 } from "@mui/material";
 import { Edit, Delete, Add, Close } from "@mui/icons-material";
 import dynamic from "next/dynamic";
@@ -621,7 +620,7 @@ const SubjectDetails: React.FC = () => {
 
                 <Button
                   variant="contained"
-                  color="success"
+                  color="primary"
                   disabled={loading}
                   startIcon={
                     loading ? (
@@ -632,8 +631,11 @@ const SubjectDetails: React.FC = () => {
                   }
                   onClick={() => setCreateModalOpen(true)}
                   sx={{
-                    background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                    "&:hover": { opacity: 0.9 },
+                    "&.Mui-disabled": {
+                      opacity: 1,
+                      color: "white",
+                      backgroundColor: "primary.main",
+                    },
                   }}
                 >
                   {loading ? "Loading..." : "Create Subject / Topic"}
@@ -842,11 +844,15 @@ const SubjectDetails: React.FC = () => {
           </Button>
           <Button
             variant="contained"
+            color="primary"
             onClick={handleSubmit}
             disabled={creating}
             sx={{
-              background: "linear-gradient(to right, #6a11cb, #2575fc)",
-              "&:hover": { opacity: 0.9 },
+              "&.Mui-disabled": {
+                opacity: 1,
+                color: "white",
+                backgroundColor: "primary.main",
+              },
             }}
           >
             {creating ? (
@@ -1061,11 +1067,15 @@ const SubjectDetails: React.FC = () => {
 
           <Button
             variant="contained"
+            color="primary"
             onClick={handleUpdate}
             disabled={creating}
             sx={{
-              background: "linear-gradient(to right, #6a11cb, #2575fc)",
-              "&:hover": { opacity: 0.9 },
+              "&.Mui-disabled": {
+                opacity: 1,
+                color: "white",
+                backgroundColor: "primary.main",
+              },
             }}
           >
             {creating ? (
@@ -1125,6 +1135,13 @@ const SubjectDetails: React.FC = () => {
             startIcon={
               deleting ? <CircularProgress size={18} color="inherit" /> : null
             }
+            sx={{
+              "&.Mui-disabled": {
+                opacity: 1,
+                color: "white",
+                backgroundColor: (theme) => theme.palette.error.main,
+              },
+            }}
           >
             {deleting ? "Deleting..." : "Delete"}
           </Button>

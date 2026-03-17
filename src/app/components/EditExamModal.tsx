@@ -1108,26 +1108,42 @@ export default function EditExamModal({
           >
             Back
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={apiLoading || isSubmitting}
-            startIcon={
-              activeStep === steps.length - 1 && isSubmitting ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : null
-            }
-          >
-            {activeStep === steps.length - 1
-              ? isSubmitting
+
+          {activeStep === steps.length - 1 ? (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={apiLoading || isSubmitting}
+              startIcon={
+                isSubmitting ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : null
+              }
+              sx={{
+                "&.Mui-disabled": {
+                  opacity: 1,
+                  color: "white",
+                  backgroundColor: "primary.main",
+                },
+              }}
+            >
+              {isSubmitting
                 ? isEdit
                   ? "Updating..."
                   : "Creating..."
                 : isEdit
                   ? "Update Exam"
-                  : "Create Exam"
-              : "Next"}
-          </Button>
+                  : "Create Exam"}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={apiLoading}
+            >
+              Next
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

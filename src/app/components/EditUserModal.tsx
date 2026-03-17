@@ -381,8 +381,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             saving ? <CircularProgress size={18} color="inherit" /> : null
           }
           sx={{
-            background: "linear-gradient(to right, #6a11cb, #2575fc)",
-            color: "white",
+            "&.Mui-disabled": {
+              opacity: 1,
+              color: "white",
+              backgroundColor: "primary.main",
+            },
           }}
         >
           {saving ? "Updating..." : "Save Changes"}
