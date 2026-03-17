@@ -48,19 +48,20 @@ export async function GET(req: Request) {
     }
 
     // 3️⃣ Map student_exam_questions with answers
-    const questions = attempt.student_exam_questions.map((sq) => {
-      const answer = attempt.student_answers.find(
-        (a) => a.question_id === sq.question_id
-      );
+  const questions = attempt.student_exam_questions.map((sq) => {
+    const answer = attempt.student_answers.find(
+      (a) => a.question_id === sq.question_id
+    );
 
-      const q = sq.questions;
+    const q = sq.questions;
 
-      const selectedAnswer = answer?.selected_answer || null;
-      const isCorrect = answer?.is_correct || false;
+    const selectedAnswer = answer?.selected_answer || null;
+    const isCorrect = answer?.is_correct || false;
 
-      return {
-        id: q.question_id,
-        text: q.question_text,
+    return {
+      id: q.question_id,
+      questionOrder: sq.question_order,
+      text: q.question_text,
         options: [
           { id: "A", text: q.option_a },
           { id: "B", text: q.option_b },

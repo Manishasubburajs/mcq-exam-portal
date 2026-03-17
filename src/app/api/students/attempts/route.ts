@@ -149,6 +149,7 @@ export async function GET(req: Request) {
         examType: exam.exam_type,
         score: attempt.score.toString(),
         completedAt: attempt.end_time ? formatDateToDDMMYYYY(attempt.end_time) : "N/A",
+        endTime: attempt.end_time, // Raw end time for calculation
         totalTimeSeconds: attempt.total_time_seconds,
         canRetake,
         hasReachedRetakeLimit,
