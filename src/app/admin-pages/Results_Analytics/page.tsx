@@ -697,13 +697,13 @@ const ResultsAnalytics = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                       <CircularProgress />
                     </TableCell>
                   </TableRow>
                 ) : studentResults.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                       No results found
                     </TableCell>
                   </TableRow>

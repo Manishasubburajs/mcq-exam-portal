@@ -283,23 +283,32 @@ export default function AssignExamModal({
           <Button variant="outlined" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleAssign}
-            disabled={isButtonDisabled() || submitting}
-            startIcon={
-              submitting ? <CircularProgress size={18} color="inherit" /> : null
-            }
-          >
-            {submitting
-              ? preAssigned.length === 0
-                ? "Assigning..."
-                : "Updating..."
-              : preAssigned.length === 0
-                ? "Assign Exam"
-                : "Update Assignment"}
-            {/* {preAssigned.length === 0 ? "Assign Exam" : "Update Assignment"} */}
-          </Button>
+
+          {submitting ? (
+            <Button
+              variant="contained"
+              onClick={handleAssign}
+              disabled
+              startIcon={<CircularProgress size={18} color="inherit" />}
+              sx={{
+                "&.Mui-disabled": {
+                  opacity: 1,
+                  color: "white",
+                  backgroundColor: "primary.main",
+                },
+              }}
+            >
+              {preAssigned.length === 0 ? "Assigning..." : "Updating..."}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              onClick={handleAssign}
+              disabled={isButtonDisabled()}
+            >
+              {preAssigned.length === 0 ? "Assign Exam" : "Update Assignment"}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
