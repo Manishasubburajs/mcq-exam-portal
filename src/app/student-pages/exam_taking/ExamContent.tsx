@@ -491,8 +491,8 @@ const ExamContent: React.FC = () => {
     const q = examData.questions[questionNum - 1];
     if (!q) return "unanswered";
     if (questionNum === currentQuestion) return "current";
-    if (userAnswers[q.id]) return "answered";
     if (flaggedQuestions.has(questionNum)) return "flagged";
+    if (userAnswers[q.id]) return "answered";
     return "unanswered";
   };
 

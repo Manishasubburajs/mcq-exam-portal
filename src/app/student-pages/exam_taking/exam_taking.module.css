@@ -414,6 +414,28 @@
   cursor: not-allowed;
 }
 
+.btnOutline:disabled,
+.btnPrimary:disabled,
+.btnFlag:disabled,
+.btnDanger:disabled {
+  background: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
+.btnOutline:disabled:hover,
+.btnPrimary:disabled:hover,
+.btnFlag:disabled:hover,
+.btnDanger:disabled:hover {
+  background: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+}
+
 .btnClear:hover:not(:disabled) {
   background: #5a6268;
   transform: scale(1.05);

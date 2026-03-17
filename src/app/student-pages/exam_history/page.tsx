@@ -66,6 +66,7 @@ interface ExamAttempt {
   examType: "practice" | "mock" | "live";
   score: string;
   completedAt: string;
+  endTime: string; // ISO format date string
   totalTimeSeconds: number;
   canRetake: boolean;
   hasReachedRetakeLimit: boolean;
@@ -90,6 +91,7 @@ interface ExamCardProps {
   title: string;
   subject: string;
   meta: ExamMeta;
+  endTime?: string;
   onViewResults?: () => void;
   onTakeExam?: (examType: string) => void;
   canRetake?: boolean;
@@ -101,12 +103,27 @@ const ExamCard = ({
   title,
   subject,
   meta,
+  endTime,
   onViewResults,
   onTakeExam,
   canRetake,
   hasReachedRetakeLimit,
   onViewAttemptHistory,
-}: ExamCardProps) => (
+}: ExamCardProps) => {
+  // Check if results are available for live exam
+  const isResultsAvailable = (): boolean => {
+    if (meta.examType !== "live" || !endTime) {
+      return true;
+    }
+    
+    const examEndTime = new Date(endTime);
+    const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after end time
+    return new Date() >= resultsAvailableTime;
+  };
+  
+  const resultsAvailable = isResultsAvailable();
+  
+  return (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -376,29 +393,45 @@ const ExamCard = ({
               </span>
             </Tooltip>
           )}
-          <Button
-            variant="contained"
-            sx={{
-              flex: canRetake || onViewAttemptHistory ? 1 : "none",
-              width: !canRetake && !onViewAttemptHistory ? "100%" : "auto",
-              padding: { xs: "8px 12px", sm: "10px 16px" },
-              height: { xs: "40px", sm: "44px" },
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              textTransform: "none",
-              background: "linear-gradient(to right, #6a11cb, #2575fc)",
-              color: "#fff",
-              borderRadius: 2,
-              fontSize: { xs: "12px", sm: "13px" },
-              fontWeight: 600,
-              boxShadow: "none",
-              "&:hover": { transform: "translateY(-2px)" },
-            }}
-            onClick={onViewResults}
+          <Tooltip
+            title={!resultsAvailable ? "Results will be available after 30 minutes" : ""}
+            placement="top"
+            disableInteractive={false}
           >
-            View Results
-          </Button>
+            <span>
+              <Button
+                variant="contained"
+                disabled={!resultsAvailable}
+                sx={{
+                  flex: canRetake || onViewAttemptHistory ? 1 : "none",
+                  width: !canRetake && !onViewAttemptHistory ? "100%" : "auto",
+                  padding: { xs: "8px 12px", sm: "10px 16px" },
+                  height: { xs: "40px", sm: "44px" },
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textTransform: "none",
+                  background: !resultsAvailable ? "#ccc" : "linear-gradient(to right, #6a11cb, #2575fc)",
+                  color: "#fff",
+                  borderRadius: 2,
+                  fontSize: { xs: "12px", sm: "13px" },
+                  fontWeight: 600,
+                  boxShadow: "none",
+                  "&:hover": !resultsAvailable 
+                    ? {} 
+                    : { transform: "translateY(-2px)" },
+                  "&.Mui-disabled": {
+                    backgroundColor: "#ccc",
+                    color: "#666",
+                    cursor: "not-allowed",
+                  },
+                }}
+                onClick={onViewResults}
+              >
+                View Results
+              </Button>
+            </span>
+          </Tooltip>
           {/* Attempt History Button */}
           {onViewAttemptHistory && (
             <Button
@@ -431,7 +464,8 @@ const ExamCard = ({
       </Box>
     </Box>
   </Card>
-);
+  );
+}
 
 export default function ExamHistoryPage() {
   const router = useRouter();
@@ -644,6 +678,7 @@ export default function ExamHistoryPage() {
                       examType: exam.examType,
                       attemptNumber: exam.attemptNumber,
                     }}
+                    endTime={exam.endTime}
                     onViewResults={() => viewResults(exam.attemptId)}
                     onTakeExam={(examType) =>
                       takeExam(exam.attemptId, exam.examId, examType)

@@ -154,6 +154,113 @@ export default function ExamResultsReview() {
 
   const { attempt, exam, questions } = resultData;
   
+  // Check if it's a live exam and if results should be hidden
+  const isLiveExam = exam.exam_type === "live";
+  const examEndTime = new Date(attempt.end_time);
+  const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after end time
+  const isResultsAvailable = new Date() >= resultsAvailableTime;
+  
+  // Show message if live exam and results not available yet
+  if (isLiveExam && !isResultsAvailable) {
+    return (
+      <Box
+        sx={{
+          flex: 1,
+          padding: {
+            xs: "60px 8px 16px",
+            sm: "70px 16px 24px",
+            md: "16px 24px 32px",
+            lg: "24px 32px 40px",
+          },
+          maxWidth: "100%",
+          overflowX: "hidden",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <Paper
+          sx={{
+            padding: { xs: 3, sm: 4, md: 5 },
+            borderRadius: 3,
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.1)",
+            maxWidth: "600px",
+            textAlign: "center",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              mb: 3,
+            }}
+          >
+            <Box
+              sx={{
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 5px 15px rgba(102, 126, 234, 0.4)",
+              }}
+            >
+              <AccessTimeIcon
+                sx={{
+                  fontSize: 50,
+                  color: "white",
+                }}
+              />
+            </Box>
+          </Box>
+          
+          <Typography
+            sx={{
+              color: "#2c3e50",
+              fontWeight: 700,
+              fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem" },
+              mb: 2,
+            }}
+          >
+            Exam Completed Successfully! 🎉
+          </Typography>
+          
+          <Typography
+            sx={{
+              color: "#6c757d",
+              fontSize: { xs: "1rem", sm: "1.125rem" },
+              lineHeight: 1.6,
+              mb: 4,
+            }}
+          >
+            You have successfully completed the live exam. Your results will be available after 30 minutes. You can view them in the Exam History. Thank you.
+          </Typography>
+          
+          <Button
+            variant="contained"
+            onClick={() => router.push("/student-pages/exam_history")}
+            sx={{
+              textTransform: "none",
+              background: "linear-gradient(to right, #6a11cb, #2575fc)",
+              padding: { xs: "12px 32px", sm: "14px 40px" },
+              fontSize: { xs: "1rem", sm: "1.125rem" },
+              borderRadius: 2,
+              boxShadow: "0 4px 12px rgba(106, 17, 203, 0.3)",
+              "&:hover": {
+                boxShadow: "0 6px 16px rgba(106, 17, 203, 0.4)",
+              },
+            }}
+          >
+            Go to Exam History
+          </Button>
+        </Paper>
+      </Box>
+    );
+  }
+  
   const score = attempt.score || 0;
   const totalQuestions = exam.question_count || 0;
   const correctCount = attempt.correct_answers || 0;
@@ -172,9 +279,7 @@ export default function ExamResultsReview() {
     globalThis.window.print();
   };
 
-  const handleExport = () => {
-    alert("Exporting results as PDF...");
-  };
+
 
   return (
     <Box
@@ -483,22 +588,7 @@ export default function ExamResultsReview() {
                   <PrintIcon />
                 </Box>
               </Button>
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<DownloadIcon />}
-                onClick={handleExport}
-                sx={{
-                  textTransform: "none",
-                  fontSize: { xs: 11, sm: 12 },
-                  minWidth: { xs: "auto", sm: 120 },
-                }}
-              >
-                <Box sx={{ display: { xs: "none", sm: "inline" } }}>Export</Box>
-                <Box sx={{ display: { xs: "inline", sm: "none" } }}>
-                  <DownloadIcon />
-                </Box>
-              </Button>
+
             </Box>
           </Box>
         </Box>
@@ -531,7 +621,7 @@ export default function ExamResultsReview() {
                   fontSize: { xs: "1rem", sm: "1.25rem" },
                 }}
               >
-                Question {index + 1}
+                Question {question.questionOrder}
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
