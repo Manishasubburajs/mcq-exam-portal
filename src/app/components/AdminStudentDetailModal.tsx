@@ -312,8 +312,10 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 <TableCell>
                                   <Chip
                                     label={
-                                      exam.result?.charAt(0).toUpperCase() +
-                                      exam.result?.slice(1)
+                                      exam.result
+                                        ? exam.result.charAt(0).toUpperCase() +
+                                          exam.result.slice(1)
+                                        : "Fail"
                                     }
                                     color={
                                       exam.result?.toLowerCase() === "pass"
@@ -463,8 +465,10 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                             <TableCell>
                               <Chip
                                 label={
-                                  exam.result?.charAt(0).toUpperCase() +
-                                  exam.result?.slice(1)
+                                  exam.result
+                                    ? exam.result.charAt(0).toUpperCase() +
+                                      exam.result.slice(1)
+                                    : "Fail"
                                 }
                                 color={
                                   exam.result?.toLowerCase() === "pass"

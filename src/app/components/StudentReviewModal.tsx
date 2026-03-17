@@ -198,8 +198,10 @@ const StudentReviewModal = ({ open, onClose, attemptId }: Props) => {
                       <TableCell>
                         <Chip
                           label={
-                            reviewData.result?.charAt(0).toUpperCase() +
-                            reviewData.result?.slice(1)
+                            reviewData.result
+                              ? reviewData.result?.charAt(0).toUpperCase() +
+                                reviewData.result?.slice(1)
+                              : "Fail"
                           }
                           color={
                             reviewData.result?.toLowerCase() === "pass"

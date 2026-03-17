@@ -549,8 +549,11 @@ const ExamManagement: React.FC = () => {
               }
               onClick={handleCreateExam}
               sx={{
-                background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                "&:hover": { opacity: 0.9 },
+                "&.Mui-disabled": {
+                  opacity: 1,
+                  color: "white",
+                  backgroundColor: "primary.main",
+                },
               }}
               disabled={loading}
             >
@@ -771,7 +774,7 @@ const ExamManagement: React.FC = () => {
                                   <span>
                                     <IconButton
                                       size="small"
-                                      color="primary"
+                                      color="secondary"
                                       disabled={
                                         exam.canEdit === false || isLiveInactive
                                       }
@@ -911,12 +914,19 @@ const ExamManagement: React.FC = () => {
               startIcon={
                 deleting ? <CircularProgress size={18} color="inherit" /> : null
               }
+              sx={{
+                "&.Mui-disabled": {
+                  opacity: 1,
+                  color: "white",
+                  backgroundColor: (theme) => theme.palette.error.main,
+                },
+              }}
             >
               {deleting ? "Deleting..." : "Delete Exam"}
             </Button>
           </DialogActions>
         </Dialog>
-        
+
         {assignExamId && (
           <AssignExamModal
             open={assignModalOpen}

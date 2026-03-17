@@ -336,6 +336,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
           startIcon={
             creating ? <CircularProgress size={18} color="inherit" /> : null
           }
+          sx={{
+            "&.Mui-disabled": {
+              opacity: 1,
+              color: "white",
+              backgroundColor: "primary.main",
+            },
+          }}
         >
           {creating ? "Creating..." : "Save Student"}
         </Button>

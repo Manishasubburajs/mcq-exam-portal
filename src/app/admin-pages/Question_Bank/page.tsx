@@ -996,10 +996,6 @@ export default function QuestionBankPage() {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              sx={{
-                background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                "&:hover": { opacity: 0.9 },
-              }}
               onClick={handleAddQuestion}
             >
               Add New Question
@@ -1053,14 +1049,7 @@ export default function QuestionBankPage() {
             <Button variant="outlined" onClick={handleReset}>
               Reset
             </Button>
-            <Button
-              variant="contained"
-              onClick={handleSearch}
-              sx={{
-                background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                "&:hover": { opacity: 0.9 },
-              }}
-            >
+            <Button variant="contained" onClick={handleSearch}>
               Search
             </Button>
           </Box>
@@ -2223,6 +2212,7 @@ export default function QuestionBankPage() {
               {uploadTypeSelection === "individual" && (
                 <Button
                   variant="contained"
+                  color="primary"
                   onClick={handleSaveQuestion}
                   disabled={loading}
                   startIcon={
@@ -2231,8 +2221,11 @@ export default function QuestionBankPage() {
                     ) : null
                   }
                   sx={{
-                    background: "linear-gradient(to right, #6a11cb, #2575fc)",
-                    "&:hover": { opacity: 0.9 },
+                    "&.Mui-disabled": {
+                      opacity: 1,
+                      color: "white",
+                      backgroundColor: "primary.main",
+                    },
                   }}
                 >
                   {loading
@@ -2259,6 +2252,7 @@ export default function QuestionBankPage() {
                   {bulkQuestions.length > 0 && (
                     <Button
                       variant="contained"
+                      color="primary"
                       onClick={handleBulkSubmit}
                       disabled={loading}
                       startIcon={
@@ -2267,9 +2261,11 @@ export default function QuestionBankPage() {
                         ) : null
                       }
                       sx={{
-                        background:
-                          "linear-gradient(to right, #6a11cb, #2575fc)",
-                        "&:hover": { opacity: 0.9 },
+                        "&.Mui-disabled": {
+                          opacity: 1,
+                          color: "white",
+                          backgroundColor: "primary.main",
+                        },
                       }}
                     >
                       {loading
@@ -2333,6 +2329,13 @@ export default function QuestionBankPage() {
               startIcon={
                 loading ? <CircularProgress size={18} color="inherit" /> : null
               }
+              sx={{
+                "&.Mui-disabled": {
+                  opacity: 1,
+                  color: "white",
+                  backgroundColor: (theme) => theme.palette.error.main,
+                },
+              }}
             >
               {loading ? "Deleting..." : "Delete"}
             </Button>
