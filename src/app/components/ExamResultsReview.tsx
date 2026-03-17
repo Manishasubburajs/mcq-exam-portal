@@ -172,9 +172,7 @@ export default function ExamResultsReview() {
     globalThis.window.print();
   };
 
-  const handleExport = () => {
-    alert("Exporting results as PDF...");
-  };
+
 
   return (
     <Box
@@ -483,22 +481,7 @@ export default function ExamResultsReview() {
                   <PrintIcon />
                 </Box>
               </Button>
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<DownloadIcon />}
-                onClick={handleExport}
-                sx={{
-                  textTransform: "none",
-                  fontSize: { xs: 11, sm: 12 },
-                  minWidth: { xs: "auto", sm: 120 },
-                }}
-              >
-                <Box sx={{ display: { xs: "none", sm: "inline" } }}>Export</Box>
-                <Box sx={{ display: { xs: "inline", sm: "none" } }}>
-                  <DownloadIcon />
-                </Box>
-              </Button>
+
             </Box>
           </Box>
         </Box>
@@ -531,7 +514,7 @@ export default function ExamResultsReview() {
                   fontSize: { xs: "1rem", sm: "1.25rem" },
                 }}
               >
-                Question {index + 1}
+                Question {question.questionOrder}
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
