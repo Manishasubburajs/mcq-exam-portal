@@ -122,18 +122,16 @@ const PersonalInformationTab = ({
     }
   };
 
-  const handlePersonalInfoChange =
-    async (field: string, value: string) =>
-    {
-      const updatedInfo = {
-        ...personalInfo,
-        [field]: value,
-      };
-
-      setPersonalInfo(updatedInfo);
-
-      await validatePersonalField(field, value, updatedInfo);
+  const handlePersonalInfoChange = async (field: string, value: string) => {
+    const updatedInfo = {
+      ...personalInfo,
+      [field]: value,
     };
+
+    setPersonalInfo(updatedInfo);
+
+    await validatePersonalField(field, value, updatedInfo);
+  };
 
   const handlePersonalInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,7 +240,9 @@ const PersonalInformationTab = ({
                   fullWidth
                   label="First Name"
                   value={personalInfo.firstName}
-                  onChange={(e) => handlePersonalInfoChange("firstName", e.target.value)}
+                  onChange={(e) =>
+                    handlePersonalInfoChange("firstName", e.target.value)
+                  }
                   size={isMobile ? "small" : "medium"}
                   error={!!errors.firstName}
                   helperText={errors.firstName}
@@ -253,7 +253,9 @@ const PersonalInformationTab = ({
                   fullWidth
                   label="Last Name"
                   value={personalInfo.lastName}
-                  onChange={(e) => handlePersonalInfoChange("lastName", e.target.value)}
+                  onChange={(e) =>
+                    handlePersonalInfoChange("lastName", e.target.value)
+                  }
                   size={isMobile ? "small" : "medium"}
                   error={!!errors.lastName}
                   helperText={errors.lastName}
@@ -266,7 +268,9 @@ const PersonalInformationTab = ({
               type="email"
               value={personalInfo.email}
               disabled
-              onChange={(e) => handlePersonalInfoChange("email", e.target.value)}
+              onChange={(e) =>
+                handlePersonalInfoChange("email", e.target.value)
+              }
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.email}
@@ -287,7 +291,9 @@ const PersonalInformationTab = ({
                   label="Date of Birth"
                   type="date"
                   value={personalInfo.birthDate}
-                  onChange={(e) => handlePersonalInfoChange("birthDate", e.target.value)}
+                  onChange={(e) =>
+                    handlePersonalInfoChange("birthDate", e.target.value)
+                  }
                   size={isMobile ? "small" : "medium"}
                   error={!!errors.birthDate}
                   helperText={errors.birthDate}
@@ -301,8 +307,11 @@ const PersonalInformationTab = ({
                 <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Gender</InputLabel>
                   <Select
+                    label="Gender"
                     value={personalInfo.gender}
-                    onChange={(e) => handlePersonalInfoChange("gender", e.target.value)}
+                    onChange={(e) =>
+                      handlePersonalInfoChange("gender", e.target.value)
+                    }
                     error={!!errors.gender}
                   >
                     <MenuItem value="male">Male</MenuItem>
@@ -321,7 +330,9 @@ const PersonalInformationTab = ({
               fullWidth
               label="School / College Name"
               value={personalInfo.school}
-              onChange={(e) => handlePersonalInfoChange("school", e.target.value)}
+              onChange={(e) =>
+                handlePersonalInfoChange("school", e.target.value)
+              }
               sx={{ mb: 2 }}
               size={isMobile ? "small" : "medium"}
               error={!!errors.school}
@@ -339,7 +350,9 @@ const PersonalInformationTab = ({
                 fullWidth
                 label="Grade / Department"
                 value={personalInfo.grade}
-                onChange={(e) => handlePersonalInfoChange("grade", e.target.value)}
+                onChange={(e) =>
+                  handlePersonalInfoChange("grade", e.target.value)
+                }
                 size={isMobile ? "small" : "medium"}
                 error={!!errors.grade}
                 helperText={errors.grade}
@@ -348,7 +361,9 @@ const PersonalInformationTab = ({
                 fullWidth
                 label="Section (Optional)"
                 value={personalInfo.section}
-                onChange={(e) => handlePersonalInfoChange("section", e.target.value)}
+                onChange={(e) =>
+                  handlePersonalInfoChange("section", e.target.value)
+                }
                 size={isMobile ? "small" : "medium"}
               />
             </Box>
@@ -408,7 +423,7 @@ const AccountSettingsTab = ({
     severity: "success" as "success" | "error" | "info",
   });
 
-    const validateAccountField = async (
+  const validateAccountField = async (
     field: string,
     value: any,
     updatedSettings: any,
@@ -422,19 +437,18 @@ const AccountSettingsTab = ({
   };
 
   const handleAccountChange =
-  (field: string) =>
-  async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
+    (field: string) => async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
 
-    const updatedSettings = {
-      ...accountSettings,
-      [field]: value,
+      const updatedSettings = {
+        ...accountSettings,
+        [field]: value,
+      };
+
+      setAccountSettings(updatedSettings);
+
+      await validateAccountField(field, value, updatedSettings);
     };
-
-    setAccountSettings(updatedSettings);
-
-    await validateAccountField(field, value, updatedSettings);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
