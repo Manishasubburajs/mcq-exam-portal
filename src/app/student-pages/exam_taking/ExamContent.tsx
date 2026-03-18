@@ -217,9 +217,7 @@ const ExamContent: React.FC = () => {
         const data = await response.json();
         if (data.success) {
           setExamData(data.data);
-          if (data.data.examType !== "practice") {
-            setTimeLeft(data.data.duration * 60);
-          }
+          setTimeLeft(data.data.duration * 60);
         } else {
           setError(data.message || "Failed to load exam");
         }
@@ -236,7 +234,7 @@ const ExamContent: React.FC = () => {
 
   // Timer effect
   useEffect(() => {
-    if (!examData || examData.examType === "practice" || timeLeft <= 0) return;
+    if (!examData || timeLeft <= 0) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -639,12 +637,10 @@ const ExamContent: React.FC = () => {
               minutes • {examData!.points || 200} points
             </p>
           </div>
-          {examData.examType !== "practice" && (
-            <div className={`${styles.timer} ${getTimerClass()}`}>
-              <i className="fas fa-clock"></i>{" "}
-              <span>{formatTime(timeLeft)}</span>
-            </div>
-          )}
+          <div className={`${styles.timer} ${getTimerClass()}`}>
+            <i className="fas fa-clock"></i>{" "}
+            <span>{formatTime(timeLeft)}</span>
+          </div>
         </div>
 
         <div className={styles.examContent}>
