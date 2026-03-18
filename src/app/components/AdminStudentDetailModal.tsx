@@ -448,7 +448,9 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                       <TableBody>
                         {paginatedData.map((exam: any, idx: number) => (
                           <TableRow key={idx} hover>
-                            <TableCell>{idx + 1}</TableCell>
+                            <TableCell>
+                              {(page - 1) * rowsPerPage + idx + 1}
+                            </TableCell>
                             <TableCell>{exam.examTitle}</TableCell>
                             <TableCell>{exam.score ?? "-"}</TableCell>
                             <TableCell>
