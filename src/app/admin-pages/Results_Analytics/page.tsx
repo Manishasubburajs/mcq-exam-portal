@@ -714,7 +714,7 @@ const ResultsAnalytics = () => {
                       hover
                     >
                       <TableCell>
-                        {student.rank ?? (currentPage - 1) * 10 + index + 1}
+                        {student.rank ?? (currentPage - 1) * 5 + index + 1}
                       </TableCell>
                       <TableCell>{student.username}</TableCell>
 

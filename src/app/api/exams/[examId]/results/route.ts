@@ -28,7 +28,7 @@ export async function GET(
         exam_id: true,
         exam_type: true,
         is_active: true,
-        scheduled_end: true, // ✅ Added
+        scheduled_end: true,
       },
     });
 
@@ -47,7 +47,7 @@ export async function GET(
       );
     }
 
-    // 3️⃣ Check if exam is still active (with time logic)
+    // 3️⃣ Check if exam is still active
     let isExamActive = exam.is_active;
 
     if (exam.scheduled_end) {
@@ -66,16 +66,8 @@ export async function GET(
       );
     }
 
-    // 4️⃣ Get total completed attempts
-    const totalCount = await prisma.student_exam_attempts.count({
-      where: {
-        exam_id: examId,
-        status: "completed",
-      },
-    });
-
-    // 5️⃣ Get paginated completed attempts ordered by score DESC
-    const attempts = await prisma.student_exam_attempts.findMany({
+    // 4️⃣ Get ALL completed attempts (IMPORTANT for correct ranking)
+    const allAttempts = await prisma.student_exam_attempts.findMany({
       where: {
         exam_id: examId,
         status: "completed",
@@ -83,14 +75,39 @@ export async function GET(
       orderBy: {
         score: "desc",
       },
-      skip,
-      take: limit,
     });
 
-    // 6️⃣ Extract student IDs
-    const studentIds = attempts.map((attempt) => attempt.student_id);
+    const totalCount = allAttempts.length;
 
-    // 7️⃣ Fetch usernames
+    // 5️⃣ Rank calculation (competition ranking 1,1,3)
+    let previousScore: number | null = null;
+    let currentRank = 0;
+
+    const rankedAttempts = allAttempts.map((attempt, index) => {
+      const score = Number(attempt.score ?? 0);
+
+      if (previousScore === null) {
+        currentRank = 1;
+      } else if (score < previousScore) {
+        currentRank = index + 1;
+      }
+
+      previousScore = score;
+
+      return {
+        ...attempt,
+        score,
+        rank: currentRank,
+      };
+    });
+
+    // 6️⃣ Pagination AFTER ranking
+    const paginatedAttempts = rankedAttempts.slice(skip, skip + limit);
+
+    // 7️⃣ Extract student IDs
+    const studentIds = paginatedAttempts.map((a) => a.student_id);
+
+    // 8️⃣ Fetch usernames
     const students = await prisma.users.findMany({
       where: {
         user_id: { in: studentIds },
@@ -101,17 +118,17 @@ export async function GET(
       },
     });
 
-    // 8️⃣ Create lookup map
+    // 9️⃣ Create lookup map
     const studentMap = new Map<number, string>(
-      students.map((student) => [student.user_id, student.username])
+      students.map((s) => [s.user_id, s.username])
     );
 
-    // 9️⃣ Merge data + add rank
-    const results = attempts.map((attempt, index) => ({
+    // 🔟 Final response mapping
+    const results = paginatedAttempts.map((attempt) => ({
       attempt_id: attempt.attempt_id,
       username: studentMap.get(attempt.student_id) || "Unknown",
-      score: attempt.score ? Number(attempt.score) : 0,
-      rank: skip + index + 1,
+      score: attempt.score,
+      rank: attempt.rank,
     }));
 
     return NextResponse.json({

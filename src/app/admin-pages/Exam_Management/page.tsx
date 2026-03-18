@@ -284,13 +284,14 @@ const ExamManagement: React.FC = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (exam) =>
-          exam.exam_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          exam.subjects.some((sub) =>
-            sub.subject_name.toLowerCase().includes(searchTerm.toLowerCase()),
-          ) ||
-          exam.subjects.some((sub) =>
-            sub.topic_name?.toLowerCase().includes(searchTerm.toLowerCase()),
-          ),
+          exam.exam_name.toLowerCase().includes(searchTerm.toLowerCase()),
+        // ||
+        // exam.subjects.some((sub) =>
+        //   sub.subject_name.toLowerCase().includes(searchTerm.toLowerCase()),
+        // ) ||
+        // exam.subjects.some((sub) =>
+        //   sub.topic_name?.toLowerCase().includes(searchTerm.toLowerCase()),
+        // ),
       );
     }
 
