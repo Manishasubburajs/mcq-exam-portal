@@ -233,10 +233,8 @@ export default function QuestionBankPage() {
 
   // Show table when subject or topic is selected
   useEffect(() => {
-    if (selectedSubjectId > 0 || selectedTopicId > 0) {
-      setShowTable(true);
-    }
-  }, [selectedSubjectId, selectedTopicId]);
+    setShowTable(true);
+  }, []);
 
   // Filter questions based on search term, subject, and topic
   useEffect(() => {
@@ -247,7 +245,7 @@ export default function QuestionBankPage() {
       filtered = filtered.filter(
         (q) =>
           q.question_text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          q.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          // q.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           q.difficulty?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
@@ -1018,6 +1016,7 @@ export default function QuestionBankPage() {
                 onChange={(e) =>
                   handleFilterSubjectChange(Number(e.target.value))
                 }
+                label="Select Subject"
               >
                 <MenuItem value={0}>All Subjects</MenuItem>
                 {subjects.map((subject) => (
@@ -1264,7 +1263,7 @@ export default function QuestionBankPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ py: 5 }}>
+                          <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
                             <Typography variant="body1" color="text.secondary">
                               {searchTerm ||
                               selectedSubjectId ||
@@ -1313,6 +1312,7 @@ export default function QuestionBankPage() {
                   handleFormSubjectChange(subjectId);
                   setValidationErrors({ ...validationErrors, subject_id: "" });
                 }}
+                label="Select Subject"
               >
                 <MenuItem value={0}>Select Subject</MenuItem>
                 {subjects.map((sub) => (
@@ -1338,6 +1338,7 @@ export default function QuestionBankPage() {
                     topic_id: Number(e.target.value),
                   })
                 }
+                label="Select Topic"
                 disabled={!newQuestion.subject_id}
               >
                 <MenuItem value={0}>Select Topic</MenuItem>
@@ -1421,6 +1422,7 @@ export default function QuestionBankPage() {
             >
               <InputLabel>Correct Answer</InputLabel>
               <Select
+                label="Correct Answer"
                 value={newQuestion.correct_answer}
                 onChange={(e) => {
                   setNewQuestion({
@@ -1477,6 +1479,7 @@ export default function QuestionBankPage() {
             <FormControl fullWidth margin="dense">
               <InputLabel>Difficulty</InputLabel>
               <Select
+                label="Difficulty"
                 value={newQuestion.difficulty}
                 onChange={(e) =>
                   setNewQuestion({ ...newQuestion, difficulty: e.target.value })
@@ -1657,6 +1660,7 @@ export default function QuestionBankPage() {
                     Select Subject
                   </InputLabel>
                   <Select
+                    label="Select Subject"
                     labelId="subject-select-label"
                     value={newQuestion.subject_id}
                     onChange={(e) => {
@@ -1696,6 +1700,7 @@ export default function QuestionBankPage() {
                 <FormControl fullWidth margin="dense">
                   <InputLabel>Select Topic</InputLabel>
                   <Select
+                    label="Select Topic"
                     value={newQuestion.topic_id || 0}
                     onChange={(e) => {
                       const value = Number(e.target.value);
@@ -1888,6 +1893,7 @@ export default function QuestionBankPage() {
                 >
                   <InputLabel>Correct Answer</InputLabel>
                   <Select
+                    label="Correct Answer"
                     value={newQuestion.correct_answer}
                     onChange={(e) => {
                       setNewQuestion({
@@ -1950,6 +1956,7 @@ export default function QuestionBankPage() {
                 <FormControl fullWidth margin="dense">
                   <InputLabel>Difficulty</InputLabel>
                   <Select
+                    label="Difficulty"
                     value={newQuestion.difficulty}
                     onChange={(e) =>
                       setNewQuestion({
