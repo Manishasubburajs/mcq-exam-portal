@@ -23,6 +23,7 @@ import EventIcon from "@mui/icons-material/Event";
 import GradeIcon from "@mui/icons-material/Grade";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import VerifiedIcon from "@mui/icons-material/Verified";
 
 const MAIN_BG = "#f5f7fa";
 const CARD_BG = "#ffffff";
@@ -685,6 +686,7 @@ export default function StudentDashboard() {
           },
         });
         const completedData = await completedResponse.json();
+        console.log(completedData,"completedData");
         if (completedData.success) {
           setCompletedExams(completedData.data);
         }
@@ -705,6 +707,26 @@ export default function StudentDashboard() {
 
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme.breakpoints, router]);
+
+  // Calculate overall accuracy
+  const calculateOverallAccuracy = () => {
+    let totalCorrect = 0;
+    let totalQuestions = 0;
+
+    completedExams.forEach(exam => {
+      const correct = Number(exam.correctAnswers || 0);
+      const wrong = Number(exam.wrongAnswers || 0);
+      const unanswered = Number(exam.unanswered || 0);
+      
+      totalCorrect += correct;
+      totalQuestions += correct + wrong + unanswered;
+    });
+
+    if (totalQuestions === 0) return "0%";
+    
+    const accuracy = Math.round((totalCorrect / totalQuestions) * 100);
+    return `${accuracy}%`;
+  };
 
   return (
     <Box
@@ -743,17 +765,17 @@ export default function StudentDashboard() {
           />
           <StatCard
             icon={<ScheduleIcon />}
-            label="Pending Results"
-            value="2"
+            label="Upcoming Live Exams"
+            value={upcomingLiveExams.length}
             color={"#fef7e0"}
             iconColor={"#e37400"}
           />
           <StatCard
-            icon={<StarRateIcon />}
-            label="Average Score"
-            value="82%"
-            color={"#fce8e6"}
-            iconColor={"#c5221f"}
+            icon={<VerifiedIcon />}
+            label="Overall Accuracy"
+            value={calculateOverallAccuracy()}
+            color={"#e6f4ea"}
+            iconColor={"#137333"}
           />
         </Box>
       </Box>

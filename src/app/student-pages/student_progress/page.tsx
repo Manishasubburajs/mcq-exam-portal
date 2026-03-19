@@ -116,10 +116,9 @@ const StudentProgressPage = () => {
     ],
   });
   const [examType, setExamType] = useState<string>("all");
-  const [quickFilter, setQuickFilter] = useState<string>("30d");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  const [quickFilter, setQuickFilter] = useState<string>("7d");
   const [graphLoading, setGraphLoading] = useState<boolean>(false);
+  const [examNames, setExamNames] = useState<Record<string, string>>({});
 
   const chartOptions = {
     responsive: true,
@@ -142,8 +141,22 @@ const StudentProgressPage = () => {
       },
       tooltip: {
         callbacks: {
+          title: function (context: any) {
+            const date = context[0].label;
+            return date;
+          },
           label: function (context: any) {
-            return "Accuracy: " + context.parsed.y + "%";
+            const index = context.dataIndex;
+            const date = context.label;
+            const examName = examNames[date];
+            const accuracy = context.parsed.y;
+            
+            let label = "Accuracy: " + accuracy + "%";
+            if (examName) {
+              label += "\nExam: " + examName;
+            }
+            
+            return label;
           },
         },
       },
@@ -180,19 +193,16 @@ const StudentProgressPage = () => {
   };
 
   // API Fetch Function
-  const fetchPerformanceData = async (
-    type: string,
-    from: string,
-    to: string,
-  ) => {
+  const fetchPerformanceData = async (type: string) => {
     setGraphLoading(true);
     try {
       const token =
         localStorage.getItem("token") || sessionStorage.getItem("token");
+      const dateRange = calculateDateRange(quickFilter);
       const params = new URLSearchParams({
         examType: type,
-        fromDate: from,
-        toDate: to,
+        fromDate: dateRange.from,
+        toDate: dateRange.to,
       });
 
       const response = await fetch(
@@ -205,19 +215,47 @@ const StudentProgressPage = () => {
       );
       const result = await response.json();
 
-      if (result.success) {
+       if (result.success) {
+        // Aggregate accuracy per date to avoid duplicate dates
+        const dateToAccuracies: Record<string, number[]> = {};
+        const dateToExamName: Record<string, string> = {};
+        
+        result.data.forEach((item: any) => {
+          const date = new Date(item.date);
+          const day = String(date.getDate()).padStart(2, "0");
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const year = date.getFullYear();
+          const dateStr = `${day}-${month}-${year}`;
+          
+          if (!dateToAccuracies[dateStr]) {
+            dateToAccuracies[dateStr] = [];
+          }
+          dateToAccuracies[dateStr].push(item.accuracy);
+          dateToExamName[dateStr] = item.title; // Store exam name for the date
+        });
+        
+        // Calculate average accuracy for each date
+        const aggregatedData: { date: string; accuracy: number }[] = Object.entries(dateToAccuracies).map(([date, accuracies]) => {
+          const averageAccuracy = accuracies.reduce((sum, acc) => sum + acc, 0) / accuracies.length;
+          return {
+            date,
+            accuracy: Number(averageAccuracy.toFixed(2)) // Round to 2 decimal places
+          };
+        });
+        
+        // Sort by date
+        aggregatedData.sort((a, b) => {
+          const [dayA, monthA, yearA] = a.date.split("-").map(Number);
+          const [dayB, monthB, yearB] = b.date.split("-").map(Number);
+          return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
+        });
+        
         const formattedData = {
-          labels: result.data.map((item: any) => {
-            const date = new Date(item.date);
-            const day = String(date.getDate()).padStart(2, "0");
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const year = date.getFullYear();
-            return `${day}-${month}-${year}`;
-          }),
+          labels: aggregatedData.map(item => item.date),
           datasets: [
             {
               label: "Accuracy",
-              data: result.data.map((item: any) => item.accuracy),
+              data: aggregatedData.map(item => item.accuracy),
               borderColor: "#6a11cb",
               backgroundColor: "rgba(106, 17, 203, 0.1)",
               borderWidth: 3,
@@ -227,6 +265,7 @@ const StudentProgressPage = () => {
           ],
         };
         setGraphData(formattedData);
+        setExamNames(dateToExamName); // Set the exam names for tooltip
       }
     } catch (error) {
       console.error("Error fetching performance data:", error);
@@ -238,52 +277,23 @@ const StudentProgressPage = () => {
   // Filter Handlers
   const handleExamTypeChange = (type: string) => {
     setExamType(type);
-    const defaultRange = type === "all" ? "30d" : "7d";
-    setQuickFilter(defaultRange);
-    const dateRange = calculateDateRange(defaultRange);
-    setFromDate(dateRange.from);
-    setToDate(dateRange.to);
-    fetchPerformanceData(type, dateRange.from, dateRange.to);
+    fetchPerformanceData(type);
   };
 
   const handleQuickFilterChange = (filter: string) => {
     setQuickFilter(filter);
-    const dateRange = calculateDateRange(filter);
-    setFromDate(dateRange.from);
-    setToDate(dateRange.to);
-    fetchPerformanceData(examType, dateRange.from, dateRange.to);
-  };
-
-  const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFromDate(e.target.value);
-  };
-
-  const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setToDate(e.target.value);
-  };
-
-  const handleManualDateApply = () => {
-    if (fromDate && toDate) {
-      setQuickFilter(""); // Clear quick filter
-      fetchPerformanceData(examType, fromDate, toDate);
-    }
+    fetchPerformanceData(examType);
   };
 
   const handleReset = () => {
     setExamType("all");
-    setQuickFilter("30d");
-    const dateRange = calculateDateRange("30d");
-    setFromDate(dateRange.from);
-    setToDate(dateRange.to);
-    fetchPerformanceData("all", dateRange.from, dateRange.to);
+    setQuickFilter("7d");
+    fetchPerformanceData("all");
   };
 
   // Initialize Graph Data
   useEffect(() => {
-    const dateRange = calculateDateRange("30d");
-    setFromDate(dateRange.from);
-    setToDate(dateRange.to);
-    fetchPerformanceData("all", dateRange.from, dateRange.to);
+    fetchPerformanceData("all");
   }, []);
 
   const getProgressColor = (percentage: number) => {
@@ -420,10 +430,29 @@ const StudentProgressPage = () => {
 
   useEffect(() => {
     if (attempts.length > 0) {
-      const totalExams = attempts.length;
+      // Filter attempts based on exam type
+      let filteredAttempts = attempts;
+      
+      if (examType !== "all") {
+        filteredAttempts = attempts.filter(exam => exam.examType === examType);
+        // For specific exam types, only include the latest attempt per exam
+        const examToLatestAttempt: Record<number, any> = {};
+        
+        filteredAttempts.forEach(attempt => {
+          const examId = attempt.examId;
+          
+          if (!examToLatestAttempt[examId] || attempt.attemptNumber > examToLatestAttempt[examId].attemptNumber) {
+            examToLatestAttempt[examId] = attempt;
+          }
+        });
+        
+        filteredAttempts = Object.values(examToLatestAttempt);
+      }
+
+      const totalExams = filteredAttempts.length;
 
       // Average Score in %
-      const sumPercentage = attempts.reduce((sum, exam) => {
+      const sumPercentage = filteredAttempts.reduce((sum, exam) => {
         const percentage = calculatePercentageFromScore(
           Number(exam.score),
           exam.questions,
@@ -434,11 +463,11 @@ const StudentProgressPage = () => {
         totalExams > 0 ? Number((sumPercentage / totalExams).toFixed(2)) : 0;
 
       // Overall Accuracy: Total Correct / Total Attempted (Correct + Wrong)
-      const totalCorrect = attempts.reduce(
+      const totalCorrect = filteredAttempts.reduce(
         (sum, exam) => sum + Number(exam.correctAnswers),
         0,
       );
-      const totalWrong = attempts.reduce(
+      const totalWrong = filteredAttempts.reduce(
         (sum, exam) => sum + Number(exam.wrongAnswers),
         0,
       );
@@ -449,7 +478,7 @@ const StudentProgressPage = () => {
           : 0;
 
       // Passed / Failed exams (based on 33% pass rule)
-      const passedExams = attempts.filter((exam) => {
+      const passedExams = filteredAttempts.filter((exam) => {
         const percentage = calculatePercentageFromScore(
           Number(exam.score),
           exam.questions,
@@ -466,7 +495,7 @@ const StudentProgressPage = () => {
         failed: failedExams,
       });
     }
-  }, [attempts]);
+  }, [attempts, examType]);
 
   const getLatestAttempts = (attempts: any[]) => {
     const examMap: Record<number, any> = {};
@@ -646,7 +675,7 @@ const StudentProgressPage = () => {
             Performance Trend
           </Typography>
 
-          {/* Filters Container */}
+           {/* Filters Container */}
           <Box
             sx={{
               mb: 3,
@@ -694,74 +723,33 @@ const StudentProgressPage = () => {
                 "& .MuiToggleButton-root": {
                   color: "#666",
                   "&.Mui-selected": {
-                    backgroundColor: "#1a73e8",
+                    backgroundColor: "#6a11cb",
                     color: "white",
                     "&:hover": {
-                      backgroundColor: "#1557b0",
+                      backgroundColor: "#5a0fb8",
                     },
                   },
                 },
               }}
             >
-              <ToggleButton value="24h">Last 24 Hours</ToggleButton>
               <ToggleButton value="7d">Last 7 Days</ToggleButton>
               <ToggleButton value="30d">Last 30 Days</ToggleButton>
             </ToggleButtonGroup>
 
-            {/* Manual Date Range */}
-            <Box
+            <Button
+              variant="outlined"
+              onClick={handleReset}
               sx={{
-                display: "flex",
-                gap: 1,
-                flexWrap: "wrap",
-                alignItems: "center",
+                borderColor: "#6c757d",
+                color: "#6c757d",
+                "&:hover": {
+                  borderColor: "#5a6268",
+                  backgroundColor: "#e9ecef",
+                },
               }}
             >
-              <TextField
-                label="From"
-                type="datetime-local"
-                value={fromDate.slice(0, 16)}
-                onChange={handleFromDateChange}
-                sx={{ minWidth: 180 }}
-              />
-              <TextField
-                label="To"
-                type="datetime-local"
-                value={toDate.slice(0, 16)}
-                onChange={handleToDateChange}
-                sx={{ minWidth: 180 }}
-              />
-              <Button
-                variant="contained"
-                onClick={handleManualDateApply}
-                disabled={!fromDate || !toDate}
-                sx={{
-                  backgroundColor: "#28a745",
-                  "&:hover": {
-                    backgroundColor: "#218838",
-                  },
-                  "&.Mui-disabled": {
-                    backgroundColor: "#ccc",
-                  },
-                }}
-              >
-                Apply
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={handleReset}
-                sx={{
-                  borderColor: "#6c757d",
-                  color: "#6c757d",
-                  "&:hover": {
-                    borderColor: "#5a6268",
-                    backgroundColor: "#e9ecef",
-                  },
-                }}
-              >
-                Reset
-              </Button>
-            </Box>
+              Reset
+            </Button>
           </Box>
 
           {/* Graph */}
