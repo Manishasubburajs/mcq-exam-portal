@@ -118,7 +118,7 @@ interface ExamCardProps {
 // Helper to calculate time remaining
 const getTimeRemaining = (startDateString: string, endDateString: string) => {
   if (!startDateString) return "Available soon";
-  
+
   const now = new Date();
   const startDate = new Date(startDateString);
   const endDate = new Date(endDateString);
@@ -132,7 +132,9 @@ const getTimeRemaining = (startDateString: string, endDateString: string) => {
   }
 
   const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const hours = Math.floor(
+    (timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+  );
   const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
 
   if (days > 0) {
@@ -145,13 +147,17 @@ const getTimeRemaining = (startDateString: string, endDateString: string) => {
 };
 
 // Helper to check if start button should be enabled
-const isStartEnabled = (startDateString: string, endDateString: string, examType: string) => {
+const isStartEnabled = (
+  startDateString: string,
+  endDateString: string,
+  examType: string,
+) => {
   if (examType !== "live") return true;
-  
+
   const now = new Date();
   const startDate = new Date(startDateString);
   const endDate = new Date(endDateString);
-  
+
   return now >= startDate && now <= endDate;
 };
 
@@ -169,7 +175,16 @@ const formatDateTime = (dateString: string) => {
   });
 };
 
-const ExamCard = ({ title, subject, meta, onStart, timeRemaining, isStartEnabled = true, startDate, endDate }: ExamCardProps & { startDate?: string; endDate?: string }) => (
+const ExamCard = ({
+  title,
+  subject,
+  meta,
+  onStart,
+  timeRemaining,
+  isStartEnabled = true,
+  startDate,
+  endDate,
+}: ExamCardProps & { startDate?: string; endDate?: string }) => (
   <Card
     sx={{
       border: `1px solid #e0e0e0`,
@@ -401,7 +416,7 @@ const ExamCard = ({ title, subject, meta, onStart, timeRemaining, isStartEnabled
               alignItems: "center",
               justifyContent: "center",
               textTransform: "none",
-              background: isStartEnabled 
+              background: isStartEnabled
                 ? "linear-gradient(to right, #6a11cb, #2575fc)"
                 : "#9ca3af",
               color: "#fff",
@@ -409,7 +424,9 @@ const ExamCard = ({ title, subject, meta, onStart, timeRemaining, isStartEnabled
               fontSize: { xs: "13px", sm: "14px" },
               fontWeight: 600,
               boxShadow: "none",
-              "&:hover": isStartEnabled ? { transform: "translateY(-2px)" } : {},
+              "&:hover": isStartEnabled
+                ? { transform: "translateY(-2px)" }
+                : {},
             }}
             onClick={() => onStart && onStart(meta.examType)}
             disabled={!isStartEnabled}
@@ -484,14 +501,15 @@ export default function MyExamsPage() {
 
   const startExam = async (examId: number, examType: string) => {
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
       const response = await fetch("/api/students/start", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ examId })
+        body: JSON.stringify({ examId }),
       });
 
       const data = await response.json();
@@ -515,11 +533,13 @@ export default function MyExamsPage() {
               // Continue without fullscreen if request fails
             }
           };
-          
+
           await enterFullscreen();
         }
-        
-        router.push(`/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`);
+
+        router.push(
+          `/student-pages/exam_taking?examId=${examId}&attemptId=${data.attemptId}`,
+        );
       } else {
         alert(data.message || "Failed to start exam");
       }
@@ -530,9 +550,11 @@ export default function MyExamsPage() {
   };
 
   // Separate exams by type
-  const practiceExams = availableExams.filter(exam => exam.examType === "practice");
-  const mockExams = availableExams.filter(exam => exam.examType === "mock");
-  const liveExams = availableExams.filter(exam => exam.examType === "live");
+  const practiceExams = availableExams.filter(
+    (exam) => exam.examType === "practice",
+  );
+  const mockExams = availableExams.filter((exam) => exam.examType === "mock");
+  const liveExams = availableExams.filter((exam) => exam.examType === "live");
 
   return (
     <Box
@@ -547,12 +569,14 @@ export default function MyExamsPage() {
       }}
     >
       {/* Exam Count Cards */}
-      <Box sx={{ 
-        display: "flex", 
-        flexWrap: "wrap", 
-        gap: { xs: 1.5, sm: 2, md: 2.5 }, 
-        mb: { xs: 2, sm: 3, md: 3.75 } 
-      }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: { xs: 1.5, sm: 2, md: 2.5 },
+          mb: { xs: 2, sm: 3, md: 3.75 },
+        }}
+      >
         <StatCard
           icon={<EmojiEventsIcon fontSize="medium" />}
           label="Total Exams Available"
@@ -583,8 +607,8 @@ export default function MyExamsPage() {
         />
       </Box>
 
-      {/* Practice Exams */}
-      {practiceExams.length > 0 && (
+      {/* Live Exams */}
+      {liveExams.length > 0 && (
         <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
           <Card
             sx={{
@@ -615,7 +639,7 @@ export default function MyExamsPage() {
                   textAlign: { xs: "center", sm: "left" },
                 }}
               >
-                Practice Exams
+                Live Exams
               </Typography>
             </Box>
 
@@ -629,12 +653,16 @@ export default function MyExamsPage() {
             >
               {loading ? (
                 <Typography>Loading exams...</Typography>
-              ) : practiceExams.length > 0 ? (
-                practiceExams.map((exam) => (
+              ) : liveExams.length > 0 ? (
+                liveExams.map((exam) => (
                   <Box
                     key={exam.id}
                     sx={{
-                      flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
+                      flex: {
+                        xs: "1 1 100%",
+                        sm: "1 1 280px",
+                        md: "1 1 300px",
+                      },
                     }}
                   >
                     <ExamCard
@@ -648,15 +676,23 @@ export default function MyExamsPage() {
                         examType: exam.examType,
                       }}
                       onStart={(examType) => startExam(exam.id, examType)}
-                      timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
-                      isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
+                      timeRemaining={
+                        exam.examType === "live"
+                          ? getTimeRemaining(exam.startDate, exam.endDate)
+                          : undefined
+                      }
+                      isStartEnabled={isStartEnabled(
+                        exam.startDate,
+                        exam.endDate,
+                        exam.examType,
+                      )}
                       startDate={exam.startDate}
                       endDate={exam.endDate}
                     />
                   </Box>
                 ))
               ) : (
-                <Typography>No practice exams available.</Typography>
+                <Typography>No live exams available.</Typography>
               )}
             </Box>
           </Card>
@@ -714,7 +750,11 @@ export default function MyExamsPage() {
                   <Box
                     key={exam.id}
                     sx={{
-                      flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
+                      flex: {
+                        xs: "1 1 100%",
+                        sm: "1 1 280px",
+                        md: "1 1 300px",
+                      },
                     }}
                   >
                     <ExamCard
@@ -728,8 +768,16 @@ export default function MyExamsPage() {
                         examType: exam.examType,
                       }}
                       onStart={(examType) => startExam(exam.id, examType)}
-                      timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
-                      isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
+                      timeRemaining={
+                        exam.examType === "live"
+                          ? getTimeRemaining(exam.startDate, exam.endDate)
+                          : undefined
+                      }
+                      isStartEnabled={isStartEnabled(
+                        exam.startDate,
+                        exam.endDate,
+                        exam.examType,
+                      )}
                       startDate={exam.startDate}
                       endDate={exam.endDate}
                     />
@@ -743,8 +791,8 @@ export default function MyExamsPage() {
         </Box>
       )}
 
-      {/* Live Exams */}
-      {liveExams.length > 0 && (
+      {/* Practice Exams */}
+      {practiceExams.length > 0 && (
         <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
           <Card
             sx={{
@@ -775,7 +823,7 @@ export default function MyExamsPage() {
                   textAlign: { xs: "center", sm: "left" },
                 }}
               >
-                Live Exams
+                Practice Exams
               </Typography>
             </Box>
 
@@ -789,12 +837,16 @@ export default function MyExamsPage() {
             >
               {loading ? (
                 <Typography>Loading exams...</Typography>
-              ) : liveExams.length > 0 ? (
-                liveExams.map((exam) => (
+              ) : practiceExams.length > 0 ? (
+                practiceExams.map((exam) => (
                   <Box
                     key={exam.id}
                     sx={{
-                      flex: { xs: "1 1 100%", sm: "1 1 280px", md: "1 1 300px" },
+                      flex: {
+                        xs: "1 1 100%",
+                        sm: "1 1 280px",
+                        md: "1 1 300px",
+                      },
                     }}
                   >
                     <ExamCard
@@ -808,15 +860,23 @@ export default function MyExamsPage() {
                         examType: exam.examType,
                       }}
                       onStart={(examType) => startExam(exam.id, examType)}
-                      timeRemaining={exam.examType === "live" ? getTimeRemaining(exam.startDate, exam.endDate) : undefined}
-                      isStartEnabled={isStartEnabled(exam.startDate, exam.endDate, exam.examType)}
+                      timeRemaining={
+                        exam.examType === "live"
+                          ? getTimeRemaining(exam.startDate, exam.endDate)
+                          : undefined
+                      }
+                      isStartEnabled={isStartEnabled(
+                        exam.startDate,
+                        exam.endDate,
+                        exam.examType,
+                      )}
                       startDate={exam.startDate}
                       endDate={exam.endDate}
                     />
                   </Box>
                 ))
               ) : (
-                <Typography>No live exams available.</Typography>
+                <Typography>No practice exams available.</Typography>
               )}
             </Box>
           </Card>

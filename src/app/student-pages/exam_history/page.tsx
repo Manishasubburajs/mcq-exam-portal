@@ -601,6 +601,13 @@ export default function ExamHistoryPage() {
     });
   });
 
+  // Separate exams by type
+  const practiceExams = latestAttempts.filter(
+    (exam) => exam.examType === "practice",
+  );
+  const mockExams = latestAttempts.filter((exam) => exam.examType === "mock");
+  const liveExams = latestAttempts.filter((exam) => exam.examType === "live");
+
   return (
     <Box
       sx={{
@@ -613,90 +620,283 @@ export default function ExamHistoryPage() {
         p: { xs: 1.5, sm: 2.5, md: 3.75 },
       }}
     >
-      {/* Completed Exams */}
-      <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
-        <Card
-          sx={{
-            background: CARD_BG,
-            borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
-            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
-            p: { xs: 2, sm: 2.5, md: 3.125 },
-            transition: "all 0.3s ease",
-          }}
-        >
-          <Box
+      {/* Live Exams */}
+      {liveExams.length > 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: { xs: 1.5, sm: 2, md: 2.5 },
-              pb: { xs: 1, sm: 1.5, md: 1.875 },
-              borderBottom: `2px solid #f0f0f0`,
-              flexDirection: { xs: "column", sm: "row" },
-              gap: { xs: 1, sm: 0 },
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
             }}
           >
-            <Typography
+            <Box
               sx={{
-                fontWeight: 700,
-                color: "#2c3e50",
-                fontSize: { xs: 18, sm: 19, md: 20 },
-                textAlign: { xs: "center", sm: "left" },
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: { xs: 1.5, sm: 2, md: 2.5 },
+                pb: { xs: 1, sm: 1.5, md: 1.875 },
+                borderBottom: `2px solid #f0f0f0`,
+                flexDirection: { xs: "column", sm: "row" },
+                gap: { xs: 1, sm: 0 },
               }}
             >
-              Exam History
-            </Typography>
-          </Box>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: "#2c3e50",
+                  fontSize: { xs: 18, sm: 19, md: 20 },
+                  textAlign: { xs: "center", sm: "left" },
+                }}
+              >
+                Live Exams
+              </Typography>
+            </Box>
 
-          <Box
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
+                alignItems: "start",
+              }}
+            >
+              {loading ? (
+                <Typography>Loading live exams...</Typography>
+              ) : liveExams.length > 0 ? (
+                liveExams.map((exam) => (
+                  <Box
+                    key={exam.examId}
+                    sx={{
+                      flex: { xs: "1 1 100%", sm: "1 1 360px", md: "1 1 400px" },
+                    }}
+                  >
+                    <ExamCard
+                      title={exam.title}
+                      subject={exam.subject}
+                      meta={{
+                        duration: exam.duration.toString(),
+                        questions: exam.questions.toString(),
+                        completedAt: exam.completedAt,
+                        points: exam.points,
+                        score: exam.score,
+                        examType: exam.examType,
+                        attemptNumber: exam.attemptNumber,
+                      }}
+                      endTime={exam.endTime}
+                      onViewResults={() => viewResults(exam.attemptId)}
+                      onTakeExam={(examType) =>
+                        takeExam(exam.attemptId, exam.examId, examType)
+                      }
+                      canRetake={exam.canRetake}
+                      hasReachedRetakeLimit={exam.hasReachedRetakeLimit}
+                      onViewAttemptHistory={
+                        exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
+                      }
+                    />
+                  </Box>
+                ))
+              ) : (
+                <Typography>No live exams completed yet.</Typography>
+              )}
+            </Box>
+          </Card>
+        </Box>
+      )}
+
+      {/* Mock Exams */}
+      {mockExams.length > 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: { xs: 1.5, sm: 2, md: 2.5 },
-              alignItems: "start",
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
             }}
           >
-            {loading ? (
-              <Typography>Loading exam history...</Typography>
-            ) : latestAttempts.length > 0 ? (
-              latestAttempts.map((exam) => (
-                <Box
-                  key={exam.examId}
-                  sx={{
-                    flex: { xs: "1 1 100%", sm: "1 1 360px", md: "1 1 400px" },
-                  }}
-                >
-                  <ExamCard
-                    title={exam.title}
-                    subject={exam.subject}
-                    meta={{
-                      duration: exam.duration.toString(),
-                      questions: exam.questions.toString(),
-                      completedAt: exam.completedAt,
-                      points: exam.points,
-                      score: exam.score,
-                      examType: exam.examType,
-                      attemptNumber: exam.attemptNumber,
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: { xs: 1.5, sm: 2, md: 2.5 },
+                pb: { xs: 1, sm: 1.5, md: 1.875 },
+                borderBottom: `2px solid #f0f0f0`,
+                flexDirection: { xs: "column", sm: "row" },
+                gap: { xs: 1, sm: 0 },
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: "#2c3e50",
+                  fontSize: { xs: 18, sm: 19, md: 20 },
+                  textAlign: { xs: "center", sm: "left" },
+                }}
+              >
+                Mock Exams
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
+                alignItems: "start",
+              }}
+            >
+              {loading ? (
+                <Typography>Loading mock exams...</Typography>
+              ) : mockExams.length > 0 ? (
+                mockExams.map((exam) => (
+                  <Box
+                    key={exam.examId}
+                    sx={{
+                      flex: { xs: "1 1 100%", sm: "1 1 360px", md: "1 1 400px" },
                     }}
-                    endTime={exam.endTime}
-                    onViewResults={() => viewResults(exam.attemptId)}
-                    onTakeExam={(examType) =>
-                      takeExam(exam.attemptId, exam.examId, examType)
-                    }
-                    canRetake={exam.canRetake}
-                    hasReachedRetakeLimit={exam.hasReachedRetakeLimit}
-                    onViewAttemptHistory={
-                      exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
-                    }
-                  />
-                </Box>
-              ))
-            ) : (
-              <Typography>No completed exams yet.</Typography>
-            )}
-          </Box>
-        </Card>
-      </Box>
+                  >
+                    <ExamCard
+                      title={exam.title}
+                      subject={exam.subject}
+                      meta={{
+                        duration: exam.duration.toString(),
+                        questions: exam.questions.toString(),
+                        completedAt: exam.completedAt,
+                        points: exam.points,
+                        score: exam.score,
+                        examType: exam.examType,
+                        attemptNumber: exam.attemptNumber,
+                      }}
+                      endTime={exam.endTime}
+                      onViewResults={() => viewResults(exam.attemptId)}
+                      onTakeExam={(examType) =>
+                        takeExam(exam.attemptId, exam.examId, examType)
+                      }
+                      canRetake={exam.canRetake}
+                      hasReachedRetakeLimit={exam.hasReachedRetakeLimit}
+                      onViewAttemptHistory={
+                        exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
+                      }
+                    />
+                  </Box>
+                ))
+              ) : (
+                <Typography>No mock exams completed yet.</Typography>
+              )}
+            </Box>
+          </Card>
+        </Box>
+      )}
+
+      {/* Practice Exams */}
+      {practiceExams.length > 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
+            sx={{
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: { xs: 1.5, sm: 2, md: 2.5 },
+                pb: { xs: 1, sm: 1.5, md: 1.875 },
+                borderBottom: `2px solid #f0f0f0`,
+                flexDirection: { xs: "column", sm: "row" },
+                gap: { xs: 1, sm: 0 },
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: "#2c3e50",
+                  fontSize: { xs: 18, sm: 19, md: 20 },
+                  textAlign: { xs: "center", sm: "left" },
+                }}
+              >
+                Practice Exams
+              </Typography>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
+                alignItems: "start",
+              }}
+            >
+              {loading ? (
+                <Typography>Loading practice exams...</Typography>
+              ) : practiceExams.length > 0 ? (
+                practiceExams.map((exam) => (
+                  <Box
+                    key={exam.examId}
+                    sx={{
+                      flex: { xs: "1 1 100%", sm: "1 1 360px", md: "1 1 400px" },
+                    }}
+                  >
+                    <ExamCard
+                      title={exam.title}
+                      subject={exam.subject}
+                      meta={{
+                        duration: exam.duration.toString(),
+                        questions: exam.questions.toString(),
+                        completedAt: exam.completedAt,
+                        points: exam.points,
+                        score: exam.score,
+                        examType: exam.examType,
+                        attemptNumber: exam.attemptNumber,
+                      }}
+                      endTime={exam.endTime}
+                      onViewResults={() => viewResults(exam.attemptId)}
+                      onTakeExam={(examType) =>
+                        takeExam(exam.attemptId, exam.examId, examType)
+                      }
+                      canRetake={exam.canRetake}
+                      hasReachedRetakeLimit={exam.hasReachedRetakeLimit}
+                      onViewAttemptHistory={
+                        exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
+                      }
+                    />
+                  </Box>
+                ))
+              ) : (
+                <Typography>No practice exams completed yet.</Typography>
+              )}
+            </Box>
+          </Card>
+        </Box>
+      )}
+
+      {/* No Exams Message */}
+      {!loading && latestAttempts.length === 0 && (
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 3.75 } }}>
+          <Card
+            sx={{
+              background: CARD_BG,
+              borderRadius: { xs: 1.5, sm: 2, md: 2.5 },
+              boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+              p: { xs: 2, sm: 2.5, md: 3.125 },
+              transition: "all 0.3s ease",
+            }}
+          >
+            <Typography>No completed exams yet.</Typography>
+          </Card>
+        </Box>
+      )}
 
       {/* Attempt History Modal */}
       <AttemptHistoryModal
