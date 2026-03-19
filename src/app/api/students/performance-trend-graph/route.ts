@@ -27,8 +27,6 @@ export async function GET(req: NextRequest) {
     const fromDate = searchParams.get("fromDate");
     const toDate = searchParams.get("toDate");
 
-
-
     // ---------------- DATE FILTER ----------------
     const dateFilter: any = {};
 
@@ -66,6 +64,7 @@ export async function GET(req: NextRequest) {
         accuracy: true,
         end_time: true,
         attempt_number: true,
+        exam_id: true,
         exam: {
           select: {
             exam_type: true,
@@ -79,8 +78,23 @@ export async function GET(req: NextRequest) {
       },
     });
 
+     // ---------------- FILTER LATEST ATTEMPTS PER EXAM ----------------
+  // For all exam types, only include the latest attempt per exam to avoid duplicates
+  const examToLatestAttempt: Record<number, any> = {};
+  
+  attempts.forEach(attempt => {
+    const examId = attempt.exam_id;
+    
+    // If we haven't seen this exam or this is a later attempt, update
+    if (!examToLatestAttempt[examId] || attempt.attempt_number > examToLatestAttempt[examId].attempt_number) {
+      examToLatestAttempt[examId] = attempt;
+    }
+  });
+  
+  const filteredAttempts = Object.values(examToLatestAttempt);
+
     // ---------------- FORMAT FOR GRAPH ----------------
-    const graphData = attempts.map((a) => ({
+    const graphData = filteredAttempts.map((a) => ({
       date: a.end_time,
       accuracy: Number(a.accuracy ?? 0),
       attempt: a.attempt_number,
