@@ -17,6 +17,10 @@ import {
   CircularProgress,
   Divider,
   Grid,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
 } from "@mui/material";
 import {
   Print as PrintIcon,
@@ -91,6 +95,7 @@ export default function ExamResultsReview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "unanswered">("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!attemptId) {
@@ -284,9 +289,31 @@ export default function ExamResultsReview() {
   const totalTimeTaken = attempt.total_time_seconds || 0;
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
-  const filteredQuestions = questions.filter(
-    (q: any) => filter === "all" || q.status === filter
-  );
+  // Time-based filter logic
+  const getTimeFilterRange = (timeFilter: string): { min: number; max: number } | null => {
+    switch (timeFilter) {
+      case "less30":
+        return { min: 0, max: 30 };
+      case "30to60":
+        return { min: 30, max: 60 };
+      case "1to2":
+        return { min: 60, max: 120 };
+      case "more2":
+        return { min: 120, max: Infinity };
+      default:
+        return null;
+    }
+  };
+
+  const filteredQuestions = questions
+    .filter((q: any) => filter === "all" || q.status === filter)
+    .filter((q: any) => {
+      if (timeFilter === "all") return true;
+      const range = getTimeFilterRange(timeFilter);
+      if (!range) return true;
+      return q.timeTaken >= range.min && q.timeTaken < range.max;
+    })
+    .sort((a: any, b: any) => b.timeTaken - a.timeTaken);
 
   const handlePrint = () => {
     globalThis.window.print();
@@ -577,11 +604,51 @@ export default function ExamResultsReview() {
               </Button>
             </ButtonGroup>
             
+            <FormControl
+              size="small"
+              sx={{
+                minWidth: { xs: "100%", sm: 140 },
+                mt: { xs: 1, sm: 0 },
+              }}
+            >
+              <InputLabel
+                id="time-filter-label"
+                sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+              >
+                Time-Based
+              </InputLabel>
+              <Select
+                labelId="time-filter-label"
+                value={timeFilter}
+                label="Time-Based"
+                onChange={(e) => setTimeFilter(e.target.value)}
+                sx={{
+                  fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                }}
+              >
+                <MenuItem value="all" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  All Time
+                </MenuItem>
+                <MenuItem value="less30" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  Less than 30 sec
+                </MenuItem>
+                <MenuItem value="30to60" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  30-60 sec
+                </MenuItem>
+                <MenuItem value="1to2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  1-2 min
+                </MenuItem>
+                <MenuItem value="more2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  More than 2 min
+                </MenuItem>
+              </Select>
+            </FormControl>
+            
             <Box
               sx={{
                 display: "flex",
                 gap: 1,
-                mt: { xs: 0, sm: 0 },
+                mt: { xs: 1, sm: 0 },
                 justifyContent: { xs: "center", sm: "flex-start" },
               }}
             >
