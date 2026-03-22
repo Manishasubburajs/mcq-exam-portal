@@ -26,6 +26,19 @@ import {
   AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 
+// Helper function to format time
+const formatTime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${seconds} sec`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) {
+    return `${minutes} min`;
+  }
+  return `${minutes} min ${remainingSeconds} sec`;
+};
+
 const ScoreCircle = ({ score }: { score: number }) => {
   const percentage = score;
   const getScoreColor = (val: number): string => {
@@ -627,7 +640,7 @@ export default function ExamResultsReview() {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <AccessTimeIcon sx={{ fontSize: 16, color: "#6a11cb" }} />
                   <Typography sx={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                    {question.timeTaken}s
+                    {formatTime(question.timeTaken)}
                   </Typography>
                 </Box>
                 <Chip
