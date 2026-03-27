@@ -236,6 +236,15 @@ export default function ForgotPassword() {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
 
+  const formatTime = (t: number) => {
+    const minutes = Math.floor(t / 60);
+    const seconds = t % 60;
+
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
+    
   // ========================
   // AUTO FOCUS FIRST BOX
   // ========================
@@ -274,7 +283,7 @@ export default function ForgotPassword() {
       }
 
       setStep(2);
-      setTimer(300); // ✅ 5 minutes
+      setTimer(120); // ✅ 5 minutes
 
     if (timerRef.current) clearInterval(timerRef.current);
 
@@ -453,10 +462,15 @@ export default function ForgotPassword() {
             <Typography
               textAlign="center"
               mb={2}
-              color={timer === 0 ? "error.main" : "success.main"}
+              color={
+                timer === 0 
+                ? "error.main"
+                : timer < 30
+                ? "warning.main"
+                : "success.main"}
             >
               {timer > 0
-                ? `Expires in 00:${timer.toString().padStart(2, "0")}`
+                ? `Expires in ${formatTime(timer)}`
                 : "OTP expired"}
             </Typography>
 

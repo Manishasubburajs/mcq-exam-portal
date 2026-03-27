@@ -1,8 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextResponse , NextRequest} from "next/server";
 import { otpStore } from "@/lib/otpStore";
 
 export async function POST(req: Request) {
-  const { email, otp } = await req.json();
+  let data;
+
+  try {
+    data = await req.json();
+    console.log("BODY RECEIVED:", data); // 🔍 DEBUG
+  } catch (err) {
+    console.log("JSON PARSE ERROR");
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+  const { email, otp } = data;
 
   const record = otpStore[email];
   console.log("ENTERED OTP:", otp);
