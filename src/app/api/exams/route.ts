@@ -260,7 +260,7 @@ export async function POST(req: Request) {
         return exam;
       },
       {
-        timeout: 15000,
+        timeout: 50000,
       },
     );
 

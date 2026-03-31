@@ -209,7 +209,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
         onConfirm={handleConfirmNavigation}
         onCancel={handleCancelNavigation}
       />
-      <LiveExamWarningModal open={showLiveWarning} />
+      <LiveExamWarningModal open={showLiveWarning} violationCount={0} onClose={() => setShowLiveWarning(false)} />
     </SidebarContext.Provider>
   );
 }

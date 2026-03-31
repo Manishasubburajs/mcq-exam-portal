@@ -123,6 +123,23 @@ const ExamCard = ({
   
   const resultsAvailable = isResultsAvailable();
   
+  // Format the results available time for tooltip
+  const getResultsAvailableTime = (): string => {
+    if (meta.examType !== "live" || !endTime) {
+      return "";
+    }
+    
+    const examEndTime = new Date(endTime);
+    const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after end time
+    return resultsAvailableTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+  
+  const resultsAvailableTimeString = getResultsAvailableTime();
+  
   return (
   <Card
     sx={{
@@ -260,26 +277,32 @@ const ExamCard = ({
             Completed: {meta.completedAt}
           </Typography>
         </Box>
-        <Box
-          sx={{
-            flex: { xs: "1 0 100%", sm: "1 0 50%" },
-            mb: { xs: 0.75, sm: 1, md: 1.25 },
-            display: "flex",
-            alignItems: "center",
-            gap: { xs: 0.5, sm: 0.625 },
-          }}
+        <Tooltip
+          title={!resultsAvailable ? `Score will be available at ${resultsAvailableTimeString}` : ""}
+          placement="top"
+          disableInteractive={false}
         >
-          <GradeIcon fontSize="small" sx={{ color: "#6a11cb" }} />
-          <Typography
-            variant="body2"
+          <Box
             sx={{
-              color: TEXT_PRIMARY,
-              fontSize: { xs: 13, sm: 14 },
+              flex: { xs: "1 0 100%", sm: "1 0 50%" },
+              mb: { xs: 0.75, sm: 1, md: 1.25 },
+              display: "flex",
+              alignItems: "center",
+              gap: { xs: 0.5, sm: 0.625 },
             }}
           >
-            Score: {meta.score}/{meta.points}
-          </Typography>
-        </Box>
+            <GradeIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+            <Typography
+              variant="body2"
+              sx={{
+                color: TEXT_PRIMARY,
+                fontSize: { xs: 13, sm: 14 },
+              }}
+            >
+              Score: {resultsAvailable ? `${meta.score}/${meta.points}` : "-"}
+            </Typography>
+          </Box>
+        </Tooltip>
         <Box
           sx={{
             flex: { xs: "1 0 100%", sm: "1 0 50%" },
@@ -394,7 +417,7 @@ const ExamCard = ({
             </Tooltip>
           )}
           <Tooltip
-            title={!resultsAvailable ? "Results will be available after 30 minutes" : ""}
+            title={!resultsAvailable ? `Results will be available at ${resultsAvailableTimeString}` : ""}
             placement="top"
             disableInteractive={false}
           >
@@ -494,6 +517,7 @@ export default function ExamHistoryPage() {
           },
         });
         const data = await response.json();
+        console.log(data,"datain examhistory");
         if (data.success) {
           setCompletedExams(data.data);
         }

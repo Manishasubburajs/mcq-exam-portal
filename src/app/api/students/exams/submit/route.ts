@@ -10,32 +10,37 @@ const PASS_PERCENTAGE = 45;
 export async function POST(req: Request) {
   try {
     // ---------------- AUTH ----------------
+    let studentId: number | null = null;
     const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 },
-      );
+    
+    if (authHeader?.startsWith("Bearer ")) {
+      const decoded = verifyToken(authHeader.substring(7));
+      if (decoded && decoded.role === "student") {
+        studentId = decoded.userId;
+      }
     }
-
-    const decoded = verifyToken(authHeader.substring(7));
-    if (!decoded || decoded.role !== "student") {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 },
-      );
-    }
-
-    const studentId = decoded.userId;
 
     // ---------------- BODY ----------------
     const {
       examId,
       attemptId,
+      studentId: bodyStudentId,
       answers = {},
       questionTimes = {},
       totalTimeTaken = 0,
     } = await req.json();
+
+    // If no Authorization header, try to get studentId from body (for sendBeacon requests)
+    if (!studentId && bodyStudentId) {
+      studentId = Number(bodyStudentId);
+    }
+
+    if (!studentId) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    }
 
     if (!examId || !attemptId) {
       return NextResponse.json(
@@ -65,8 +70,21 @@ export async function POST(req: Request) {
     });
 
     if (!attempt) {
+      // ✅ Already submitted case handle
+      const existingAttempt = await prisma.student_exam_attempts.findUnique({
+        where: { attempt_id: parsedAttemptId },
+      });
+
+      if (existingAttempt?.status === "completed") {
+        return NextResponse.json({
+          success: true,
+          message: "Already submitted",
+          attemptId: parsedAttemptId,
+        });
+      }
+
       return NextResponse.json(
-        { success: false, message: "Invalid or completed attempt" },
+        { success: false, message: "Invalid attempt" },
         { status: 400 },
       );
     }
@@ -102,7 +120,11 @@ export async function POST(req: Request) {
         const qId = Number(questionId);
         const correctAnswer = questionMap.get(qId) ?? ""; // ensure string
         const isCorrect = selectedAnswer === correctAnswer;
-        const marksAwarded = isCorrect ? MARK_PER_Q : -NEGATIVE;
+        const marksAwarded = selectedAnswer
+          ? isCorrect
+            ? MARK_PER_Q
+            : -NEGATIVE
+          : 0;
 
         return {
           attempt_id: parsedAttemptId,
@@ -141,10 +163,11 @@ export async function POST(req: Request) {
       }
     });
 
-    const answeredCount = savedAnswers.length;
+    const answeredCount = savedAnswers.filter((a) => a.selected_answer).length;
     const unanswered = totalQuestions - answeredCount;
 
-    const score = Math.max(0, correct * MARK_PER_Q - wrong * NEGATIVE);
+    const rawScore = correct * MARK_PER_Q - wrong * NEGATIVE;
+    const score = Number(Math.max(0, rawScore).toFixed(2));
     const attempted = correct + wrong;
 
     const accuracy =
