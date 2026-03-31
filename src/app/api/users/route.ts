@@ -9,9 +9,6 @@ import bcrypt from "bcryptjs";
 const studentSchema = Yup.object({
   dob: Yup.string().nullable(),
   gender: Yup.string().nullable(),
-  school: Yup.string().nullable(),
-  grade: Yup.string().nullable(),
-  section: Yup.string().nullable(),
 });
 
 // Separate schemas for create and update operations
@@ -25,9 +22,6 @@ const createUserSchema = Yup.object({
   department: Yup.string().nullable(),
   dob: Yup.string().nullable(),
   gender: Yup.string().nullable(),
-  school: Yup.string().nullable(),
-  grade: Yup.string().nullable(),
-  section: Yup.string().nullable(),
 });
 
 const updateUserSchema = Yup.object({
@@ -41,9 +35,6 @@ const updateUserSchema = Yup.object({
   department: Yup.string().nullable(),
   dob: Yup.string().nullable(),
   gender: Yup.string().nullable(),
-  school: Yup.string().nullable(),
-  grade: Yup.string().nullable(),
-  section: Yup.string().nullable(),
 });
 
 // ------------------------------------------
@@ -65,7 +56,7 @@ export async function GET(req: Request) {
       if (!user) {
         return NextResponse.json(
           { success: false, error: "User not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -84,7 +75,7 @@ export async function GET(req: Request) {
     console.error("❌ GET /api/users error:", error);
     return NextResponse.json(
       { success: false, error: "Error fetching users" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -108,12 +99,9 @@ export async function POST(req: Request) {
       role,
       first_name,
       last_name,
-      department,
+      mobile_number,
       dob,
       gender,
-      school,
-      grade,
-      section,
     } = body;
 
     // Hash the password
@@ -128,7 +116,7 @@ export async function POST(req: Request) {
           role,
           first_name,
           last_name,
-         
+          mobile_number,
         },
       });
 
@@ -137,23 +125,20 @@ export async function POST(req: Request) {
         if (!dob || dob.trim() === "") {
           throw new Error("Date of birth is required for students");
         }
-        
+
         // Convert YYYY-MM-DD to Date object for Prisma DateTime field
         const formattedDob = new Date(dob);
-        
+
         // Validate that the date conversion worked
         if (isNaN(formattedDob.getTime())) {
           throw new Error("Invalid date format for date of birth");
         }
-        
+
         await tx.student_details.create({
           data: {
             user_id: user.user_id,
             dob: formattedDob,
-            gender: gender as any, // Type assertion for enum
-            school: school || "",
-            grade: grade || "",
-            section: section || null,
+            gender: gender as any,
           },
         });
       }
@@ -167,17 +152,14 @@ export async function POST(req: Request) {
       return userWithDetails;
     });
 
-    return NextResponse.json(
-      { success: true, data: result },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error: any) {
     console.error("❌ POST /api/users error:", error);
 
     if (error.name === "ValidationError") {
       return NextResponse.json(
         { success: false, validationErrors: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -192,23 +174,27 @@ export async function POST(req: Request) {
           message = "Username already exists";
         } else if (target.includes("email")) {
           message = "Email already exists";
+        } else if (target.includes("mobile_number")) {
+          message = "Mobile number already registered";
         }
       } else if (typeof target === "string") {
         if (target.includes("username")) {
           message = "Username already exists";
         } else if (target.includes("email")) {
           message = "Email already exists";
+        } else if (target.includes("mobile_number")) {
+          message = "Mobile number already registered";
         }
       }
-        return NextResponse.json(
+      return NextResponse.json(
         { success: false, error: message },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     return NextResponse.json(
       { success: false, error: "Error creating user" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -233,12 +219,9 @@ export async function PUT(req: Request) {
       status,
       first_name,
       last_name,
-      department,
+      mobile_number,
       dob,
       gender,
-      school,
-      grade,
-      section,
     } = body;
 
     const result = await prisma.$transaction(async (tx) => {
@@ -251,6 +234,7 @@ export async function PUT(req: Request) {
           first_name,
           last_name,
           status,
+          mobile_number,
         },
       });
 
@@ -262,11 +246,11 @@ export async function PUT(req: Request) {
         if (exists) {
           await tx.student_details.update({
             where: { user_id },
-            data: { dob, gender, school, grade, section },
+            data: { dob, gender },
           });
         } else {
           await tx.student_details.create({
-            data: { user_id, dob, gender, school, grade, section },
+            data: { user_id, dob, gender },
           });
         }
       }
@@ -280,23 +264,20 @@ export async function PUT(req: Request) {
       return userWithDetails;
     });
 
-    return NextResponse.json(
-      { success: true, data: result },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true, data: result }, { status: 200 });
   } catch (error: any) {
     console.error("❌ PUT /api/users error:", error);
 
     if (error.name === "ValidationError") {
       return NextResponse.json(
         { success: false, validationErrors: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
       { success: false, error: "Error updating user" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -312,7 +293,7 @@ export async function DELETE(req: Request) {
     if (!user_id) {
       return NextResponse.json(
         { success: false, error: "User ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -330,14 +311,13 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json(
       { success: true, message: "User deleted successfully" },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("❌ DELETE /api/users error:", error);
     return NextResponse.json(
       { success: false, error: "Error deleting user" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

@@ -18,6 +18,7 @@ import {
   FormHelperText,
   IconButton,
   CircularProgress,
+  InputAdornment,
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import * as yup from "yup";
@@ -37,11 +38,7 @@ interface User {
   email: string;
   role: string;
   status: string;
-
-  // Student details (optional)
-  grade?: string;
-  section?: string;
-  school?: string;
+  mobile?: string;
   dob?: string;
   gender?: string;
 }
@@ -70,9 +67,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         "Enter a valid email address",
       )
       .required("Email is required"),
-    grade: yup.string().required("Grade / Department is required"),
-    school: yup.string().required("School / College is required"),
     dob: yup.string().required("Date of Birth is required"),
+    mobile: yup
+      .string()
+      .required("Mobile number is required")
+      .matches(/^[6-9]\d{9}$/, {
+        message: "Enter a valid 10-digit mobile number",
+        excludeEmptyString: true,
+      }),
     gender: yup.string().required("Gender is required"),
   });
 
@@ -106,10 +108,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       const userData = {
         ...user,
         // Handle flattened data (from UserManagement page)
+        mobile: user.mobile || user.mobile_number || "",
         dob: user.dob || user.student_details?.dob || "",
-        grade: user.grade || user.student_details?.grade || "",
-        section: user.section || user.student_details?.section || "",
-        school: user.school || user.student_details?.school || "",
         gender: user.gender || user.student_details?.gender || "",
       };
 
@@ -154,12 +154,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         email: editUser.email,
         role: editUser.role,
         status: editUser.status,
+        mobile_number: editUser.mobile,
       };
 
       if (editUser.role === "student") {
-        updateData.grade = editUser.grade || null;
-        updateData.section = editUser.section || null;
-        updateData.school = editUser.school || null;
         updateData.gender = editUser.gender || null;
         updateData.dob = editUser.dob
           ? new Date(editUser.dob + "T00:00:00").toISOString()
@@ -273,6 +271,28 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             sx={{ backgroundColor: "#f9f9f9", mb: 2 }}
           />
 
+          <TextField
+            label="Mobile Number"
+            value={editUser.mobile || ""}
+            onChange={(e) =>
+              handleChange("mobile", e.target.value.replace(/\D/g, ""))
+            }
+            error={!!errors.mobile}
+            helperText={errors.mobile}
+            fullWidth
+            sx={{ mb: 2 }}
+            inputProps={{
+              inputMode: "numeric",
+              maxLength: 10,
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">+91</InputAdornment>
+              ),
+            }}
+            disabled
+          />
+
           <FormControl fullWidth>
             <InputLabel>Role</InputLabel>
             <Select value={editUser.role} label="Role" disabled sx={{ mb: 2 }}>
@@ -318,36 +338,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   </Typography>
                 )}
               </FormControl>
-
-              <TextField
-                label="School / College Name"
-                value={editUser.school || ""}
-                onChange={(e) => handleChange("school", e.target.value)}
-                error={!!errors.school}
-                helperText={errors.school}
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-
-              <TextField
-                label="Grade / Department"
-                value={editUser.grade || ""}
-                onChange={(e) => handleChange("grade", e.target.value)}
-                error={!!errors.grade}
-                helperText={errors.grade}
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-
-              <TextField
-                label="Section (Optional)"
-                value={editUser.section || ""}
-                onChange={(e) =>
-                  setEditUser({ ...editUser, section: e.target.value })
-                }
-                fullWidth
-                sx={{ mb: 2 }}
-              />
             </>
           )}
 

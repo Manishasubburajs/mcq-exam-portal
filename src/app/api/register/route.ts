@@ -13,15 +13,22 @@ export async function POST(req: Request) {
       password,
       firstName,
       lastName,
+      mobile,
       dob,
       gender,
-      school,
-      grade,
-      section,
     } = body;
 
     // Basic validation
-    if (!email || !username || !password || !firstName || !lastName) {
+    if (
+      !email ||
+      !username ||
+      !password ||
+      !firstName ||
+      !lastName ||
+      !mobile ||
+      !dob ||
+      !gender
+    ) {
       return NextResponse.json(
         { error: "Please fill in all required fields." },
         { status: 400 },
@@ -55,6 +62,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const mobileExists = await prisma.users.findFirst({
+      where: { mobile_number: mobile },
+    });
+
+    if (mobileExists) {
+      return NextResponse.json(
+        { error: "Mobile number already registered" },
+        { status: 409 },
+      );
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -67,13 +85,11 @@ export async function POST(req: Request) {
         role: "student",
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        mobile_number: mobile ? mobile.trim() : null,
         student_details: {
           create: {
             dob: new Date(dob),
             gender,
-            school: school.trim(),
-            grade,
-            section: section?.trim() || null,
           },
         },
       },

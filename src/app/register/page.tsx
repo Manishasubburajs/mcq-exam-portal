@@ -18,12 +18,14 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
 import styles from "./page.module.css";
 
-const steps = ["Account", "Personal", "Academic"];
+const steps = ["Account", "Personal"];
 
 // Step-wise validation schemas
 const accountSchema = yup.object({
@@ -62,18 +64,19 @@ const accountSchema = yup.object({
 const personalSchema = yup.object({
   firstName: yup.string().required("First name is required"),
   lastName: yup.string().required("Last name is required"),
+  mobile: yup
+    .string()
+    .required("Mobile number is required")
+    .matches(/^[6-9]\d{9}$/, {
+      message: "Enter a valid 10-digit mobile number",
+      excludeEmptyString: true,
+    }),
   dob: yup.string().required("Date of Birth is required"),
   gender: yup.string().required("Gender is required"),
-});
-
-const academicSchema = yup.object({
-  // studentId: yup.string().required("Student ID is required"),
-  school: yup.string().required("School is required"),
-  grade: yup.string().required("Grade is required"),
   agree: yup.bool().oneOf([true], "You must agree to terms"),
 });
 
-const stepSchemas = [accountSchema, personalSchema, academicSchema];
+const stepSchemas = [accountSchema, personalSchema];
 
 export default function Register() {
   const [activeStep, setActiveStep] = useState(0);
@@ -87,12 +90,9 @@ export default function Register() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
+    mobile: "",
     dob: "",
     gender: "",
-    // studentId: "",
-    school: "",
-    grade: "",
-    section: "",
     agree: false,
   });
 
@@ -371,6 +371,27 @@ export default function Register() {
                 </Box>
                 <TextField
                   fullWidth
+                  type="text"
+                  margin="normal"
+                  label="Mobile Number"
+                  value={formData.mobile}
+                  onChange={(e) =>
+                    handleChange("mobile", e.target.value.replace(/\D/g, ""))
+                  }
+                  error={!!errors.mobile}
+                  helperText={errors.mobile}
+                  inputProps={{
+                    inputMode: "numeric",
+                    maxLength: 10,
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">+91</InputAdornment>
+                    ),
+                  }}
+                />
+                <TextField
+                  fullWidth
                   margin="normal"
                   label="Date of Birth"
                   type="date"
@@ -385,64 +406,26 @@ export default function Register() {
                   }}
                   inputProps={{ max: "9999-12-31" }}
                 />
-                <Select
-                  fullWidth
-                  displayEmpty
-                  value={formData.gender}
-                  onChange={(e) => handleChange("gender", e.target.value)}
-                  sx={{ mt: 2 }}
-                  error={!!errors.gender}
-                >
-                  <MenuItem value="">Select Gender</MenuItem>
-                  <MenuItem value="male">Male</MenuItem>
-                  <MenuItem value="female">Female</MenuItem>
-                  <MenuItem value="other">Other</MenuItem>
-                </Select>
-                {errors.gender && (
-                  <Typography color="error" variant="caption">
-                    {errors.gender}
-                  </Typography>
-                )}
-              </Box>
-            )}
+                <FormControl fullWidth error={!!errors.gender} margin="normal">
+                  <InputLabel>Gender</InputLabel>
+                  <Select
+                    label="Gender"
+                    value={formData.gender}
+                    onChange={(e) => handleChange("gender", e.target.value)}
+                    error={!!errors.gender}
+                  >
+                    <MenuItem value="">Select Gender</MenuItem>
+                    <MenuItem value="male">Male</MenuItem>
+                    <MenuItem value="female">Female</MenuItem>
+                    <MenuItem value="other">Other</MenuItem>
+                  </Select>
+                  {errors.gender && (
+                    <Typography color="error" variant="caption">
+                      {errors.gender}
+                    </Typography>
+                  )}
+                </FormControl>
 
-            {/* Step 3: Academic */}
-            {activeStep === 2 && (
-              <Box>
-                {/* <TextField
-                  fullWidth
-                  margin="normal"
-                  label="Student ID"
-                  value={formData.studentId}
-                  onChange={(e) => handleChange("studentId", e.target.value)}
-                  error={!!errors.studentId}
-                  helperText={errors.studentId}
-                /> */}
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  label="School / College Name"
-                  value={formData.school}
-                  onChange={(e) => handleChange("school", e.target.value)}
-                  error={!!errors.school}
-                  helperText={errors.school}
-                />
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  label="Grade/Department"
-                  value={formData.grade}
-                  onChange={(e) => handleChange("grade", e.target.value)}
-                  error={!!errors.grade}
-                  helperText={errors.grade}
-                />
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  label="Section (Optional)"
-                  value={formData.section}
-                  onChange={(e) => handleChange("section", e.target.value)}
-                />
                 <FormControlLabel
                   control={
                     <Checkbox

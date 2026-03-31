@@ -15,6 +15,7 @@ import {
   CardContent,
   useTheme,
   CircularProgress,
+  InputAdornment,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
@@ -33,10 +34,15 @@ const personalInformationSchema = yup.object({
       /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
       "Enter a valid email with proper domain",
     ),
+  mobile: yup
+    .string()
+    .required("Mobile number is required")
+    .matches(/^[6-9]\d{9}$/, {
+      message: "Enter a valid 10-digit mobile number",
+      excludeEmptyString: true,
+    }),
   birthDate: yup.string().required("Date of birth is required"),
   gender: yup.string().required("Gender is required"),
-  school: yup.string().required("School / College name is required"),
-  grade: yup.string().required("Grade / Department is required"),
 });
 
 /* ---- Validation Schema for Account Settings ---- */
@@ -238,6 +244,58 @@ const PersonalInformationTab = ({
               <Box sx={{ flex: 1 }}>
                 <TextField
                   fullWidth
+                  label="Email Address"
+                  type="email"
+                  value={personalInfo.email}
+                  disabled
+                  onChange={(e) =>
+                    handlePersonalInfoChange("email", e.target.value)
+                  }
+                  size={isMobile ? "small" : "medium"}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  type="text"
+                  label="Mobile Number"
+                  value={personalInfo.mobile}
+                  onChange={(e) =>
+                    handlePersonalInfoChange(
+                      "mobile",
+                      e.target.value.replace(/\D/g, ""),
+                    )
+                  }
+                  size={isMobile ? "small" : "medium"}
+                  error={!!errors.mobile}
+                  helperText={errors.mobile}
+                  inputProps={{
+                    inputMode: "numeric", // mobile keyboard numbers
+                    maxLength: 10,
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">+91</InputAdornment>
+                    ),
+                  }}
+                  disabled
+                />
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+                mb: 2,
+              }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
                   label="First Name"
                   value={personalInfo.firstName}
                   onChange={(e) =>
@@ -262,20 +320,6 @@ const PersonalInformationTab = ({
                 />
               </Box>
             </Box>
-            <TextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={personalInfo.email}
-              disabled
-              onChange={(e) =>
-                handlePersonalInfoChange("email", e.target.value)
-              }
-              sx={{ mb: 2 }}
-              size={isMobile ? "small" : "medium"}
-              error={!!errors.email}
-              helperText={errors.email}
-            />
 
             <Box
               sx={{
@@ -303,7 +347,7 @@ const PersonalInformationTab = ({
                   inputProps={{ max: "9999-12-31" }}
                 />
               </Box>
-              <Box sx={{ flex: 1 }}>
+              <Box sx={{ flex: 1, mb: 2 }}>
                 <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                   <InputLabel>Gender</InputLabel>
                   <Select
@@ -326,47 +370,7 @@ const PersonalInformationTab = ({
                 </FormControl>
               </Box>
             </Box>
-            <TextField
-              fullWidth
-              label="School / College Name"
-              value={personalInfo.school}
-              onChange={(e) =>
-                handlePersonalInfoChange("school", e.target.value)
-              }
-              sx={{ mb: 2 }}
-              size={isMobile ? "small" : "medium"}
-              error={!!errors.school}
-              helperText={errors.school}
-            />
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
-                gap: 2,
-                mb: 2,
-              }}
-            >
-              <TextField
-                fullWidth
-                label="Grade / Department"
-                value={personalInfo.grade}
-                onChange={(e) =>
-                  handlePersonalInfoChange("grade", e.target.value)
-                }
-                size={isMobile ? "small" : "medium"}
-                error={!!errors.grade}
-                helperText={errors.grade}
-              />
-              <TextField
-                fullWidth
-                label="Section (Optional)"
-                value={personalInfo.section}
-                onChange={(e) =>
-                  handlePersonalInfoChange("section", e.target.value)
-                }
-                size={isMobile ? "small" : "medium"}
-              />
-            </Box>
+
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
               <Button
                 type="submit"
@@ -751,11 +755,9 @@ const ProfilePage = () => {
     firstName: "",
     lastName: "",
     email: "",
+    mobile: "",
     birthDate: "",
     gender: "",
-    school: "",
-    grade: "",
-    section: "",
   });
 
   const [accountSettings, setAccountSettings] = useState({
@@ -789,13 +791,11 @@ const ProfilePage = () => {
         firstName: user.first_name || "",
         lastName: user.last_name || "",
         email: user.email || "",
+        mobile: user.mobile_number || "",
         birthDate: user.student_details?.dob
           ? user.student_details.dob.split("T")[0]
           : "",
         gender: user.student_details?.gender || "",
-        school: user.student_details?.school || "",
-        grade: user.student_details?.grade || "",
-        section: user.student_details?.section || "",
       });
 
       setAccountSettings((prev) => ({
@@ -856,7 +856,7 @@ const ProfilePage = () => {
       }}
     >
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Box
           sx={{
             display: "flex",
