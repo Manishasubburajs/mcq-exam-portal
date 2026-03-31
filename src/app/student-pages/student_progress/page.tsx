@@ -26,6 +26,7 @@ import {
   Grid,
   ToggleButtonGroup,
   ToggleButton,
+  Tooltip,
 } from "@mui/material";
 import {
   TrendingUp,
@@ -44,7 +45,7 @@ import {
   PointElement,
   LineElement,
   Title,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
   Filler,
 } from "chart.js";
@@ -58,7 +59,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   Title,
-  Tooltip,
+  ChartTooltip,
   Legend,
   Filler,
 );
@@ -150,12 +151,12 @@ const StudentProgressPage = () => {
             const date = context.label;
             const examName = examNames[date];
             const accuracy = context.parsed.y;
-            
+
             let label = "Accuracy: " + accuracy + "%";
             if (examName) {
               label += "\nExam: " + examName;
             }
-            
+
             return label;
           },
         },
@@ -215,47 +216,52 @@ const StudentProgressPage = () => {
       );
       const result = await response.json();
 
-       if (result.success) {
+      if (result.success) {
         // Aggregate accuracy per date to avoid duplicate dates
         const dateToAccuracies: Record<string, number[]> = {};
         const dateToExamName: Record<string, string> = {};
-        
+
         result.data.forEach((item: any) => {
           const date = new Date(item.date);
           const day = String(date.getDate()).padStart(2, "0");
           const month = String(date.getMonth() + 1).padStart(2, "0");
           const year = date.getFullYear();
           const dateStr = `${day}-${month}-${year}`;
-          
+
           if (!dateToAccuracies[dateStr]) {
             dateToAccuracies[dateStr] = [];
           }
           dateToAccuracies[dateStr].push(item.accuracy);
           dateToExamName[dateStr] = item.title; // Store exam name for the date
         });
-        
+
         // Calculate average accuracy for each date
-        const aggregatedData: { date: string; accuracy: number }[] = Object.entries(dateToAccuracies).map(([date, accuracies]) => {
-          const averageAccuracy = accuracies.reduce((sum, acc) => sum + acc, 0) / accuracies.length;
-          return {
-            date,
-            accuracy: Number(averageAccuracy.toFixed(2)) // Round to 2 decimal places
-          };
-        });
-        
+        const aggregatedData: { date: string; accuracy: number }[] =
+          Object.entries(dateToAccuracies).map(([date, accuracies]) => {
+            const averageAccuracy =
+              accuracies.reduce((sum, acc) => sum + acc, 0) / accuracies.length;
+            return {
+              date,
+              accuracy: Number(averageAccuracy.toFixed(2)), // Round to 2 decimal places
+            };
+          });
+
         // Sort by date
         aggregatedData.sort((a, b) => {
           const [dayA, monthA, yearA] = a.date.split("-").map(Number);
           const [dayB, monthB, yearB] = b.date.split("-").map(Number);
-          return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
+          return (
+            new Date(yearA, monthA - 1, dayA).getTime() -
+            new Date(yearB, monthB - 1, dayB).getTime()
+          );
         });
-        
+
         const formattedData = {
-          labels: aggregatedData.map(item => item.date),
+          labels: aggregatedData.map((item) => item.date),
           datasets: [
             {
               label: "Accuracy",
-              data: aggregatedData.map(item => item.accuracy),
+              data: aggregatedData.map((item) => item.accuracy),
               borderColor: "#6a11cb",
               backgroundColor: "rgba(106, 17, 203, 0.1)",
               borderWidth: 3,
@@ -432,20 +438,25 @@ const StudentProgressPage = () => {
     if (attempts.length > 0) {
       // Filter attempts based on exam type
       let filteredAttempts = attempts;
-      
+
       if (examType !== "all") {
-        filteredAttempts = attempts.filter(exam => exam.examType === examType);
+        filteredAttempts = attempts.filter(
+          (exam) => exam.examType === examType,
+        );
         // For specific exam types, only include the latest attempt per exam
         const examToLatestAttempt: Record<number, any> = {};
-        
-        filteredAttempts.forEach(attempt => {
+
+        filteredAttempts.forEach((attempt) => {
           const examId = attempt.examId;
-          
-          if (!examToLatestAttempt[examId] || attempt.attemptNumber > examToLatestAttempt[examId].attemptNumber) {
+
+          if (
+            !examToLatestAttempt[examId] ||
+            attempt.attemptNumber > examToLatestAttempt[examId].attemptNumber
+          ) {
             examToLatestAttempt[examId] = attempt;
           }
         });
-        
+
         filteredAttempts = Object.values(examToLatestAttempt);
       }
 
@@ -552,6 +563,36 @@ const StudentProgressPage = () => {
   const handleReview = (attemptId: number) => {
     setSelectedAttemptId(attemptId);
     setReviewOpen(true);
+  };
+
+  const isResultsAvailable = (exam: any): boolean => {
+    if (exam.examType !== "live" || !exam.endTime) {
+      return true;
+    }
+
+    const examEndTime = new Date(exam.endTime);
+    const resultsAvailableTime = new Date(
+      examEndTime.getTime() + 30 * 60 * 1000,
+    );
+
+    return new Date() >= resultsAvailableTime;
+  };
+
+  const getResultsAvailableTime = (exam: any): string => {
+    if (exam.examType !== "live" || !exam.endTime) {
+      return "";
+    }
+
+    const examEndTime = new Date(exam.endTime);
+    const resultsAvailableTime = new Date(
+      examEndTime.getTime() + 30 * 60 * 1000,
+    );
+
+    return resultsAvailableTime.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
   return (
@@ -675,7 +716,7 @@ const StudentProgressPage = () => {
             Performance Trend
           </Typography>
 
-           {/* Filters Container */}
+          {/* Filters Container */}
           <Box
             sx={{
               mb: 3,
@@ -996,9 +1037,7 @@ const StudentProgressPage = () => {
                       <TableCell sx={{ fontWeight: "bold" }}>Exam</TableCell>
                       <TableCell sx={{ fontWeight: "bold" }}>Type</TableCell>
                       <TableCell sx={{ fontWeight: "bold" }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: "bold" }}>
-                        Score (%)
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: "bold" }}>Score</TableCell>
                       <TableCell sx={{ fontWeight: "bold" }}>
                         Time Taken
                       </TableCell>
@@ -1015,101 +1054,103 @@ const StudentProgressPage = () => {
                       </TableRow>
                     )}
 
-                    {paginatedAttempts.map((exam) => (
-                      <TableRow hover key={exam.attemptId}>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontWeight: "medium" }}
-                          >
-                            {exam.title}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={
-                              exam.examType.charAt(0).toUpperCase() +
-                              exam.examType.slice(1)
-                            }
-                            color={getExamTypeColor(exam.examType)}
-                            size="small"
-                            icon={
-                              exam.examType === "practice" ? (
-                                <PlayArrow />
-                              ) : exam.examType === "mock" ? (
-                                <Assessment />
-                              ) : (
-                                <LiveTv />
-                              )
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>{exam.completedAt}</TableCell>
-                        <TableCell>
-                          {(() => {
-                            const percentage = calculatePercentageFromScore(
-                              Number(exam.score),
-                              exam.questions,
-                            );
+                    {paginatedAttempts.map((exam) => {
+                      const resultsAvailable = isResultsAvailable(exam);
+                      const resultsTime = getResultsAvailableTime(exam);
 
-                            return (
-                              <Typography
-                                sx={{
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {percentage}%
-                              </Typography>
-                            );
-                          })()}
-                        </TableCell>
-
-                        <TableCell>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                            }}
-                          >
-                            <Timer sx={{ fontSize: 16 }} />
-                            <Typography variant="body2">
-                              {formatTimeTaken(
-                                exam.totalTimeSeconds,
-                                exam.duration,
-                              )}
+                      return (
+                        <TableRow hover key={exam.attemptId}>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: "medium" }}
+                            >
+                              {exam.title}
                             </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Box
-                            sx={{
-                              bgcolor: "#d4edda",
-                              color: "#155724",
-                              px: 1,
-                              py: 0.5,
-                              borderRadius: 2,
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              display: "inline-block",
-                            }}
-                          >
-                            Completed
-                          </Box>
-                        </TableCell>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                exam.examType.charAt(0).toUpperCase() +
+                                exam.examType.slice(1)
+                              }
+                              color={getExamTypeColor(exam.examType)}
+                              size="small"
+                              icon={
+                                exam.examType === "practice" ? (
+                                  <PlayArrow />
+                                ) : exam.examType === "mock" ? (
+                                  <Assessment />
+                                ) : (
+                                  <LiveTv />
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>{exam.completedAt}</TableCell>
+                          <TableCell>
+                            {" "}
+                            {resultsAvailable ? exam.score : "-"}
+                          </TableCell>
 
-                        <TableCell>
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            size="small"
-                            onClick={() => handleReview(exam.attemptId)}
-                          >
-                            Review
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          <TableCell>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
+                              <Timer sx={{ fontSize: 16 }} />
+                              <Typography variant="body2">
+                                {formatTimeTaken(
+                                  exam.totalTimeSeconds,
+                                  exam.duration,
+                                )}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box
+                              sx={{
+                                bgcolor: "#d4edda",
+                                color: "#155724",
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 2,
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                display: "inline-block",
+                              }}
+                            >
+                              Completed
+                            </Box>
+                          </TableCell>
+
+                          <TableCell>
+                            <Tooltip
+                              title={
+                                !resultsAvailable
+                                  ? `Results will be available at ${resultsTime}`
+                                  : ""
+                              }
+                            >
+                              <span>
+                                <Button
+                                  variant="outlined"
+                                  color="secondary"
+                                  size="small"
+                                  disabled={!resultsAvailable}
+                                  onClick={() => handleReview(exam.attemptId)}
+                                >
+                                  Review
+                                </Button>
+                              </span>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>

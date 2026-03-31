@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     if (!process.env.JWT_SECRET) {
       return NextResponse.json(
         { success: false, error: "Server configuration error" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     } catch (err) {
       return NextResponse.json(
         { success: false, error: "Invalid or expired token" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json(
         { success: false, error: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
     console.error("❌ GET /users/me error:", error);
     return NextResponse.json(
       { success: false, error: "Something went wrong" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -76,12 +76,10 @@ export async function PUT(req: Request) {
     const {
       firstName,
       lastName,
+      mobile,
       email,
       birthDate,
       gender,
-      school,
-      grade,
-      section,
     } = body;
 
     const updatedUser = await prisma.$transaction(async (tx) => {
@@ -91,6 +89,7 @@ export async function PUT(req: Request) {
           first_name: firstName,
           last_name: lastName,
           email,
+          mobile_number: mobile || null,
         },
       });
 
@@ -104,9 +103,6 @@ export async function PUT(req: Request) {
           data: {
             dob: new Date(birthDate),
             gender,
-            school,
-            grade,
-            section,
           },
         });
       } else {
@@ -115,9 +111,6 @@ export async function PUT(req: Request) {
             user_id: userId,
             dob: new Date(birthDate),
             gender,
-            school,
-            grade,
-            section,
           },
         });
       }
@@ -133,7 +126,7 @@ export async function PUT(req: Request) {
     console.error("❌ PUT /users/me error:", error);
     return NextResponse.json(
       { success: false, error: "Update failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
