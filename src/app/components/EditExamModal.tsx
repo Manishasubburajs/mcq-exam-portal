@@ -21,6 +21,13 @@ import {
   Alert,
   CircularProgress,
   IconButton,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableContainer,
+  Paper,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useState, useMemo, useEffect } from "react";
@@ -140,6 +147,11 @@ export default function EditExamModal({
     setTopicCounts({});
     setTopicErrors({});
     setFormErrors({});
+    setDateErrors({});
+    setQuestionsByTopic({});
+    setSelectedQuestions([]);
+    setLoadingTopics({});
+    setSelectionMode("auto");
   };
 
   const [activeStep, setActiveStep] = useState(0);
@@ -155,6 +167,14 @@ export default function EditExamModal({
   const [endTime, setEndTime] = useState("");
 
   // STEP 3: Questions
+  const [selectionMode, setSelectionMode] = useState<"auto" | "manual">("auto");
+  const [questionsByTopic, setQuestionsByTopic] = useState<
+    Record<number, any[]>
+  >({});
+  const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState<Record<number, boolean>>(
+    {},
+  );
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<number[]>([]);
   const [topicCounts, setTopicCounts] = useState<Record<number, number>>({});
@@ -166,6 +186,17 @@ export default function EditExamModal({
   const [isHydrated, setIsHydrated] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiLoading, setApiLoading] = useState(false);
+  const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
+  const [pageByTopic, setPageByTopic] = useState<Record<number, number>>({});
+  const [filterByTopic, setFilterByTopic] = useState<
+    Record<number, "all" | "selected" | "unselected">
+  >({});
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewQuestions, setPreviewQuestions] = useState<any[]>([]);
+  const [expandedTopics, setExpandedTopics] = useState<Record<number, boolean>>(
+    {},
+  );
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -188,10 +219,13 @@ export default function EditExamModal({
 
   const isPractice = examType === "practice";
 
-  const totalQuestions = Object.values(topicCounts).reduce(
-    (sum, v) => sum + (Number(v) || 0),
-    0,
-  );
+  const totalQuestions =
+    selectionMode === "manual"
+      ? selectedQuestions.length
+      : Object.values(topicCounts).reduce(
+          (sum, v) => sum + (Number(v) || 0),
+          0,
+        );
 
   // Fetch subjects + topics + counts when modal opens
   useEffect(() => {
@@ -219,6 +253,32 @@ export default function EditExamModal({
     return localDate.toISOString().slice(0, 16);
   };
 
+
+  const loadSelectedQuestionsForEdit = async () => {
+    if (!isEdit || !examData) return;
+
+    const allSelectedIds = examData.selectedQuestions || [];
+
+    // ✅ STEP 1: SET SELECTED QUESTIONS FIRST
+    setSelectedQuestions(allSelectedIds);
+
+    // ✅ STEP 2: LOAD QUESTIONS BY TOPIC
+    const topicIds = new Set<number>();
+
+    examData.subjects.forEach((s: any) => {
+      if (s.topic_id) topicIds.add(s.topic_id);
+    });
+
+    for (const topicId of topicIds) {
+      const res = await fetch(`/api/questions/by-topic?topicId=${topicId}`);
+      const data = await res.json();
+
+      setQuestionsByTopic((prev) => ({
+        ...prev,
+        [topicId]: data,
+      }));
+    }
+  };
   // Populate form for edit
   useEffect(() => {
     if (open && isEdit && examData) {
@@ -244,16 +304,39 @@ export default function EditExamModal({
         counts[s.topic_id] = s.question_count;
       });
       setTopicCounts(counts);
+      setSelectionMode(examData.selection_mode || "auto");
       setIsHydrated(true);
+
+      loadSelectedQuestionsForEdit();
+    }
+  }, [open, isEdit, examData]);
+
+  useEffect(() => {
+    if (open && isEdit) {
+      fetch(`/api/exams/${examData.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.selectedQuestions) {
+            setSelectedQuestions(data.selectedQuestions);
+          }
+        });
     }
   }, [open, isEdit, examData]);
 
   // Toggle Subject
   const toggleSubject = (id: number) => {
+    setExpandedTopics({});
+
     if (isPractice) {
       setSelectedSubjects([id]);
+
       setTopicCounts({});
       setTopicErrors({});
+
+      setSelectedQuestions([]);
+      setQuestionsByTopic({});
+      setPageByTopic({});
+      setSearchTerms({});
     } else {
       setSelectedSubjects((prev) => {
         const isRemoving = prev.includes(id);
@@ -268,6 +351,12 @@ export default function EditExamModal({
 
           if (subject) {
             const topicIds = subject.topics.map((t) => t.topic_id);
+
+            setQuestionsByTopic((prev) => {
+              const updated = { ...prev };
+              subject.topics.forEach((t) => delete updated[t.topic_id]);
+              return updated;
+            });
 
             // remove topic counts
             setTopicCounts((prevCounts) => {
@@ -289,6 +378,17 @@ export default function EditExamModal({
               delete newErrors[`subject_${id}`];
               return newErrors;
             });
+
+            setSelectedQuestions((prev) =>
+              prev.filter(
+                (qid) =>
+                  !subject?.topics.some((t) =>
+                    (questionsByTopic[t.topic_id] || []).some(
+                      (q) => q.question_id === qid,
+                    ),
+                  ),
+              ),
+            );
           }
         }
 
@@ -468,9 +568,12 @@ export default function EditExamModal({
       } else {
         const subject = subjects.find((s) => s.subject_id === subjectId);
 
-        const hasAssignedTopic = subject?.topics.some(
-          (topic) => (topicCounts[topic.topic_id] || 0) > 0,
-        );
+        const hasAssignedTopic =
+          selectionMode === "manual"
+            ? selectedQuestions.length > 0
+            : subject?.topics.some(
+                (topic) => (topicCounts[topic.topic_id] || 0) > 0,
+              );
 
         if (!hasAssignedTopic) {
           errors.subject = "Please assign at least one topic";
@@ -501,14 +604,24 @@ export default function EditExamModal({
         return;
       }
 
-      const hasTopic = subject.topics.some(
-        (topic) => (topicCounts[topic.topic_id] || 0) > 0,
-      );
+      if (selectionMode === "manual") {
+        // ✅ FIX: only show error if ZERO questions
+        if (selectedQuestions.length === 0) {
+          errors[`subject_${subjectId}`] =
+            "Please select at least one question";
+          isValid = false;
+        }
+      } else {
+        const hasTopic = subject.topics.some(
+          (topic) => (topicCounts[topic.topic_id] || 0) > 0,
+        );
 
-      if (!hasTopic) {
-        errors[`subject_${subjectId}`] =
-          "At least one topic must be assigned in this subject";
-        isValid = false;
+        // ✅ FIX: only show if no topic AND totalQuestions = 0
+        if (!hasTopic && totalQuestions === 0) {
+          errors[`subject_${subjectId}`] =
+            "At least one topic must be assigned in this subject";
+          isValid = false;
+        }
       }
     });
 
@@ -522,11 +635,11 @@ export default function EditExamModal({
       isValid = false;
     }
 
-    // 🚨 total questions validation
-    // if (totalQuestions <= 0) {
-    //   errors.totalQuestions = "Please add at least one question";
-    //   isValid = false;
-    // }
+
+    if (selectionMode === "manual" && totalQuestions <= 0) {
+      errors.totalQuestions = "Please select at least one question";
+      isValid = false;
+    }
 
     if (
       (examType === "mock" || examType === "live") &&
@@ -674,7 +787,8 @@ export default function EditExamModal({
       duration,
       startTime: startTime ? new Date(startTime).toISOString() : null,
       endTime: endTime ? new Date(endTime).toISOString() : null,
-      topicCounts,
+      selectionMode,
+      ...(selectionMode === "auto" ? { topicCounts } : { selectedQuestions }),
     };
 
     try {
@@ -749,6 +863,62 @@ export default function EditExamModal({
       setDuration(0);
     }
   }, [totalQuestions, examType, isHydrated]);
+
+  useEffect(() => {
+    if (selectionMode === "manual" && selectedQuestions.length > 0) {
+      setFormErrors((prev) => {
+        const newErrors = { ...prev };
+
+        // remove global error
+        delete newErrors.totalQuestions;
+
+        // ✅ remove ALL subject errors
+        Object.keys(newErrors).forEach((key) => {
+          if (key.startsWith("subject_")) {
+            delete newErrors[key];
+          }
+        });
+
+        return newErrors;
+      });
+    }
+  }, [selectedQuestions, selectionMode]);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [open]);
+
+  const fetchQuestionsByTopic = async (topicId: number) => {
+    // already loaded → skip
+    if (questionsByTopic[topicId] || loadingTopics[topicId]) return;
+
+    setLoadingTopics((prev) => ({ ...prev, [topicId]: true }));
+
+    try {
+      const res = await fetch(`/api/questions/by-topic?topicId=${topicId}`);
+      const data = await res.json();
+
+      setQuestionsByTopic((prev) => ({
+        ...prev,
+        [topicId]: data,
+      }));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTopics((prev) => ({ ...prev, [topicId]: false }));
+    }
+  };
 
   const renderStepContent = () => {
     switch (steps[activeStep]) {
@@ -918,112 +1088,553 @@ export default function EditExamModal({
 
       case "Questions":
         return (
-          <Box>
-            {formErrors.subject && (
-              <Typography color="error" mb={2}>
-                {formErrors.subject}
-              </Typography>
-            )}
+          <>
+            <Box mb={2} border="1px solid #ddd" borderRadius={2} p={2}>
+              <Typography fontWeight={600}>Selection Mode</Typography>
 
-            {loadingSubjects ? (
-              <Box display="flex" justifyContent="center" mt={3}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              subjects.map((subj) => {
-                const selected = selectedSubjects.includes(subj.subject_id);
-                return (
-                  <Box key={subj.subject_id} mb={3}>
-                    <FormControlLabel
-                      control={
-                        isPractice ? (
-                          <Radio
-                            checked={selected}
-                            onChange={() => toggleSubject(subj.subject_id)}
-                          />
-                        ) : (
-                          <Checkbox
-                            checked={selected}
-                            onChange={() => toggleSubject(subj.subject_id)}
-                          />
-                        )
-                      }
-                      label={subj.subject_name}
-                    />
+              <RadioGroup row value={selectionMode}>
+                <FormControlLabel
+                  value="auto"
+                  control={<Radio />}
+                  label="Auto (by count)"
+                  disabled
+                />
+                <FormControlLabel
+                  value="manual"
+                  control={<Radio />}
+                  label="Manual Selection"
+                  disabled
+                />
+              </RadioGroup>
+            </Box>
 
-                    {/* Subject-level error displayed ABOVE topics */}
-                    {formErrors[`subject_${subj.subject_id}`] && (
-                      <Typography color="error" ml={4} mb={1}>
-                        {formErrors[`subject_${subj.subject_id}`]}
-                      </Typography>
-                    )}
+            <Box>
+              {formErrors.subject && (
+                <Typography color="error" mb={2}>
+                  {formErrors.subject}
+                </Typography>
+              )}
 
-                    {selected && (
-                      <Box ml={4} mt={1}>
-                        {subj.topics.map((topic) => {
-                          const disabled = topic.question_count === 0;
-                          return (
-                            <Box
-                              key={topic.topic_id}
-                              display="grid"
-                              gridTemplateColumns="200px 120px 120px"
-                              alignItems="center"
-                              gap={2}
-                              mb={1}
-                            >
-                              <Typography>{topic.topic_name}</Typography>
-                              <Typography
-                                color={
-                                  disabled ? "text.disabled" : "text.primary"
-                                }
-                              >
-                                Available: {topic.question_count}
-                              </Typography>
-                              <TextField
-                                size="small"
-                                type="number"
-                                disabled={disabled}
-                                value={topicCounts[topic.topic_id] ?? ""}
-                                error={!!topicErrors[topic.topic_id]}
-                                helperText={topicErrors[topic.topic_id] || " "}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  handleTopicChange(
-                                    topic.topic_id,
-                                    val === "" ? undefined : Number(val),
-                                    topic.question_count,
+              {loadingSubjects ? (
+                <Box display="flex" justifyContent="center" mt={3}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                subjects.map((subj) => {
+                  const selected = selectedSubjects.includes(subj.subject_id);
+                  return (
+                    <Box key={subj.subject_id} mb={3}>
+                      <FormControlLabel
+                        control={
+                          isPractice ? (
+                            <Radio
+                              checked={selected}
+                              onChange={() => toggleSubject(subj.subject_id)}
+                            />
+                          ) : (
+                            <Checkbox
+                              checked={selected}
+                              onChange={() => toggleSubject(subj.subject_id)}
+                            />
+                          )
+                        }
+                        label={subj.subject_name}
+                      />
+
+                      {/* Subject-level error displayed ABOVE topics */}
+                      {formErrors[`subject_${subj.subject_id}`] && (
+                        <Typography color="error" ml={4} mb={1}>
+                          {formErrors[`subject_${subj.subject_id}`]}
+                        </Typography>
+                      )}
+
+                      {selected && (
+                        <Box ml={4} mt={1}>
+                          {subj.topics.map((topic) => {
+                            const disabled = topic.question_count === 0;
+                            const searchValue =
+                              searchTerms[topic.topic_id] || "";
+                            const list = questionsByTopic[topic.topic_id] || [];
+                            const filterType =
+                              filterByTopic[topic.topic_id] || "all";
+
+                            const filteredQuestions = list
+                              .filter((q) =>
+                                q.question_text
+                                  .toLowerCase()
+                                  .includes(searchValue.toLowerCase()),
+                              )
+                              .filter((q) => {
+                                if (filterType === "selected") {
+                                  return selectedQuestions.includes(
+                                    q.question_id,
                                   );
-                                }}
-                                inputProps={{
-                                  min: 0,
-                                  max: topic.question_count,
-                                }}
-                                onKeyDown={(e) => {
-                                  if (
-                                    ["-", "+", "e", "E", "."].includes(e.key)
-                                  ) {
-                                    e.preventDefault();
-                                  }
-                                }}
-                              />
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    )}
-                    <Divider sx={{ mt: 2 }} />
-                  </Box>
-                );
-              })
-            )}
-            <Typography fontWeight={700} mt={2}>
-              Total Questions: {totalQuestions}
-            </Typography>
+                                }
+                                if (filterType === "unselected") {
+                                  return !selectedQuestions.includes(
+                                    q.question_id,
+                                  );
+                                }
+                                return true;
+                              });
 
-            {formErrors.totalQuestions && (
-              <Typography color="error">{formErrors.totalQuestions}</Typography>
-            )}
-          </Box>
+                            const selectedCount = (
+                              questionsByTopic[topic.topic_id] || []
+                            ).filter((q) =>
+                              selectedQuestions.includes(q.question_id),
+                            ).length;
+
+                            const page = pageByTopic[topic.topic_id] || 0;
+                            const rowsPerPage = 10;
+                            const paginatedQuestions = filteredQuestions.slice(
+                              page * rowsPerPage,
+                              page * rowsPerPage + rowsPerPage,
+                            );
+                            const totalPages = Math.max(
+                              1,
+                              Math.ceil(filteredQuestions.length / rowsPerPage),
+                            );
+                            return (
+                              <Box key={topic.topic_id} mb={2} ml={4}>
+                                <Box
+                                  key={topic.topic_id}
+                                  display="grid"
+                                  gridTemplateColumns={
+                                    selectionMode === "manual"
+                                      ? "200px 120px 300px 300px"
+                                      : "200px 120px 120px"
+                                  }
+                                  alignItems="center"
+                                  gap={2}
+                                  mb={1}
+                                >
+                                  <Typography>{topic.topic_name}</Typography>
+                                  <Typography
+                                    color={
+                                      disabled
+                                        ? "text.disabled"
+                                        : "text.primary"
+                                    }
+                                  >
+                                    Available: {topic.question_count}
+                                  </Typography>
+                                  {selectionMode === "manual" ? (
+                                    <Box
+                                      display="flex"
+                                      alignItems="center"
+                                      gap={1}
+                                    >
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        disabled={topic.question_count === 0}
+                                        onClick={() => {
+                                          // toggle UI
+                                          setExpandedTopics((prev) => ({
+                                            ...prev,
+                                            [topic.topic_id]:
+                                              !prev[topic.topic_id],
+                                          }));
+
+                                          // fetch only first time
+                                          if (
+                                            !questionsByTopic[topic.topic_id]
+                                          ) {
+                                            fetchQuestionsByTopic(
+                                              topic.topic_id,
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        {loadingTopics[topic.topic_id]
+                                          ? "Loading..."
+                                          : expandedTopics[topic.topic_id] ||
+                                              false
+                                            ? "Hide Questions"
+                                            : "Show Questions"}
+                                      </Button>
+                                      {topic.question_count > 0 && (
+                                        <Typography>
+                                          Selected:{" "}
+                                          {
+                                            (
+                                              questionsByTopic[
+                                                topic.topic_id
+                                              ] || []
+                                            ).filter((q) =>
+                                              selectedQuestions.includes(
+                                                q.question_id,
+                                              ),
+                                            ).length
+                                          }
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  ) : (
+                                    <TextField
+                                      size="small"
+                                      type="number"
+                                      disabled={disabled}
+                                      value={topicCounts[topic.topic_id] ?? ""}
+                                      error={!!topicErrors[topic.topic_id]}
+                                      helperText={
+                                        topicErrors[topic.topic_id] || " "
+                                      }
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        handleTopicChange(
+                                          topic.topic_id,
+                                          val === "" ? undefined : Number(val),
+                                          topic.question_count,
+                                        );
+                                      }}
+                                      inputProps={{
+                                        min: 0,
+                                        max: topic.question_count,
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (
+                                          ["-", "+", "e", "E", "."].includes(
+                                            e.key,
+                                          )
+                                        ) {
+                                          e.preventDefault();
+                                        }
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                                {/* Manual Mode Table */}
+                                {selectionMode === "manual" &&
+                                  expandedTopics[topic.topic_id] &&
+                                  questionsByTopic[topic.topic_id] && (
+                                    <Box mt={1} p={2} component={Paper}>
+                                      <Box display="flex" gap={2} mb={1}>
+                                        <TextField
+                                          select
+                                          size="small"
+                                          label="Filter"
+                                          value={
+                                            filterByTopic[topic.topic_id] ||
+                                            "all"
+                                          }
+                                          onChange={(e) => {
+                                            const value = e.target.value as
+                                              | "all"
+                                              | "selected"
+                                              | "unselected";
+
+                                            setFilterByTopic((prev) => ({
+                                              ...prev,
+                                              [topic.topic_id]: value,
+                                            }));
+
+                                            setPageByTopic((prev) => ({
+                                              ...prev,
+                                              [topic.topic_id]: 0,
+                                            }));
+                                          }}
+                                          SelectProps={{ native: true }}
+                                        >
+                                          <option value="all">All</option>
+                                          <option value="selected">
+                                            Selected
+                                          </option>
+                                          <option value="unselected">
+                                            Unselected
+                                          </option>
+                                        </TextField>
+
+                                        <TextField
+                                          size="small"
+                                          fullWidth
+                                          placeholder="Search questions..."
+                                          value={
+                                            searchTerms[topic.topic_id] || ""
+                                          }
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+
+                                            setSearchTerms((prev) => ({
+                                              ...prev,
+                                              [topic.topic_id]: value,
+                                            }));
+
+                                            setPageByTopic((prev) => ({
+                                              ...prev,
+                                              [topic.topic_id]: 0,
+                                            }));
+                                          }}
+                                          sx={{ flex: 1 }}
+                                        />
+                                      </Box>
+
+                                      <TableContainer>
+                                        <Table size="small">
+                                          <TableHead>
+                                            <TableRow
+                                              sx={{
+                                                backgroundColor: "#f8f9fa",
+                                              }}
+                                            >
+                                              <TableCell
+                                                width={50}
+                                                sx={{ fontWeight: "bold" }}
+                                              >
+                                                <Checkbox
+                                                  checked={
+                                                    paginatedQuestions.length >
+                                                      0 &&
+                                                    paginatedQuestions.every(
+                                                      (q) =>
+                                                        selectedQuestions.includes(
+                                                          q.question_id,
+                                                        ),
+                                                    )
+                                                  }
+                                                  indeterminate={
+                                                    paginatedQuestions.some(
+                                                      (q) =>
+                                                        selectedQuestions.includes(
+                                                          q.question_id,
+                                                        ),
+                                                    ) &&
+                                                    !paginatedQuestions.every(
+                                                      (q) =>
+                                                        selectedQuestions.includes(
+                                                          q.question_id,
+                                                        ),
+                                                    )
+                                                  }
+                                                  onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                      // SELECT ALL (only current page)
+                                                      const ids =
+                                                        paginatedQuestions.map(
+                                                          (q) => q.question_id,
+                                                        );
+
+                                                      setSelectedQuestions(
+                                                        (prev) => [
+                                                          ...new Set([
+                                                            ...prev,
+                                                            ...ids,
+                                                          ]),
+                                                        ],
+                                                      );
+                                                    } else {
+                                                      // UNSELECT ALL (only current page)
+                                                      setSelectedQuestions(
+                                                        (prev) =>
+                                                          prev.filter(
+                                                            (id) =>
+                                                              !paginatedQuestions.some(
+                                                                (q) =>
+                                                                  q.question_id ===
+                                                                  id,
+                                                              ),
+                                                          ),
+                                                      );
+                                                    }
+                                                  }}
+                                                />
+                                              </TableCell>
+                                              <TableCell
+                                                sx={{ fontWeight: "bold" }}
+                                              >
+                                                Question
+                                              </TableCell>
+                                            </TableRow>
+                                          </TableHead>
+                                          <TableBody>
+                                            {paginatedQuestions.length === 0 ? (
+                                              <TableRow>
+                                                <TableCell
+                                                  colSpan={2}
+                                                  align="center"
+                                                >
+                                                  <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    py={2}
+                                                  >
+                                                    {searchValue
+                                                      ? "No questions match your search"
+                                                      : filterType ===
+                                                          "selected"
+                                                        ? "No selected questions"
+                                                        : filterType ===
+                                                            "unselected"
+                                                          ? "No unselected questions"
+                                                          : "No questions available"}
+                                                  </Typography>
+                                                </TableCell>
+                                              </TableRow>
+                                            ) : (
+                                              paginatedQuestions.map((q) => (
+                                                <TableRow key={q.question_id}>
+                                                  <TableCell>
+                                                    <Checkbox
+                                                      checked={selectedQuestions.includes(
+                                                        q.question_id,
+                                                      )}
+                                                      onChange={(e) => {
+                                                        const isChecked =
+                                                          e.target.checked;
+
+                                                        setSelectedQuestions(
+                                                          (prev) =>
+                                                            isChecked
+                                                              ? [
+                                                                  ...prev,
+                                                                  q.question_id,
+                                                                ]
+                                                              : prev.filter(
+                                                                  (id) =>
+                                                                    id !==
+                                                                    q.question_id,
+                                                                ),
+                                                        );
+
+                                                        // 🔥 FIX: update topicCounts
+                                                        setTopicCounts(
+                                                          (prev) => {
+                                                            const topicId =
+                                                              topic.topic_id;
+
+                                                            const current =
+                                                              prev[topicId] ||
+                                                              0;
+
+                                                            if (isChecked) {
+                                                              return {
+                                                                ...prev,
+                                                                [topicId]:
+                                                                  current + 1,
+                                                              };
+                                                            } else {
+                                                              const updated =
+                                                                current - 1;
+
+                                                              if (
+                                                                updated <= 0
+                                                              ) {
+                                                                const copy = {
+                                                                  ...prev,
+                                                                };
+                                                                delete copy[
+                                                                  topicId
+                                                                ];
+                                                                return copy;
+                                                              }
+
+                                                              return {
+                                                                ...prev,
+                                                                [topicId]:
+                                                                  updated,
+                                                              };
+                                                            }
+                                                          },
+                                                        );
+                                                      }}
+                                                      
+                                                    />
+                                                  </TableCell>
+                                                  <TableCell>
+                                                    {q.question_text}
+                                                  </TableCell>
+                                                </TableRow>
+                                              ))
+                                            )}
+                                          </TableBody>
+                                        </Table>
+                                      </TableContainer>
+
+                                      {/* Pagination Controls */}
+                                      <Box
+                                        display="flex"
+                                        justifyContent="flex-end"
+                                        gap={1}
+                                        mt={1}
+                                      >
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          onClick={() =>
+                                            setPageByTopic((prev) => ({
+                                              ...prev,
+                                              [topic.topic_id]: Math.max(
+                                                (prev[topic.topic_id] || 0) - 1,
+                                                0,
+                                              ),
+                                            }))
+                                          }
+                                          disabled={
+                                            totalPages <= 1 ||
+                                            (pageByTopic[topic.topic_id] ||
+                                              0) === 0
+                                          }
+                                        >
+                                          Previous
+                                        </Button>
+
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                          }}
+                                        >
+                                          Page {(page || 0) + 1} of{" "}
+                                          {totalPages || 1}
+                                        </Typography>
+
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          onClick={() =>
+                                            setPageByTopic((prev) => ({
+                                              ...prev,
+                                              [topic.topic_id]: Math.min(
+                                                (prev[topic.topic_id] || 0) + 1,
+                                                totalPages - 1,
+                                              ),
+                                            }))
+                                          }
+                                          disabled={
+                                            totalPages <= 1 ||
+                                            (pageByTopic[topic.topic_id] ||
+                                              0) >=
+                                              totalPages - 1
+                                          }
+                                        >
+                                          Next
+                                        </Button>
+                                      </Box>
+                                    </Box>
+                                  )}
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      )}
+                      <Divider sx={{ mt: 2 }} />
+                    </Box>
+                  );
+                })
+              )}
+              <Typography fontWeight={700} mt={2}>
+                Total Questions: {totalQuestions}
+                {selectionMode === "manual" && " (Manual Selection)"}
+              </Typography>
+
+              {formErrors.totalQuestions && (
+                <Typography color="error">
+                  {formErrors.totalQuestions}
+                </Typography>
+              )}
+            </Box>
+          </>
         );
 
       case "Review":
@@ -1062,6 +1673,7 @@ export default function EditExamModal({
     <>
       <Dialog
         open={open}
+        fullScreen
         onClose={(event, reason) => {
           // Prevent closing when clicking outside or pressing Escape
           if (reason === "backdropClick" || reason === "escapeKeyDown") return;
@@ -1069,8 +1681,7 @@ export default function EditExamModal({
           resetForm();
           onClose();
         }}
-        maxWidth="md"
-        fullWidth
+        scroll="paper"
       >
         <DialogTitle
           sx={{
@@ -1100,7 +1711,12 @@ export default function EditExamModal({
           </Stepper>
           {renderStepContent()}
         </DialogContent>
-        <DialogActions>
+        <DialogActions
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
           <Button
             variant="outlined"
             disabled={activeStep === 0 || isSubmitting}
@@ -1109,41 +1725,103 @@ export default function EditExamModal({
             Back
           </Button>
 
-          {activeStep === steps.length - 1 ? (
-            <Button
-              variant="contained"
-              onClick={handleNext}
-              disabled={apiLoading || isSubmitting}
-              startIcon={
-                isSubmitting ? (
-                  <CircularProgress size={18} color="inherit" />
-                ) : null
-              }
-              sx={{
-                "&.Mui-disabled": {
-                  opacity: 1,
-                  color: "white",
-                  backgroundColor: "primary.main",
-                },
-              }}
-            >
-              {isSubmitting
-                ? isEdit
-                  ? "Updating..."
-                  : "Creating..."
-                : isEdit
-                  ? "Update Exam"
-                  : "Create Exam"}
-            </Button>
+          {/* RIGHT SIDE */}
+          <Box display="flex" gap={1}>
+            {/* ✅ Preview Button */}
+            {steps[activeStep] === "Questions" &&
+              selectionMode === "manual" &&
+              selectedQuestions.length > 0 && (
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    const allQuestions = Object.values(questionsByTopic).flat();
+
+                    const selected = allQuestions.filter((q) =>
+                      selectedQuestions.includes(q.question_id),
+                    );
+
+                    setPreviewQuestions(selected);
+                    setPreviewOpen(true);
+                  }}
+                >
+                  Preview Selected ({selectedQuestions.length})
+                </Button>
+              )}
+
+            {activeStep === steps.length - 1 ? (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={apiLoading || isSubmitting}
+                startIcon={
+                  isSubmitting ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : null
+                }
+                sx={{
+                  "&.Mui-disabled": {
+                    opacity: 1,
+                    color: "white",
+                    backgroundColor: "primary.main",
+                  },
+                }}
+              >
+                {isSubmitting
+                  ? isEdit
+                    ? "Updating..."
+                    : "Creating..."
+                  : isEdit
+                    ? "Update Exam"
+                    : "Create Exam"}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={apiLoading}
+              >
+                Next
+              </Button>
+            )}
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Preview Questions </DialogTitle>
+
+        <DialogContent dividers>
+          {previewQuestions.length === 0 ? (
+            <Typography>No questions selected</Typography>
           ) : (
-            <Button
-              variant="contained"
-              onClick={handleNext}
-              disabled={apiLoading}
-            >
-              Next
-            </Button>
+            previewQuestions.map((q, index) => (
+              <Box key={q.question_id} mb={3}>
+                <Typography fontWeight={600}>
+                  {index + 1}. {q.question_text}
+                </Typography>
+
+                <Box ml={2} mt={1}>
+                  <Typography>A. {q.option_a}</Typography>
+                  <Typography>B. {q.option_b}</Typography>
+                  <Typography>C. {q.option_c}</Typography>
+                  <Typography>D. {q.option_d}</Typography>
+                </Box>
+
+                <Divider sx={{ mt: 2 }} />
+              </Box>
+            ))
           )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setPreviewOpen(false)}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -54,11 +54,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     email: "",
     password: "",
     dob: "",
+    mobile: "",
     gender: "",
     role: defaultRole,
-    grade: "",
-    section: "",
-    school: "",
     status: "active",
   });
 
@@ -71,11 +69,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         email: "",
         password: "",
         dob: "",
+        mobile: "",
         gender: "",
         role: defaultRole,
-        grade: "",
-        section: "",
-        school: "",
         status: "active",
       });
       setErrors({});
@@ -105,10 +101,14 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     first_name: yup.string().required("First name is required"),
     last_name: yup.string().required("Last name is required"),
     dob: yup.string().required("Date of Birth is required"),
+    mobile: yup
+      .string()
+      .required("Mobile number is required")
+      .matches(/^[6-9]\d{9}$/, {
+        message: "Enter a valid 10-digit mobile number",
+        excludeEmptyString: true,
+      }),
     gender: yup.string().required("Gender is required"),
-    grade: yup.string().required("Grade / Department is required"),
-    // section: yup.string().required("Section is required"),
-    school: yup.string().required("School / College is required"),
   });
 
   const teacherAdminSchema = yup.object().shape({
@@ -156,8 +156,12 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       await schema.validate(newUser, { abortEarly: false });
       setErrors({});
 
-      const { password, ...rest } = newUser;
-      const payload = { ...rest, password_hash: password };
+      const { password, mobile, ...rest } = newUser;
+      const payload = {
+        ...rest,
+        password_hash: password,
+        mobile_number: mobile,
+      };
 
       const res = await fetch("/api/users", {
         method: "POST",
@@ -266,6 +270,26 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
       />
 
       <TextField
+        fullWidth
+        type="text"
+        label="Mobile Number"
+        value={newUser.mobile}
+        onChange={(e) =>
+          handleChange("mobile", e.target.value.replace(/\D/g, ""))
+        }
+        error={!!errors.mobile}
+        helperText={errors.mobile}
+        inputProps={{
+          inputMode: "numeric", // mobile keyboard numbers
+          maxLength: 10,
+        }}
+        InputProps={{
+          startAdornment: <InputAdornment position="start">+91</InputAdornment>,
+        }}
+        sx={{ mb: 2 }}
+      />
+
+      <TextField
         label="Date of Birth"
         type="date"
         InputLabelProps={{ shrink: true }}
@@ -277,7 +301,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         sx={{ mb: 2 }}
         inputProps={{ max: "9999-12-31" }}
       />
-      <FormControl fullWidth sx={{ mb: 2 }}>
+      <FormControl fullWidth sx={{ mb: 2 }} error={!!errors.gender}>
         <InputLabel>Gender</InputLabel>
         <Select
           value={newUser.gender}
@@ -297,33 +321,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         )}
       </FormControl>
 
-      <TextField
-        label="School / College Name"
-        fullWidth
-        value={newUser.school}
-        onChange={(e) => handleChange("school", e.target.value)}
-        error={!!errors.school}
-        helperText={errors.school}
-        sx={{ mb: 2 }}
-      />
-
-      <TextField
-        label="Grade / Department"
-        fullWidth
-        value={newUser.grade}
-        onChange={(e) => handleChange("grade", e.target.value)}
-        error={!!errors.grade}
-        helperText={errors.grade}
-        sx={{ mb: 2 }}
-      />
-
-      <TextField
-        label="Section (Optional)"
-        fullWidth
-        value={newUser.section}
-        onChange={(e) => handleChange("section", e.target.value)}
-        sx={{ mb: 2 }}
-      />
 
       <DialogActions>
         <Button variant="outlined" onClick={onClose}>
