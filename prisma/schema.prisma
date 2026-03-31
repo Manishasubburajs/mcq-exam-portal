@@ -18,6 +18,7 @@ model users {
   last_name              String                     @db.VarChar(50)
   created_at             DateTime                   @default(now())
   status                 users_status               @default(active)
+  mobile_number          String?                    @unique(map: "mobile_number") @db.VarChar(20)
   examAssignmentStudents exam_assignment_students[]
   assignments            exam_assignments[]         @relation("AssignmentsGiven")
   exams_created          exams[]                    @relation("ExamsCreated")
@@ -64,6 +65,7 @@ model exams {
   exam_type               exam_type               @default(practice)
   updated_at              DateTime                @updatedAt
   updated_by              Int?
+  selection_mode          exams_selection_mode    @default(auto)
   exam_assignments        exam_assignments[]
   exam_questions          exam_questions[]
   exam_subject_configs    exam_subject_configs[]
@@ -155,10 +157,10 @@ model student_exam_attempts {
   correct_answers        Int                           @default(0)
   wrong_answers          Int                           @default(0)
   unanswered             Int                           @default(0)
-  accuracy               Decimal?                      @default(0) @db.Decimal(5, 2)
-  result                 student_exam_attempts_result?
   status                 student_exam_attempts_status  @default(in_progress)
   attempt_number         Int                           @default(1)
+  accuracy               Decimal?                      @default(0) @db.Decimal(5, 2)
+  result                 student_exam_attempts_result?
   student_answers        student_answers[]
   exam                   exams                         @relation(fields: [exam_id], references: [exam_id])
   student_exam_questions student_exam_questions[]
@@ -264,4 +266,9 @@ enum users_role {
 enum student_exam_attempts_result {
   pass
   fail
+}
+
+enum exams_selection_mode {
+  auto
+  manual
 }

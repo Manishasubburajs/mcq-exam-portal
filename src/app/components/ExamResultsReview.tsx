@@ -17,6 +17,10 @@ import {
   CircularProgress,
   Divider,
   Grid,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
 } from "@mui/material";
 import {
   Print as PrintIcon,
@@ -25,6 +29,19 @@ import {
   Cancel as CancelIcon,
   AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
+
+// Helper function to format time
+const formatTime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${seconds} sec`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) {
+    return `${minutes} min`;
+  }
+  return `${minutes} min ${remainingSeconds} sec`;
+};
 
 const ScoreCircle = ({ score }: { score: number }) => {
   const percentage = score;
@@ -78,6 +95,7 @@ export default function ExamResultsReview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "unanswered">("all");
+  const [timeFilter, setTimeFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!attemptId) {
@@ -156,9 +174,16 @@ export default function ExamResultsReview() {
   
   // Check if it's a live exam and if results should be hidden
   const isLiveExam = exam.exam_type === "live";
-  const examEndTime = new Date(attempt.end_time);
-  const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after end time
+  const examEndTime = new Date(exam.scheduled_end);
+  const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after scheduled end time
   const isResultsAvailable = new Date() >= resultsAvailableTime;
+  
+  // Format the results available time
+  const formattedResultsTime = resultsAvailableTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
   
   // Show message if live exam and results not available yet
   if (isLiveExam && !isResultsAvailable) {
@@ -236,12 +261,24 @@ export default function ExamResultsReview() {
               mb: 4,
             }}
           >
-            You have successfully completed the live exam. Your results will be available after 30 minutes. You can view them in the Exam History. Thank you.
+            You have successfully completed the live exam. Your results will be available at <strong>{formattedResultsTime}</strong>. You can view them in the Exam History. Thank you.
           </Typography>
           
           <Button
             variant="contained"
-            onClick={() => router.push("/student-pages/exam_history")}
+            onClick={() => {
+              // Exit fullscreen before navigating
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              } else if ((document as any).webkitFullscreenElement) {
+                (document as any).webkitExitFullscreen();
+              } else if ((document as any).mozFullScreenElement) {
+                (document as any).mozCancelFullScreen();
+              } else if ((document as any).msFullscreenElement) {
+                (document as any).msExitFullscreen();
+              }
+              router.push("/student-pages/exam_history");
+            }}
             sx={{
               textTransform: "none",
               background: "linear-gradient(to right, #6a11cb, #2575fc)",
@@ -271,9 +308,31 @@ export default function ExamResultsReview() {
   const totalTimeTaken = attempt.total_time_seconds || 0;
   const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
-  const filteredQuestions = questions.filter(
-    (q: any) => filter === "all" || q.status === filter
-  );
+  // Time-based filter logic
+  const getTimeFilterRange = (timeFilter: string): { min: number; max: number } | null => {
+    switch (timeFilter) {
+      case "less30":
+        return { min: 0, max: 30 };
+      case "30to60":
+        return { min: 30, max: 60 };
+      case "1to2":
+        return { min: 60, max: 120 };
+      case "more2":
+        return { min: 120, max: Infinity };
+      default:
+        return null;
+    }
+  };
+
+  const filteredQuestions = questions
+    .filter((q: any) => filter === "all" || q.status === filter)
+    .filter((q: any) => {
+      if (timeFilter === "all") return true;
+      const range = getTimeFilterRange(timeFilter);
+      if (!range) return true;
+      return q.timeTaken >= range.min && q.timeTaken < range.max;
+    })
+    .sort((a: any, b: any) => b.timeTaken - a.timeTaken);
 
   const handlePrint = () => {
     globalThis.window.print();
@@ -564,11 +623,51 @@ export default function ExamResultsReview() {
               </Button>
             </ButtonGroup>
             
+            <FormControl
+              size="small"
+              sx={{
+                minWidth: { xs: "100%", sm: 140 },
+                mt: { xs: 1, sm: 0 },
+              }}
+            >
+              <InputLabel
+                id="time-filter-label"
+                sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+              >
+                Time-Based
+              </InputLabel>
+              <Select
+                labelId="time-filter-label"
+                value={timeFilter}
+                label="Time-Based"
+                onChange={(e) => setTimeFilter(e.target.value)}
+                sx={{
+                  fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                }}
+              >
+                <MenuItem value="all" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  All Time
+                </MenuItem>
+                <MenuItem value="less30" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  Less than 30 sec
+                </MenuItem>
+                <MenuItem value="30to60" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  30-60 sec
+                </MenuItem>
+                <MenuItem value="1to2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  1-2 min
+                </MenuItem>
+                <MenuItem value="more2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                  More than 2 min
+                </MenuItem>
+              </Select>
+            </FormControl>
+            
             <Box
               sx={{
                 display: "flex",
                 gap: 1,
-                mt: { xs: 0, sm: 0 },
+                mt: { xs: 1, sm: 0 },
                 justifyContent: { xs: "center", sm: "flex-start" },
               }}
             >
@@ -627,7 +726,7 @@ export default function ExamResultsReview() {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <AccessTimeIcon sx={{ fontSize: 16, color: "#6a11cb" }} />
                   <Typography sx={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                    {question.timeTaken}s
+                    {formatTime(question.timeTaken)}
                   </Typography>
                 </Box>
                 <Chip

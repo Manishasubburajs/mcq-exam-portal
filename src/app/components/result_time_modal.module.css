@@ -20,7 +20,7 @@
 }
 
 .modal h2 {
-  color: #d32f2f;
+  color: #4caf50;
   margin-bottom: 12px;
   font-size: 20px;
 }
@@ -31,16 +31,7 @@
   line-height: 1.5;
 }
 
-.warningText {
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 8px;
-  padding: 12px;
-  margin-top: 12px;
-  color: #856404;
-}
-
-.resultTimeText {
+.infoText {
   background: #e8f5e9;
   border: 1px solid #4caf50;
   border-radius: 8px;
