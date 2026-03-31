@@ -174,9 +174,16 @@ export default function ExamResultsReview() {
   
   // Check if it's a live exam and if results should be hidden
   const isLiveExam = exam.exam_type === "live";
-  const examEndTime = new Date(attempt.end_time);
-  const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after end time
+  const examEndTime = new Date(exam.scheduled_end);
+  const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after scheduled end time
   const isResultsAvailable = new Date() >= resultsAvailableTime;
+  
+  // Format the results available time
+  const formattedResultsTime = resultsAvailableTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
   
   // Show message if live exam and results not available yet
   if (isLiveExam && !isResultsAvailable) {
@@ -254,12 +261,24 @@ export default function ExamResultsReview() {
               mb: 4,
             }}
           >
-            You have successfully completed the live exam. Your results will be available after 30 minutes. You can view them in the Exam History. Thank you.
+            You have successfully completed the live exam. Your results will be available at <strong>{formattedResultsTime}</strong>. You can view them in the Exam History. Thank you.
           </Typography>
           
           <Button
             variant="contained"
-            onClick={() => router.push("/student-pages/exam_history")}
+            onClick={() => {
+              // Exit fullscreen before navigating
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              } else if ((document as any).webkitFullscreenElement) {
+                (document as any).webkitExitFullscreen();
+              } else if ((document as any).mozFullScreenElement) {
+                (document as any).mozCancelFullScreen();
+              } else if ((document as any).msFullscreenElement) {
+                (document as any).msExitFullscreen();
+              }
+              router.push("/student-pages/exam_history");
+            }}
             sx={{
               textTransform: "none",
               background: "linear-gradient(to right, #6a11cb, #2575fc)",

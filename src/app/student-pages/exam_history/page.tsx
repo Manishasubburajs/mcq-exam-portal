@@ -123,6 +123,23 @@ const ExamCard = ({
   
   const resultsAvailable = isResultsAvailable();
   
+  // Format the results available time for tooltip
+  const getResultsAvailableTime = (): string => {
+    if (meta.examType !== "live" || !endTime) {
+      return "";
+    }
+    
+    const examEndTime = new Date(endTime);
+    const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after end time
+    return resultsAvailableTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+  
+  const resultsAvailableTimeString = getResultsAvailableTime();
+  
   return (
   <Card
     sx={{
@@ -394,7 +411,7 @@ const ExamCard = ({
             </Tooltip>
           )}
           <Tooltip
-            title={!resultsAvailable ? "Results will be available after 30 minutes" : ""}
+            title={!resultsAvailable ? `Results will be available at ${resultsAvailableTimeString}` : ""}
             placement="top"
             disableInteractive={false}
           >
@@ -494,6 +511,7 @@ export default function ExamHistoryPage() {
           },
         });
         const data = await response.json();
+        console.log(data,"datain examhistory");
         if (data.success) {
           setCompletedExams(data.data);
         }

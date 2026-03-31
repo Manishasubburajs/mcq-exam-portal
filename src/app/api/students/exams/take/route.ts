@@ -103,27 +103,36 @@ export async function GET(req: Request) {
     });
 
     if (storedQuestions.length > 0) {
+      const responseData: any = {
+        examId: exam.exam_id,
+        title: exam.exam_title,
+        duration: exam.time_limit_minutes,
+        totalQuestions: storedQuestions.length,
+        points: exam.total_marks,
+        examType: exam.exam_type,
+        shuffle: assignment.shuffle_questions,
+        questions: storedQuestions.map((q) => ({
+          id: q.questions.question_id,
+          text: q.questions.question_text,
+          options: [
+            { id: "A", text: q.questions.option_a },
+            { id: "B", text: q.questions.option_b },
+            { id: "C", text: q.questions.option_c },
+            { id: "D", text: q.questions.option_d },
+          ].filter((o) => o.text),
+        })),
+      };
+
+      // Add timing data for live exams
+      if (exam.exam_type === "live") {
+        responseData.startTime = exam.scheduled_start;
+        responseData.endTime = exam.scheduled_end;
+        responseData.serverTime = new Date();
+      }
+
       return NextResponse.json({
         success: true,
-        data: {
-          examId: exam.exam_id,
-          title: exam.exam_title,
-          duration: exam.time_limit_minutes,
-          totalQuestions: storedQuestions.length,
-          points: exam.total_marks,
-          examType: exam.exam_type,
-          shuffle: assignment.shuffle_questions,
-          questions: storedQuestions.map((q) => ({
-            id: q.questions.question_id,
-            text: q.questions.question_text,
-            options: [
-              { id: "A", text: q.questions.option_a },
-              { id: "B", text: q.questions.option_b },
-              { id: "C", text: q.questions.option_c },
-              { id: "D", text: q.questions.option_d },
-            ].filter((o) => o.text),
-          })),
-        },
+        data: responseData,
       });
     }
 
@@ -179,18 +188,27 @@ export async function GET(req: Request) {
 
     /* ---------- RESPONSE ---------- */
 
+    const responseData: any = {
+      examId: exam.exam_id,
+      title: exam.exam_title,
+      duration: exam.time_limit_minutes,
+      totalQuestions: questions.length,
+      points: exam.total_marks,
+      examType: exam.exam_type,
+      shuffle: assignment.shuffle_questions,
+      questions,
+    };
+
+    // Add timing data for live exams
+    if (exam.exam_type === "live") {
+      responseData.startTime = exam.scheduled_start;
+      responseData.endTime = exam.scheduled_end;
+      responseData.serverTime = new Date();
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
-        examId: exam.exam_id,
-        title: exam.exam_title,
-        duration: exam.time_limit_minutes,
-        totalQuestions: questions.length,
-        points: exam.total_marks,
-        examType: exam.exam_type,
-        shuffle: assignment.shuffle_questions,
-        questions,
-      },
+      data: responseData,
     });
 
   } catch (error) {

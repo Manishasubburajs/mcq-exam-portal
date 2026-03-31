@@ -6,6 +6,7 @@ import { useMediaQuery } from "@mui/material";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSidebar } from "@/app/components/student_layout";
 import LiveExamWarningModal from "@/app/components/LiveExamWarningModal";
+import LateEntryModal from "@/app/components/LateEntryModal";
 import styles from "./exam_taking.module.css";
 
 interface Question {
@@ -24,11 +25,15 @@ interface ExamData {
   points?: number;
   proctoringEnabled?: boolean;
   autoSubmit?: boolean;
+  startTime?: string;
+  endTime?: string;
+  serverTime?: string;
 }
 
 const ExamContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const examStartRef = useRef<number>(Date.now());
   const examId = searchParams.get("examId");
   const attemptId = searchParams.get("attemptId");
 
@@ -52,6 +57,13 @@ const ExamContent: React.FC = () => {
   const [violationCount, setViolationCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showLateEntryModal, setShowLateEntryModal] = useState(false);
+  const [lateEntryMinutes, setLateEntryMinutes] = useState(0);
+  const [lateEntrySeconds, setLateEntrySeconds] = useState(0);
+  const [resultDisplayTime, setResultDisplayTime] = useState("");
+  const latestAnswersRef = useRef(userAnswers);
+  const latestTimeLeftRef = useRef(timeLeft);
+  const latestExamDataRef = useRef(examData);
 
   // Function to enter fullscreen with browser compatibility
   const enterFullscreen = async () => {
@@ -101,7 +113,15 @@ const ExamContent: React.FC = () => {
         examData &&
         (examData.examType === "mock" || examData.examType === "live")
       ) {
-        submitExam(true);
+        const confirmExit = window.confirm(
+          "You exited fullscreen. Exam will be submitted. Continue?",
+        );
+
+        if (confirmExit && !submittingRef.current) {
+          submitExam(true);
+        } else {
+          enterFullscreen(); // try to bring back
+        }
       }
     };
 
@@ -166,8 +186,31 @@ const ExamContent: React.FC = () => {
     if (autoSubmit === "true") {
       // Remove the flag to prevent infinite redirect loop
       sessionStorage.removeItem("autoSubmit");
-      // Redirect to results page
-      router.push(`/student-pages/exam_res_rev?attemptId=${attemptId}`);
+      
+      // Restore saved answers before submitting
+      const savedAnswers = sessionStorage.getItem(`exam_${examId}_userAnswers`);
+      const savedTimes = sessionStorage.getItem(`exam_${examId}_questionTimes`);
+      
+      if (savedAnswers) {
+        try {
+          setUserAnswers(JSON.parse(savedAnswers));
+        } catch (e) {
+          console.error("Error parsing savedAnswers", e);
+        }
+      }
+      
+      if (savedTimes) {
+        try {
+          questionTimeMap.current = JSON.parse(savedTimes);
+        } catch (e) {
+          console.error("Error parsing savedTimes", e);
+        }
+      }
+      
+      // Submit the exam with restored answers
+      setTimeout(() => {
+        submitExam(true);
+      }, 500);
       return;
     }
 
@@ -196,41 +239,81 @@ const ExamContent: React.FC = () => {
     };
 
     checkStuckAttempts();
+    fetchExam();
+  }, [examId, attemptId]);
 
-    const fetchExam = async () => {
-      try {
-        const token =
-          localStorage.getItem("token") || sessionStorage.getItem("token");
-        if (!token) {
-          setError("Not authenticated");
-          setLoading(false);
+  const fetchExam = async () => {
+    try {
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
+
+      if (!token) {
+        setError("Not authenticated");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `/api/students/exams/take?id=${examId}&attemptId=${attemptId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      const data = await response.json();
+
+      // ❌ API FAIL
+      if (!data.success) {
+        setError(data.message || "Failed to load exam");
+        return;
+      }
+
+      // ✅ SUCCESS
+      const exam = data.data;
+      setExamData(exam);
+      examStartRef.current = Date.now();
+
+      // ✅ LIVE EXAM LOGIC
+      if (exam.examType === "live") {
+        const now = new Date(exam.serverTime).getTime(); // backend time
+        const start = new Date(exam.startTime).getTime();
+        const end = new Date(exam.endTime).getTime();
+
+        // ❌ Safety check
+        if (now < start || now > end) {
+          setError("Exam not available at this time");
           return;
         }
 
-        const response = await fetch(
-          `/api/students/exams/take?id=${examId}&attemptId=${attemptId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        // ✅ Remaining time - always calculated as endTime - currentServerTime
+        const remainingSeconds = Math.max(0, Math.floor((end - now) / 1000));
 
-        const data = await response.json();
-        if (data.success) {
-          setExamData(data.data);
-          setTimeLeft(data.data.duration * 60);
-        } else {
-          setError(data.message || "Failed to load exam");
+        setTimeLeft(remainingSeconds);
+
+        // ✅ Delay popup - show if student joins late
+        const delaySeconds = Math.floor((now - start) / 1000);
+
+        if (delaySeconds > 0) {
+          const delayMin = Math.floor(delaySeconds / 60);
+          const delaySec = delaySeconds % 60;
+
+          setTimeout(() => {
+            setLateEntryMinutes(delayMin);
+            setLateEntrySeconds(delaySec);
+            setShowLateEntryModal(true);
+          }, 500);
         }
-      } catch (err) {
-        console.error("Failed to fetch exam:", err);
-        setError("Failed to load exam");
-      } finally {
-        setLoading(false);
+      } else {
+        // ✅ PRACTICE + MOCK
+        setTimeLeft(exam.duration * 60);
       }
-    };
-
-    fetchExam();
-  }, [examId]);
+    } catch (err) {
+      console.error("Failed to fetch exam:", err);
+      setError("Failed to load exam");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Timer effect
   useEffect(() => {
@@ -265,53 +348,74 @@ const ExamContent: React.FC = () => {
     },
   );
 
+  useEffect(() => {
+    latestAnswersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    latestTimeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  useEffect(() => {
+    latestExamDataRef.current = examData;
+  }, [examData]);
+
   // Handle page unload and tab closure
   useEffect(() => {
-    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      if (
-        examData?.examType !== "practice" &&
-        !submittingRef.current &&
-        !allowNavigation
-      ) {
-        // Do NOT show browser popup - remove preventDefault and returnValue
-        // Attempt to submit exam in background
-        try {
-          sessionStorage.setItem("autoSubmit", "true");
-          sessionStorage.setItem(
-            `exam_${examId}_userAnswers`,
-            JSON.stringify(userAnswers),
-          );
-          sessionStorage.setItem(
-            `exam_${examId}_questionTimes`,
-            JSON.stringify(questionTimeMap.current),
-          );
-          // We can't await fetch here because browser will cancel it
-          submitExam(true);
-        } catch (error) {
-          console.error("Error submitting exam on unload:", error);
-        }
-      }
-    };
+    const handleBeforeUnload = () => {
+      const currentExam = latestExamDataRef.current;
 
-    // Handle navigation within the application using browser history
-    const handleNavigation = (event: PopStateEvent) => {
-      if (
-        examData?.examType !== "practice" &&
-        !submittingRef.current &&
-        !allowNavigation
-      ) {
-        submitExam(true);
+      if (currentExam && !submittingRef.current && !allowNavigation) {
+        let totalTimeTaken = 0;
+
+        if (currentExam.examType === "live") {
+          totalTimeTaken = Math.floor(
+            (Date.now() - examStartRef.current) / 1000,
+          );
+        } else {
+          totalTimeTaken =
+            currentExam.duration * 60 - latestTimeLeftRef.current;
+        }
+
+        // Get studentId from token
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        let studentId = null;
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            studentId = payload.userId;
+          } catch (e) {
+            console.error("Error parsing token:", e);
+          }
+        }
+
+        const payload = {
+          examId,
+          attemptId,
+          studentId,
+          answers: latestAnswersRef.current,
+          questionTimes: questionTimeMap.current,
+          totalTimeTaken,
+          examType: currentExam.examType,
+          autoSubmitted: true,
+        };
+
+        const blob = new Blob([JSON.stringify(payload)], {
+          type: "application/json",
+        });
+
+        navigator.sendBeacon("/api/students/exams/submit", blob);
+
+        sessionStorage.setItem("autoSubmit", "true");
       }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("popstate", handleNavigation);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("popstate", handleNavigation);
     };
-  }, [examData, userAnswers, questionTimeMap.current, examId]);
+  }, [examId, attemptId, allowNavigation]);
 
   // Prevent right-click during exam
   useEffect(() => {
@@ -329,17 +433,32 @@ const ExamContent: React.FC = () => {
 
   // Live tab switch detection
   useEffect(() => {
-    if (examData?.examType !== "live") return;
+    if (examData?.examType !== "live" && examData?.examType !== "mock") return;
 
     const handleViolation = () => {
-      const newCount = violationCount + 1;
-      setViolationCount(newCount);
-      // Use attemptId to ensure each attempt has separate violation tracking
-      sessionStorage.setItem(`violation_${attemptId}`, newCount.toString());
-      setShowLiveWarning(true);
-      if (newCount > 1) {
-        setTimeout(() => submitExam(true), 1500);
-      }
+      setViolationCount((prev) => {
+        const newCount = prev + 1;
+
+        sessionStorage.setItem(`violation_${attemptId}`, newCount.toString());
+        setShowLiveWarning(true);
+
+        if (newCount >= 2 && !submittingRef.current) {
+          // Calculate result display time for live exams
+          if (examData?.examType === "live" && examData.endTime) {
+            const endTime = new Date(examData.endTime);
+            const resultTime = new Date(endTime.getTime() + 30 * 60 * 1000); // Add 30 minutes
+            const resultTimeString = resultTime.toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            });
+            setResultDisplayTime(resultTimeString);
+          }
+          setTimeout(() => submitExam(true), 1500);
+        }
+
+        return newCount;
+      });
     };
 
     const handleVisibility = () => {
@@ -359,7 +478,7 @@ const ExamContent: React.FC = () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [examData, violationCount, examId]); // ✅ replace attemptId with examId
+  }, [examData, attemptId]);
 
   // Auto-save answers periodically
   useEffect(() => {
@@ -377,28 +496,42 @@ const ExamContent: React.FC = () => {
     return () => {
       clearInterval(autoSaveInterval);
     };
-  }, [userAnswers, questionTimeMap.current, examId]);
+  }, [userAnswers, examId]);
 
   // Check for auto submit flag and restore saved answers
   useEffect(() => {
+    if (!examId) return; // முக்கியம்
+
     const autoSubmit = sessionStorage.getItem("autoSubmit");
+
     if (autoSubmit === "true") {
       sessionStorage.removeItem("autoSubmit");
-      // Restore saved answers and question times
+
+      // Restore saved answers
       const savedAnswers = sessionStorage.getItem(`exam_${examId}_userAnswers`);
-      const savedQuestionTimes = sessionStorage.getItem(
-        `exam_${examId}_questionTimes`,
-      );
+      const savedTimes = sessionStorage.getItem(`exam_${examId}_questionTimes`);
+
       if (savedAnswers) {
-        setUserAnswers(JSON.parse(savedAnswers));
+        try {
+          setUserAnswers(JSON.parse(savedAnswers));
+        } catch (e) {
+          console.error("Error parsing savedAnswers", e);
+        }
       }
-      if (savedQuestionTimes) {
-        questionTimeMap.current = JSON.parse(savedQuestionTimes);
+
+      if (savedTimes) {
+        try {
+          questionTimeMap.current = JSON.parse(savedTimes);
+        } catch (e) {
+          console.error("Error parsing savedTimes", e);
+        }
       }
-      setShowLiveWarning(true);
-      setTimeout(() => submitExam(true), 1500);
+
+      setTimeout(() => {
+        submitExam(true);
+      }, 1000);
     }
-  }, []);
+  }, [examId]);
 
   const saveQuestionTime = () => {
     const currentQ = getCurrentQuestion();
@@ -511,18 +644,30 @@ const ExamContent: React.FC = () => {
 
     saveQuestionTime();
 
-    const totalTimeTaken =
-      examData?.examType === "practice"
-        ? Object.values(questionTimeMap.current).reduce((sum, t) => sum + t, 0)
-        : examData!.duration * 60 - timeLeft;
+    const currentAnswers = latestAnswersRef.current;
+    const currentTimeLeft = latestTimeLeftRef.current;
+    const currentExam = latestExamDataRef.current;
+
+    if (!currentExam) {
+      submittingRef.current = false;
+      return;
+    }
+
+    let totalTimeTaken = 0;
+
+    if (currentExam.examType === "live") {
+      totalTimeTaken = Math.floor((Date.now() - examStartRef.current) / 1000);
+    } else {
+      totalTimeTaken = currentExam.duration * 60 - currentTimeLeft;
+    }
 
     const payload = {
       examId,
       attemptId,
-      answers: userAnswers,
+      answers: currentAnswers,
       questionTimes: questionTimeMap.current,
       totalTimeTaken,
-      examType: examData?.examType,
+      examType: currentExam.examType,
       autoSubmitted,
     };
 
@@ -625,7 +770,8 @@ const ExamContent: React.FC = () => {
 
   return (
     <>
-      <LiveExamWarningModal open={showLiveWarning} />
+      <LiveExamWarningModal open={showLiveWarning} violationCount={violationCount} onClose={() => setShowLiveWarning(false)} resultDisplayTime={resultDisplayTime} />
+      <LateEntryModal open={showLateEntryModal} delayMinutes={lateEntryMinutes} delaySeconds={lateEntrySeconds} onClose={() => setShowLateEntryModal(false)} />
 
       <div className={`${styles.examContainer} ${styles.containerFull}`}>
         {/* Exam Header */}
@@ -638,8 +784,7 @@ const ExamContent: React.FC = () => {
             </p>
           </div>
           <div className={`${styles.timer} ${getTimerClass()}`}>
-            <i className="fas fa-clock"></i>{" "}
-            <span>{formatTime(timeLeft)}</span>
+            <i className="fas fa-clock"></i> <span>{formatTime(timeLeft)}</span>
           </div>
         </div>
 
