@@ -277,26 +277,32 @@ const ExamCard = ({
             Completed: {meta.completedAt}
           </Typography>
         </Box>
-        <Box
-          sx={{
-            flex: { xs: "1 0 100%", sm: "1 0 50%" },
-            mb: { xs: 0.75, sm: 1, md: 1.25 },
-            display: "flex",
-            alignItems: "center",
-            gap: { xs: 0.5, sm: 0.625 },
-          }}
+        <Tooltip
+          title={!resultsAvailable ? `Score will be available at ${resultsAvailableTimeString}` : ""}
+          placement="top"
+          disableInteractive={false}
         >
-          <GradeIcon fontSize="small" sx={{ color: "#6a11cb" }} />
-          <Typography
-            variant="body2"
+          <Box
             sx={{
-              color: TEXT_PRIMARY,
-              fontSize: { xs: 13, sm: 14 },
+              flex: { xs: "1 0 100%", sm: "1 0 50%" },
+              mb: { xs: 0.75, sm: 1, md: 1.25 },
+              display: "flex",
+              alignItems: "center",
+              gap: { xs: 0.5, sm: 0.625 },
             }}
           >
-            Score: {meta.score}/{meta.points}
-          </Typography>
-        </Box>
+            <GradeIcon fontSize="small" sx={{ color: "#6a11cb" }} />
+            <Typography
+              variant="body2"
+              sx={{
+                color: TEXT_PRIMARY,
+                fontSize: { xs: 13, sm: 14 },
+              }}
+            >
+              Score: {resultsAvailable ? `${meta.score}/${meta.points}` : "-"}
+            </Typography>
+          </Box>
+        </Tooltip>
         <Box
           sx={{
             flex: { xs: "1 0 100%", sm: "1 0 50%" },
