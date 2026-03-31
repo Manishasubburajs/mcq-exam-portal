@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
-import { Box, Typography, Card, Button, useTheme, Avatar } from "@mui/material";
+import { Box, Typography, Card, Button, useTheme, Avatar, CircularProgress } from "@mui/material";
 import { useRouter } from "next/navigation";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -113,6 +113,7 @@ interface ExamCardProps {
   onStart?: (examType: string) => void;
   timeRemaining?: string;
   isStartEnabled?: boolean;
+  isLoading?: boolean;
 }
 
 // Helper to calculate time remaining
@@ -182,6 +183,7 @@ const ExamCard = ({
   onStart,
   timeRemaining,
   isStartEnabled = true,
+  isLoading = false,
   startDate,
   endDate,
 }: ExamCardProps & { startDate?: string; endDate?: string }) => (
@@ -429,9 +431,15 @@ const ExamCard = ({
                 : {},
             }}
             onClick={() => onStart && onStart(meta.examType)}
-            disabled={!isStartEnabled}
+            disabled={!isStartEnabled || isLoading}
           >
-            {isStartEnabled ? "Start Exam" : "Not Available"}
+            {isLoading ? (
+              <CircularProgress size={20} sx={{ color: "#fff" }} />
+            ) : isStartEnabled ? (
+              "Start Exam"
+            ) : (
+              "Not Available"
+            )}
           </Button>
         </Box>
       </Box>
@@ -456,6 +464,7 @@ export default function MyExamsPage() {
   const [availableExams, setAvailableExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [startingExamId, setStartingExamId] = useState<number | null>(null);
 
   useEffect(() => {
     // Check if user is logged in and is student
@@ -500,6 +509,7 @@ export default function MyExamsPage() {
   console.log("availableExams", availableExams);
 
   const startExam = async (examId: number, examType: string) => {
+    setStartingExamId(examId);
     try {
       const token =
         localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -542,10 +552,12 @@ export default function MyExamsPage() {
         );
       } else {
         alert(data.message || "Failed to start exam");
+        setStartingExamId(null);
       }
     } catch (error) {
       console.error("Failed to start exam:", error);
       alert("Failed to start exam");
+      setStartingExamId(null);
     }
   };
 
@@ -686,6 +698,7 @@ export default function MyExamsPage() {
                         exam.endDate,
                         exam.examType,
                       )}
+                      isLoading={startingExamId === exam.id}
                       startDate={exam.startDate}
                       endDate={exam.endDate}
                     />
@@ -778,6 +791,7 @@ export default function MyExamsPage() {
                         exam.endDate,
                         exam.examType,
                       )}
+                      isLoading={startingExamId === exam.id}
                       startDate={exam.startDate}
                       endDate={exam.endDate}
                     />
@@ -870,6 +884,7 @@ export default function MyExamsPage() {
                         exam.endDate,
                         exam.examType,
                       )}
+                      isLoading={startingExamId === exam.id}
                       startDate={exam.startDate}
                       endDate={exam.endDate}
                     />
