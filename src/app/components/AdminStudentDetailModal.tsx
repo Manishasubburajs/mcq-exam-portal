@@ -23,9 +23,23 @@ import {
   TableContainer,
   Chip,
   Paper,
+  ButtonGroup,
+  List,
+  ListItem,
+  ListItemText,
+  Card,
+  CardContent,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { PlayArrow, Assessment, LiveTv } from "@mui/icons-material";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import PrintIcon from "@mui/icons-material/Print";
 
 interface StudentDetailModalProps {
   open: boolean;
@@ -57,8 +71,47 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     live: { color: "error", icon: <LiveTv fontSize="small" /> },
   };
 
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [filter, setFilter] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("all");
+  const [questionLoading, setQuestionLoading] = useState(false);
+
+  const filteredQuestions = questions
+    .filter((q) => {
+      // Status filter
+      if (filter !== "all" && q.status !== filter) return false;
+
+      // Time filter
+      if (timeFilter === "less30" && q.timeTaken >= 30) return false;
+
+      if (timeFilter === "30to60" && (q.timeTaken < 30 || q.timeTaken > 60))
+        return false;
+
+      if (timeFilter === "1to2" && (q.timeTaken < 60 || q.timeTaken > 120))
+        return false;
+
+      if (timeFilter === "more2" && q.timeTaken <= 120) return false;
+
+      return true;
+    })
+    .sort((a: any, b: any) => b.timeTaken - a.timeTaken);
+
+  const formatTime = (seconds: number) => {
+    if (!seconds) return "0 sec";
+
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+
+    if (min === 0) return `${sec} sec`;
+    return `${min} min ${sec} sec`;
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   const [tabIndex, setTabIndex] = useState(0);
-  const isIndividualExam = selectedExam && selectedExam !== "all";
+  const isIndividualExam = !!selectedExam && selectedExam !== "all";
 
   // Define tabs based on filters
   const tabs =
@@ -83,8 +136,57 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     if (open) {
       setTabIndex(0);
       setPage(1);
+
+      setFilter("all");
+      setTimeFilter("all");
+      setQuestions([]);
     }
   }, [open, studentName]);
+
+  useEffect(() => {
+    const fetchQuestionReview = async () => {
+      if (!open || !details.length) return;
+
+      try {
+        setQuestionLoading(true);
+        setQuestions([]);
+
+        // ✅ get first attempt (since individual exam)
+        const attemptId = details[0]?.attemptId;
+
+        if (!attemptId) return;
+
+        const res = await fetch(
+          `/api/analytics/question-review?attemptId=${attemptId}`,
+        );
+
+        const data = await res.json();
+        setQuestions(data || []);
+      } catch (error) {
+        console.error("Failed to fetch question review:", error);
+        setQuestions([]);
+      } finally {
+        setQuestionLoading(false);
+      }
+    };
+
+    fetchQuestionReview();
+  }, [open, details]);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <Dialog
@@ -94,8 +196,10 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         if (reason === "backdropClick" || reason === "escapeKeyDown") return;
         onClose();
       }}
-      maxWidth="lg"
-      fullWidth
+      fullScreen={isIndividualExam}
+      maxWidth={isIndividualExam ? false : "lg"}
+      scroll="paper"
+      fullWidth={!isIndividualExam}
     >
       <DialogTitle
         sx={{
@@ -116,11 +220,25 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
       <DialogContent dividers>
         {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              py: 5,
+            }}
+          >
             <CircularProgress />
           </Box>
         ) : details.length === 0 ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 5 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              py: 5,
+            }}
+          >
             <Typography>No data available</Typography>
           </Box>
         ) : (
@@ -399,6 +517,215 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                           </TableContainer>
                         </Box>
                       )}
+
+                      <Paper
+                        sx={{
+                          padding: { xs: 2, sm: 2.5, md: 3 },
+                          borderRadius: 2,
+                          boxShadow: "0 5px 15px rgba(0, 0, 0, 0.05)",
+                          mt: 3,
+                        }}
+                      >
+                        {/* HEADER */}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: 2,
+                            mb: 2,
+                          }}
+                        >
+                          <Typography>
+                            Question Review ({filteredQuestions.length} of{" "}
+                            {questions.length})
+                          </Typography>
+
+                          <Box
+                            sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}
+                          >
+                            {/* FILTER BUTTONS */}
+                            <ButtonGroup size="small">
+                              {[
+                                "all",
+                                "correct",
+                                "incorrect",
+                                "unanswered",
+                              ].map((val) => (
+                                <Button
+                                  key={val}
+                                  variant={
+                                    filter === val ? "contained" : "outlined"
+                                  }
+                                  onClick={() => setFilter(val)}
+                                >
+                                  {val}
+                                </Button>
+                              ))}
+                            </ButtonGroup>
+
+                            {/* TIME FILTER */}
+                            <FormControl size="small">
+                              <InputLabel>Time-Based</InputLabel>
+                              <Select
+                                value={timeFilter}
+                                label="Time-Based"
+                                onChange={(e) => setTimeFilter(e.target.value)}
+                              >
+                                <MenuItem value="all">All Time</MenuItem>
+                                <MenuItem value="less30">
+                                  Less than 30 sec
+                                </MenuItem>
+                                <MenuItem value="30to60">30-60 sec</MenuItem>
+                                <MenuItem value="1to2">1-2 min</MenuItem>
+                                <MenuItem value="more2">
+                                  More than 2 min
+                                </MenuItem>
+                              </Select>
+                            </FormControl>
+
+                            {/* PRINT */}
+                            <Button
+                              variant="outlined"
+                              startIcon={<PrintIcon />}
+                              onClick={handlePrint}
+                              color="warning"
+                            >
+                              Print
+                            </Button>
+                          </Box>
+                        </Box>
+
+                        {/* QUESTIONS */}
+                        {questionLoading ? (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "center",
+                              py: 3,
+                            }}
+                          >
+                            <CircularProgress />
+                          </Box>
+                        ) : filteredQuestions.length === 0 ? (
+                          <Box
+                            sx={{
+                              textAlign: "center",
+                              py: 4,
+                              border: "1px solid",
+                              borderColor: "divider",
+                              borderRadius: 2,
+                            }}
+                          >
+                            <Typography variant="body1" color="text.secondary">
+                              No questions found for selected filter
+                            </Typography>
+                          </Box>
+                        ) : (
+                          filteredQuestions.map((question: any) => (
+                            <Card key={question.id} sx={{ mb: 2 }}>
+                              {/* HEADER */}
+                              <Box
+                                sx={{
+                                  p: 2,
+                                  background: "#f5f5f5",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <Typography>
+                                  Question {question.questionOrder}
+                                </Typography>
+
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    gap: 1,
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      gap: 0.5,
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <AccessTimeIcon sx={{ fontSize: 16 }} />{" "}
+                                    <Typography>
+                                      {formatTime(question.timeTaken)}
+                                    </Typography>
+                                  </Box>
+                                  <Chip
+                                    label={
+                                      question.status &&
+                                      question.status.charAt(0).toUpperCase() +
+                                        question.status.slice(1)
+                                    }
+                                    color={
+                                      question.status === "correct"
+                                        ? "success"
+                                        : question.status === "incorrect"
+                                          ? "error"
+                                          : "warning"
+                                    }
+                                    size="small"
+                                  />
+                                </Box>
+                              </Box>
+
+                              {/* BODY */}
+                              <CardContent>
+                                <Typography sx={{ mb: 2 }}>
+                                  {question.text}
+                                </Typography>
+
+                                <List>
+                                  {question.options.map(
+                                    (opt: any, i: number) => (
+                                      <ListItem
+                                        key={i}
+                                        sx={{
+                                          mb: 1,
+                                          border: "1px solid #ddd",
+                                          borderRadius: 1,
+                                          backgroundColor: opt.correct
+                                            ? "#d4edda"
+                                            : opt.selected && !opt.correct
+                                              ? "#f8d7da"
+                                              : "transparent",
+                                        }}
+                                      >
+                                        <ListItemText primary={opt.text} />
+
+                                        {opt.correct && (
+                                          <CheckCircleIcon color="success" />
+                                        )}
+                                        {opt.selected && !opt.correct && (
+                                          <CancelIcon color="error" />
+                                        )}
+                                      </ListItem>
+                                    ),
+                                  )}
+                                </List>
+
+                                {/* EXPLANATION */}
+                                <Box
+                                  sx={{ mt: 2, p: 2, background: "#e3f2fd" }}
+                                >
+                                  <Typography fontWeight={600}>
+                                    Explanation:
+                                  </Typography>
+                                  <Typography>
+                                    {question.explanation || "Not available"}
+                                  </Typography>
+                                </Box>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </Paper>
                     </Paper>
                   </Box>
                 ))
