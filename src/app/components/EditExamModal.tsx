@@ -253,7 +253,6 @@ export default function EditExamModal({
     return localDate.toISOString().slice(0, 16);
   };
 
-
   const loadSelectedQuestionsForEdit = async () => {
     if (!isEdit || !examData) return;
 
@@ -575,10 +574,10 @@ export default function EditExamModal({
                 (topic) => (topicCounts[topic.topic_id] || 0) > 0,
               );
 
-        if (!hasAssignedTopic) {
-          errors.subject = "Please assign at least one topic";
-          isValid = false;
-        }
+        // if (!hasAssignedTopic) {
+        //   errors.subject = "Please assign at least one topic";
+        //   isValid = false;
+        // }
       }
     } else {
       if (selectedSubjects.length === 0) {
@@ -634,7 +633,6 @@ export default function EditExamModal({
       errors.topic = "Please fix topic errors";
       isValid = false;
     }
-
 
     if (selectionMode === "manual" && totalQuestions <= 0) {
       errors.totalQuestions = "Please select at least one question";
@@ -1537,7 +1535,6 @@ export default function EditExamModal({
                                                           },
                                                         );
                                                       }}
-                                                      
                                                     />
                                                   </TableCell>
                                                   <TableCell>
@@ -1623,7 +1620,7 @@ export default function EditExamModal({
                   );
                 })
               )}
-              <Typography fontWeight={700} mt={2}>
+              {/* <Typography fontWeight={700} mt={2}>
                 Total Questions: {totalQuestions}
                 {selectionMode === "manual" && " (Manual Selection)"}
               </Typography>
@@ -1632,7 +1629,7 @@ export default function EditExamModal({
                 <Typography color="error">
                   {formErrors.totalQuestions}
                 </Typography>
-              )}
+              )} */}
             </Box>
           </>
         );
@@ -1715,15 +1712,34 @@ export default function EditExamModal({
           sx={{
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
-          <Button
-            variant="outlined"
-            disabled={activeStep === 0 || isSubmitting}
-            onClick={handleBack}
-          >
-            Back
-          </Button>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Button
+              variant="outlined"
+              disabled={activeStep === 0 || isSubmitting}
+              onClick={handleBack}
+            >
+              Back
+            </Button>
+
+            {/* 🔥 SHOW ONLY IN QUESTIONS STEP */}
+            {steps[activeStep] === "Questions" && (
+              <Box display="flex" flexDirection="column" textAlign="left">
+                <Typography fontWeight={700}>
+                  Total Questions: {totalQuestions}
+                  {selectionMode === "manual" && " (Manual Selection)"}
+                </Typography>
+
+                {formErrors.totalQuestions && (
+                  <Typography color="error">
+                    {formErrors.totalQuestions}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
 
           {/* RIGHT SIDE */}
           <Box display="flex" gap={1}>

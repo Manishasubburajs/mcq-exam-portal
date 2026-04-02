@@ -280,7 +280,6 @@ const PersonalInformationTab = ({
                       <InputAdornment position="start">+91</InputAdornment>
                     ),
                   }}
-                  disabled
                 />
               </Box>
             </Box>
