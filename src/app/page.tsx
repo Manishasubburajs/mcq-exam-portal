@@ -16,9 +16,11 @@ import {
   useMediaQuery,
   IconButton,
   InputAdornment,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-
+import { CircularProgress } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
 import FacebookIcon from "@mui/icons-material/Facebook";
 import TwitterIcon from "@mui/icons-material/Twitter";
@@ -32,7 +34,7 @@ const loginSchema = Yup.object({
     .trim()
     .matches(
       /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-      "Enter a valid email address"
+      "Enter a valid email address",
     ),
 
   password: Yup.string().required("Password is required"),
@@ -45,8 +47,18 @@ export default function Login() {
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
+    {},
   );
+  const [alert, setAlert] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+  const [loading, setLoading] = useState(false);
 
   const isMobile = useMediaQuery("(max-width:768px)");
   const router = useRouter();
@@ -76,7 +88,10 @@ export default function Login() {
      LOGIN HANDLER
   ========================= */
   const handleLogin = async () => {
+    if (loading) return; // prevent multiple submissions
+
     try {
+      setLoading(true);
       setErrors({});
 
       await loginSchema.validate({ email, password }, { abortEarly: false });
@@ -90,7 +105,11 @@ export default function Login() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Login failed");
+        setAlert({
+          open: true,
+          message: data.error || "Login failed",
+          severity: "error",
+        });
         return;
       }
 
@@ -108,12 +127,22 @@ export default function Login() {
         sessionStorage.setItem("sessionStartTime", sessionStartTime);
       }
 
+      setAlert({
+        open: true,
+        message: data.message || "Login successful! Redirecting...",
+        severity: "success",
+      });
+
       if (data.role === "admin") {
         router.push("/admin-pages");
       } else if (data.role === "student") {
         router.push("/student-pages");
       } else {
-        alert("Invalid user role. Please contact support.");
+        setAlert({
+          open: true,
+          message: "Invalid user role. Please contact support.",
+          severity: "error",
+        });
       }
     } catch (err: any) {
       if (err.name === "ValidationError") {
@@ -124,8 +153,14 @@ export default function Login() {
         setErrors(fieldErrors);
       } else {
         console.error("Login Error:", err);
-        alert("Something went wrong. Try again.");
+        setAlert({
+          open: true,
+          message: "Something went wrong. Try again.",
+          severity: "error",
+        });
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -271,6 +306,7 @@ export default function Login() {
               type="submit"
               fullWidth
               variant="contained"
+              disabled={loading}
               sx={{
                 mt: 2,
                 mb: 2,
@@ -279,7 +315,21 @@ export default function Login() {
                 background: "linear-gradient(to right, #6a11cb, #2575fc)",
               }}
             >
-              Login
+              {loading ? (
+                <span
+                  style={{
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <CircularProgress size={20} sx={{ mr: 1, color: "white" }} />
+                  Logging in...
+                </span>
+              ) : (
+                "Login"
+              )}
             </Button>
 
             <Divider sx={{ my: 3 }}>Or login with</Divider>
@@ -334,6 +384,22 @@ export default function Login() {
           </Box>
         </Box>
       </Card>
+
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={3000}
+        onClose={() => setAlert({ ...alert, open: false })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          variant="filled"
+          severity={alert.severity}
+          onClose={() => setAlert({ ...alert, open: false })}
+          sx={{ width: "100%" }}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
