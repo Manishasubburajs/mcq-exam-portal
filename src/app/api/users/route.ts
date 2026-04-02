@@ -224,6 +224,24 @@ export async function PUT(req: Request) {
       gender,
     } = body;
 
+    if (mobile_number) {
+      const existingUser = await prisma.users.findFirst({
+        where: {
+          mobile_number,
+          NOT: {
+            user_id: user_id, // allow same user
+          },
+        },
+      });
+
+      if (existingUser) {
+        return NextResponse.json(
+          { success: false, error: "Mobile number already registered" },
+          { status: 400 },
+        );
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const updatedUser = await tx.users.update({
         where: { user_id },
@@ -273,6 +291,17 @@ export async function PUT(req: Request) {
         { success: false, validationErrors: error.errors },
         { status: 400 },
       );
+    }
+
+    if (error.code === "P2002") {
+      const target = error.meta?.target;
+
+      if (target?.includes("mobile_number") || target === "mobile_number") {
+        return NextResponse.json(
+          { success: false, error: "Mobile number already registered" },
+          { status: 400 },
+        );
+      }
     }
 
     return NextResponse.json(

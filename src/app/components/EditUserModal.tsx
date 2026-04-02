@@ -290,7 +290,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 <InputAdornment position="start">+91</InputAdornment>
               ),
             }}
-            disabled
           />
 
           <FormControl fullWidth>
