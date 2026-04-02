@@ -26,16 +26,25 @@ const resetPasswordSchema = Yup.object({
   password: Yup.string()
     .required("Password is required")
     .min(8, "Password must be at least 8 characters")
-    .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .matches(/[a-z]/, "Password must contain at least one lowercase letter")
-    .matches(/\d/, "Password must contain at least one number")
-    .matches(
-      /[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/?]/,
-      "Password must contain at least one special character",
-    ),
+    .matches(/[A-Z]/, {
+      message: "Password must contain at least one uppercase letter",
+      excludeEmptyString: true,
+    })
+    .matches(/[a-z]/, {
+      message: "Password must contain at least one lowercase letter",
+      excludeEmptyString: true,
+    })
+    .matches(/\d/, {
+      message: "Password must contain at least one number",
+      excludeEmptyString: true,
+    })
+    .matches(/[@$!%*?&#^()_+\-=[\]{};':"\\|,.<>/?]/, {
+      message: "Password must contain at least one special character",
+      excludeEmptyString: true,
+    }),
   confirmPassword: Yup.string()
-    .oneOf([Yup.ref("password")], "Passwords must match")
-    .required("Confirm Password is required"),
+    .required("Confirm Password is required")
+    .oneOf([Yup.ref("password")], "Passwords must match"),
 });
 
 export default function ResetPassword() {
@@ -58,21 +67,23 @@ export default function ResetPassword() {
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width:768px)");
 
-//   const validateField = async (
-//     field: "password" | "confirmPassword",
-//     value: string,
-//   ) => {
-//     try {
-//       await resetPasswordSchema.validateAt(field, {
-//         password,
-//         confirmPassword,
-//         [field]: value,
-//       });
-//       setErrors((prev) => ({ ...prev, [field]: "" }));
-//     } catch (err: any) {
-//       setErrors((prev) => ({ ...prev, [field]: err.message }));
-//     }
-//   };
+  const validateField = async (
+    field: "password" | "confirmPassword",
+    value: string,
+    updatedValues?: { password?: string; confirmPassword?: string },
+  ) => {
+    try {
+      await resetPasswordSchema.validateAt(field, {
+        password: updatedValues?.password ?? password,
+        confirmPassword: updatedValues?.confirmPassword ?? confirmPassword,
+      });
+
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    } catch (err: any) {
+      setErrors((prev) => ({ ...prev, [field]: err.message }));
+    }
+  };
+
   /* =========================
      SUBMIT
   ========================= */
@@ -85,7 +96,7 @@ export default function ResetPassword() {
       // ✅ Validate
       await resetPasswordSchema.validate(
         { password, confirmPassword },
-        { abortEarly: false }
+        { abortEarly: false },
       );
 
       // ✅ Get email from URL
@@ -135,12 +146,13 @@ export default function ResetPassword() {
       setTimeout(() => {
         router.push("/");
       }, 2000);
-
     } catch (err: any) {
       if (err.name === "ValidationError") {
         const fieldErrors: any = {};
         err.inner.forEach((e: any) => {
-          fieldErrors[e.path] = e.message;
+          if (!fieldErrors[e.path]) {
+            fieldErrors[e.path] = e.message;
+          }
         });
         setErrors(fieldErrors);
       } else {
@@ -153,78 +165,6 @@ export default function ResetPassword() {
       setLoading(false);
     }
   };
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     setErrors({});
-//     setLoading(true);
-
-//     try {
-//       await resetPasswordSchema.validate(
-//         { password, confirmPassword },
-//         { abortEarly: false },
-//       );
-
-//       // Get token from URL
-//       const params = new URLSearchParams(window.location.search);
-//       const token = params.get("token");
-
-//       if (!token) {
-//         setSnackbar({
-//           open: true,
-//           message: "Invalid or missing reset token",
-//           severity: "error",
-//         });
-//         setLoading(false);
-//         return;
-//       }
-
-//       // Call reset password API
-//       const res = await fetch("/api/users/reset-password", {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ password, token }),
-//       });
-
-//       const data = await res.json();
-
-//       if (!res.ok) {
-//         setSnackbar({
-//           open: true,
-//           message: data.error || "Failed to reset password",
-//           severity: "error",
-//         });
-//         setLoading(false);
-//         return;
-//       }
-
-//       setSuccess(true);
-//       setSnackbar({
-//         open: true,
-//         message: data.message || "Password reset successfully!",
-//         severity: "success",
-//       });
-
-//       setTimeout(() => {
-//         router.push("/");
-//       }, 2000);
-//     } catch (err: any) {
-//       if (err.name === "ValidationError") {
-//         const fieldErrors: any = {};
-//         err.inner.forEach((e: any) => {
-//           fieldErrors[e.path] = e.message;
-//         });
-//         setErrors(fieldErrors);
-//       } else {
-//         console.error(err);
-//         setSnackbar({
-//           open: true,
-//           message: "Something went wrong",
-//           severity: "error",
-//         });
-//       }
-//       setLoading(false);
-//     }
-//   };
 
   return (
     <Box
@@ -257,165 +197,88 @@ export default function ResetPassword() {
           Enter your new password below to reset your account password.
         </Typography>
 
+        <Box component="form" onSubmit={handleSubmit}>
+          {/* PASSWORD */}
+          <TextField
+            fullWidth
+            label="New Password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => {
+              const value = e.target.value;
+              setPassword(value);
 
+              // validate password
+              validateField("password", value, { password: value });
 
-        {/* {success ? (
-          <Box
-            sx={{
-              p: 2,
-              border: "1px solid #4caf50",
-              borderRadius: 2,
-              backgroundColor: "#e8f5e9",
-              textAlign: "center",
-              mb: 2,
+              // validate confirm password with updated password
+              if (confirmPassword) {
+                validateField("confirmPassword", confirmPassword, {
+                  password: value,
+                  confirmPassword,
+                });
+              }
             }}
+            margin="normal"
+            error={!!errors.password}
+            helperText={errors.password}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          {/* CONFIRM PASSWORD */}
+          <TextField
+            fullWidth
+            label="Confirm Password"
+            type={showConfirmPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => {
+              const value = e.target.value;
+              setConfirmPassword(value);
+
+              validateField("confirmPassword", value, {
+                password,
+                confirmPassword: value,
+              });
+
+              if (!value) {
+                setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                return;
+              }
+            }}
+            margin="normal"
+            error={!!errors.confirmPassword}
+            helperText={errors.confirmPassword}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <Button
+            fullWidth
+            type="submit"
+            variant="contained"
+            sx={{ mt: 2 }}
+            disabled={loading}
           >
-            <Typography sx={{ color: "#2e7d32", fontWeight: 600, mb: 1 }}>
-              Password Reset Successful!
-            </Typography>
-            <Typography sx={{ color: "#388e3c" }}>
-              You will be redirected to login shortly.
-            </Typography>
-          </Box>
-        ) : (
-          <Box component="form" onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              type={showPassword ? "text" : "password"}
-              label="New Password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                validateField("password", e.target.value);
-              }}
-              margin="normal"
-              error={!!errors.password}
-              helperText={errors.password}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <TextField
-              fullWidth
-              type={showConfirmPassword ? "text" : "password"}
-              label="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                validateField("confirmPassword", e.target.value);
-              }}
-              margin="normal"
-              error={!!errors.confirmPassword}
-              helperText={errors.confirmPassword}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      edge="end"
-                    >
-                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{
-                mt: 2,
-                py: 1.5,
-                fontWeight: 600,
-                background: "linear-gradient(to right, #6a11cb, #2575fc)",
-              }}
-              disabled={loading}
-            >
-              {loading ? "Resetting..." : "Reset Password"}
-            </Button>
-          </Box>
-        )} */}
-        {success ? (
-          <Typography color="green" textAlign="center">
-            Password updated! Redirecting...
-          </Typography>
-        ) : (
-          <Box component="form" onSubmit={handleSubmit}>
-            {/* PASSWORD */}
-            <TextField
-              fullWidth
-              label="New Password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              error={!!errors.password}
-              helperText={errors.password}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            {/* CONFIRM PASSWORD */}
-            <TextField
-              fullWidth
-              label="Confirm Password"
-              type={showConfirmPassword ? "text" : "password"}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              margin="normal"
-              error={!!errors.confirmPassword}
-              helperText={errors.confirmPassword}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                    >
-                      {showConfirmPassword ? (
-                        <VisibilityOff />
-                      ) : (
-                        <Visibility />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              sx={{ mt: 2 }}
-              disabled={loading}
-            >
-              {loading ? "Updating..." : "Reset Password"}
-            </Button>
-          </Box>
-        )}
+            {loading ? "Updating..." : "Reset Password"}
+          </Button>
+        </Box>
 
         <Divider sx={{ my: 3 }} />
 
@@ -447,6 +310,7 @@ export default function ResetPassword() {
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
+          variant="filled"
           severity={snackbar.severity}
           sx={{ width: "100%" }}
           onClose={() => setSnackbar({ ...snackbar, open: false })}
