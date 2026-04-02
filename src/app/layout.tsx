@@ -1,14 +1,19 @@
-import Providers from './providers';
-import SessionManager from '../components/SessionManager';
+import Providers from "./providers";
+import SessionManager from "../components/SessionManager";
 import "./globals.css";
-import { Metadata } from 'next';
+import { Metadata } from "next";
 
-export const metadata : Metadata = {
-  title: "Login App",
-  description: "Login and Registration App",
+export const metadata: Metadata = {
+  title: "MCQ Exam Portal",
+  description:
+    "Secure platform for students to take exams, analyze performance, and track progress efficiently.",
 };
-export const viewport = 'width=device-width, initial-scale=1';
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const viewport = "width=device-width, initial-scale=1";
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -19,9 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>
-          <SessionManager>
-            {children}
-          </SessionManager>
+          <SessionManager>{children}</SessionManager>
         </Providers>
       </body>
     </html>
