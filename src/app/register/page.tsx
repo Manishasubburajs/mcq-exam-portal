@@ -20,10 +20,13 @@ import {
   InputAdornment,
   FormControl,
   InputLabel,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import * as yup from "yup";
 import styles from "./page.module.css";
+import { CircularProgress } from "@mui/material";
 
 const steps = ["Account", "Personal"];
 
@@ -98,6 +101,17 @@ export default function Register() {
 
   const [errors, setErrors] = useState<any>({});
 
+  const [alert, setAlert] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+  const [loading, setLoading] = useState(false);
+
   const handleChange = async (field: string, value: any) => {
     // Update form data
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -118,7 +132,10 @@ export default function Register() {
 
   // Submit handler
   const handleSubmit = async () => {
+    if (loading) return; // prevent multiple submissions
+
     try {
+      setLoading(true);
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,20 +145,38 @@ export default function Register() {
       const data = await res.json();
 
       if (res.status === 201) {
-        alert("✅ " + data.message);
+        setAlert({
+          open: true,
+          message: data.message || "Registration successful! Redirecting...",
+          severity: "success",
+        });
         console.log("Saved user:", data);
         globalThis.location.href = "/"; // redirect to login/dashboard
       } else if (res.status === 409) {
-        alert("❌ " + data.error); // user already exists
+        setAlert({
+          open: true,
+          message: data.error || "User already exists.",
+          severity: "error",
+        });
         console.log(data.error);
       } else {
         console.log(data.error);
-        alert("❌ " + (data.error || "Something went wrong."));
+        setAlert({
+          open: true,
+          message: data.error || "Something went wrong.",
+          severity: "error",
+        });
       }
     } catch (error: any) {
       console.error("Submit failed:", error);
-      alert("❌ Something went wrong: " + error.message);
+      setAlert({
+        open: true,
+        message: "Something went wrong: " + error.message,
+        severity: "error",
+      });
       console.log(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -196,7 +231,7 @@ export default function Register() {
             sx={{
               flex: "none",
               width: { xs: "100%", md: "50%" },
-              height: { xs: 500, md: 600 },
+              // height: { xs: 500, md: 600 },
               color: "white",
               p: 4,
               display: "flex",
@@ -465,9 +500,19 @@ export default function Register() {
                 onClick={handleNext}
                 className={styles.gradientButton}
               >
-                {activeStep === steps.length - 1
-                  ? "Complete Registration"
-                  : "Next"}
+                {loading ? (
+                  <>
+                    <CircularProgress
+                      size={18}
+                      sx={{ mr: 1, color: "white" }}
+                    />
+                    Submitting...
+                  </>
+                ) : activeStep === steps.length - 1 ? (
+                  "Complete Registration"
+                ) : (
+                  "Next"
+                )}
               </Button>
             </Box>
 
@@ -483,6 +528,22 @@ export default function Register() {
           </Box>
         </Paper>
       </Container>
+
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={3000}
+        onClose={() => setAlert({ ...alert, open: false })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          variant="filled"
+          severity={alert.severity}
+          onClose={() => setAlert({ ...alert, open: false })}
+          sx={{ width: "100%" }}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
