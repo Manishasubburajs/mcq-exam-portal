@@ -1424,7 +1424,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
                 );
               })
             )}
-
+            {/* 
             <Typography fontWeight={700} mt={2}>
               Total Questions: {totalQuestions}
               {selectionMode === "manual" && " (Manual Selection)"}
@@ -1432,7 +1432,7 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
 
             {formErrors.totalQuestions && (
               <Typography color="error">{formErrors.totalQuestions}</Typography>
-            )}
+            )} */}
           </>
         );
 
@@ -1514,16 +1514,35 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
           sx={{
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
-          {/* LEFT SIDE */}
-          <Button
-            variant="outlined"
-            disabled={activeStep === 0 || isSubmitting}
-            onClick={handleBack}
-          >
-            Back
-          </Button>
+          <Box display="flex" alignItems="center" gap={2}>
+            {/* LEFT SIDE */}
+            <Button
+              variant="outlined"
+              disabled={activeStep === 0 || isSubmitting}
+              onClick={handleBack}
+            >
+              Back
+            </Button>
+
+            {/* 🔥 SHOW ONLY IN QUESTIONS STEP */}
+            {steps[activeStep] === "Questions" && (
+              <Box display="flex" flexDirection="column" textAlign="left">
+                <Typography fontWeight={700}>
+                  Total Questions: {totalQuestions}
+                  {selectionMode === "manual" && " (Manual Selection)"}
+                </Typography>
+
+                {formErrors.totalQuestions && (
+                  <Typography color="error">
+                    {formErrors.totalQuestions}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
 
           {/* RIGHT SIDE */}
           <Box display="flex" gap={1}>

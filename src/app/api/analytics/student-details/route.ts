@@ -161,6 +161,7 @@ export async function GET(request: Request) {
       }
 
       results.push({
+        attemptId: attempt.attempt_id,
         examId: attempt.exam_id,
         examTitle: attempt.exam.exam_title,
         examType: attempt.exam.exam_type,

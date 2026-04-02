@@ -106,6 +106,7 @@ export async function GET(
     const results = paginatedAttempts.map((attempt, index) => {
       const user = userMap.get(attempt.student_id);
       return {
+        attemptId: attempt.attempt_id,
         rank: attempt.rank,
         studentId: attempt.student_id,
         username: user?.username,

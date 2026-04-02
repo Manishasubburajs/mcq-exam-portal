@@ -73,14 +73,25 @@ export async function PUT(req: Request) {
     const userId = decoded.userId;
 
     const body = await req.json();
-    const {
-      firstName,
-      lastName,
-      mobile,
-      email,
-      birthDate,
-      gender,
-    } = body;
+    const { firstName, lastName, mobile, email, birthDate, gender } = body;
+
+    if (mobile) {
+      const existingUser = await prisma.users.findFirst({
+        where: {
+          mobile_number: mobile,
+          NOT: {
+            user_id: userId,
+          },
+        },
+      });
+
+      if (existingUser) {
+        return NextResponse.json(
+          { success: false, error: "Mobile number already registered" },
+          { status: 400 },
+        );
+      }
+    }
 
     const updatedUser = await prisma.$transaction(async (tx) => {
       await tx.users.update({
