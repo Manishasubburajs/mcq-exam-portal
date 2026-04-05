@@ -97,6 +97,35 @@ export default function ExamResultsReview() {
   const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "unanswered">("all");
   const [timeFilter, setTimeFilter] = useState<string>("all");
 
+  // Function to exit fullscreen
+  const exitFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else if ((document as any).webkitFullscreenElement) {
+      (document as any).webkitExitFullscreen();
+    } else if ((document as any).mozFullScreenElement) {
+      (document as any).mozCancelFullScreen();
+    } else if ((document as any).msFullscreenElement) {
+      (document as any).msExitFullscreen();
+    }
+  };
+
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      exitFullscreen();
+      router.push("/student-pages/exam_history");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    // Push initial state to ensure back button works
+    window.history.pushState(null, "", window.location.href);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [router]);
+
   useEffect(() => {
     if (!attemptId) {
       setError("No attempt ID provided");
@@ -266,19 +295,7 @@ export default function ExamResultsReview() {
           
           <Button
             variant="contained"
-            onClick={() => {
-              // Exit fullscreen before navigating
-              if (document.fullscreenElement) {
-                document.exitFullscreen().catch(() => {});
-              } else if ((document as any).webkitFullscreenElement) {
-                (document as any).webkitExitFullscreen();
-              } else if ((document as any).mozFullScreenElement) {
-                (document as any).mozCancelFullScreen();
-              } else if ((document as any).msFullscreenElement) {
-                (document as any).msExitFullscreen();
-              }
-              router.push("/student-pages/exam_history");
-            }}
+            onClick={handleGoToHistory}
             sx={{
               textTransform: "none",
               background: "linear-gradient(to right, #6a11cb, #2575fc)",
@@ -334,12 +351,15 @@ export default function ExamResultsReview() {
     })
     .sort((a: any, b: any) => b.timeTaken - a.timeTaken);
 
+  const handleGoToHistory = () => {
+    exitFullscreen();
+    router.push("/student-pages/exam_history");
+  };
+
   const handlePrint = () => {
     globalThis.window.print();
   };
-
-
-
+  
   return (
     <Box
       sx={{
@@ -385,7 +405,7 @@ export default function ExamResultsReview() {
         </Typography>
         <Button
           variant="contained"
-          onClick={() => router.push("/student-pages/exam_history")}
+          onClick={handleGoToHistory}
           sx={{
             textTransform: "none",
             background: "linear-gradient(to right, #6a11cb, #2575fc)",
@@ -836,7 +856,7 @@ export default function ExamResultsReview() {
         >
           <Button
             variant="contained"
-            onClick={() => router.push("/student-pages/exam_history")}
+            onClick={handleGoToHistory}
             sx={{
               textTransform: "none",
               background: "linear-gradient(to right, #6a11cb, #2575fc)",
