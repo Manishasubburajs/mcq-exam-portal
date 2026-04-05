@@ -118,13 +118,17 @@ export default function ExamResultsReview() {
     };
 
     window.addEventListener("popstate", handlePopState);
-    // Push initial state to ensure back button works
     window.history.pushState(null, "", window.location.href);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
   }, [router]);
+
+  const handleGoToHistory = () => {
+    exitFullscreen();
+    router.push("/student-pages/exam_history");
+  };
 
   useEffect(() => {
     if (!attemptId) {
@@ -350,11 +354,6 @@ export default function ExamResultsReview() {
       return q.timeTaken >= range.min && q.timeTaken < range.max;
     })
     .sort((a: any, b: any) => b.timeTaken - a.timeTaken);
-
-  const handleGoToHistory = () => {
-    exitFullscreen();
-    router.push("/student-pages/exam_history");
-  };
 
   const handlePrint = () => {
     globalThis.window.print();
