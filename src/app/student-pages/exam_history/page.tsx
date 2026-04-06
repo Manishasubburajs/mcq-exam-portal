@@ -97,6 +97,7 @@ interface ExamCardProps {
   canRetake?: boolean;
   hasReachedRetakeLimit?: boolean;
   onViewAttemptHistory?: () => void;
+  isRetakeLoading?: boolean;
 }
 
 const ExamCard = ({
@@ -109,6 +110,7 @@ const ExamCard = ({
   canRetake,
   hasReachedRetakeLimit,
   onViewAttemptHistory,
+  isRetakeLoading,
 }: ExamCardProps) => {
   // Check if results are available for live exam
   const isResultsAvailable = (): boolean => {
@@ -379,7 +381,7 @@ const ExamCard = ({
               <span>
                 <Button
                   variant="outlined"
-                  disabled={hasReachedRetakeLimit}
+                  disabled={hasReachedRetakeLimit || isRetakeLoading}
                   sx={{
                     flex: 1,
                     padding: { xs: "8px 12px", sm: "10px 16px" },
@@ -388,15 +390,15 @@ const ExamCard = ({
                     alignItems: "center",
                     justifyContent: "center",
                     textTransform: "none",
-                    borderColor: hasReachedRetakeLimit ? "#ccc" : "#6a11cb",
-                    color: hasReachedRetakeLimit ? "#ccc" : "#6a11cb",
-                    backgroundColor: hasReachedRetakeLimit
+                    borderColor: hasReachedRetakeLimit ? "#ccc" : isRetakeLoading ? "#ccc" : "#6a11cb",
+                    color: hasReachedRetakeLimit ? "#ccc" : isRetakeLoading ? "#ccc" : "#6a11cb",
+                    backgroundColor: hasReachedRetakeLimit || isRetakeLoading
                       ? "#f5f5f5"
                       : "transparent",
                     borderRadius: 2,
                     fontSize: { xs: "12px", sm: "13px" },
                     fontWeight: 600,
-                    "&:hover": !hasReachedRetakeLimit
+                    "&:hover": !hasReachedRetakeLimit && !isRetakeLoading
                       ? {
                           backgroundColor: "#6a11cb",
                           color: "#fff",
@@ -411,7 +413,14 @@ const ExamCard = ({
                   }}
                   onClick={() => onTakeExam && onTakeExam(meta.examType)}
                 >
-                  Retake
+                  {isRetakeLoading ? (
+                    <>
+                      <span className="fa fa-spinner fa-spin" style={{ marginRight: 8 }}></span>
+                      Loading...
+                    </>
+                  ) : (
+                    "Retake"
+                  )}
                 </Button>
               </span>
             </Tooltip>
@@ -497,6 +506,7 @@ export default function ExamHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState<any>(null);
   const [attemptHistoryOpen, setAttemptHistoryOpen] = useState(false);
+  const [retakeLoadingExamId, setRetakeLoadingExamId] = useState<number | null>(null);
 
   useEffect(() => {
     // Check if user is logged in and is student
@@ -540,6 +550,7 @@ export default function ExamHistoryPage() {
     examId: number,
     examType: string,
   ) => {
+    setRetakeLoadingExamId(examId);
     try {
       const token =
         localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -592,6 +603,8 @@ export default function ExamHistoryPage() {
     } catch (error) {
       console.error("Failed to retake exam:", error);
       alert("Failed to retake exam");
+    } finally {
+      setRetakeLoadingExamId(null);
     }
   };
 
@@ -720,6 +733,7 @@ export default function ExamHistoryPage() {
                       onViewAttemptHistory={
                         exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
                       }
+                      isRetakeLoading={retakeLoadingExamId === exam.examId}
                     />
                   </Box>
                 ))
@@ -807,6 +821,7 @@ export default function ExamHistoryPage() {
                       onViewAttemptHistory={
                         exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
                       }
+                      isRetakeLoading={retakeLoadingExamId === exam.examId}
                     />
                   </Box>
                 ))
@@ -894,6 +909,7 @@ export default function ExamHistoryPage() {
                       onViewAttemptHistory={
                         exam.examType !== "live" ? () => openAttemptHistory(exam) : undefined
                       }
+                      isRetakeLoading={retakeLoadingExamId === exam.examId}
                     />
                   </Box>
                 ))

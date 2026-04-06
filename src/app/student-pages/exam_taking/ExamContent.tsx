@@ -7,6 +7,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useSidebar } from "@/app/components/student_layout";
 import LiveExamWarningModal from "@/app/components/LiveExamWarningModal";
 import LateEntryModal from "@/app/components/LateEntryModal";
+import LeaveExamModal from "@/app/components/LeaveExamModal";
+import FullscreenExitModal from "@/app/components/FullscreenExitModal";
 import styles from "./exam_taking.module.css";
 
 interface Question {
@@ -61,6 +63,9 @@ const ExamContent: React.FC = () => {
   const [lateEntryMinutes, setLateEntryMinutes] = useState(0);
   const [lateEntrySeconds, setLateEntrySeconds] = useState(0);
   const [resultDisplayTime, setResultDisplayTime] = useState("");
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showFullscreenExitModal, setShowFullscreenExitModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | undefined>(undefined);
   const latestAnswersRef = useRef(userAnswers);
   const latestTimeLeftRef = useRef(timeLeft);
   const latestExamDataRef = useRef(examData);
@@ -107,21 +112,13 @@ const ExamContent: React.FC = () => {
       );
       setIsFullscreen(isCurrentlyFullscreen);
 
-      // Auto-submit if user exits fullscreen and it's a mock or live exam
+      // Show modal for all exam types when exiting fullscreen
       if (
         !isCurrentlyFullscreen &&
         examData &&
-        (examData.examType === "mock" || examData.examType === "live")
+        !submittingRef.current
       ) {
-        const confirmExit = window.confirm(
-          "You exited fullscreen. Exam will be submitted. Continue?",
-        );
-
-        if (confirmExit && !submittingRef.current) {
-          submitExam(true);
-        } else {
-          enterFullscreen(); // try to bring back
-        }
+        setShowFullscreenExitModal(true);
       }
     };
 
@@ -154,15 +151,33 @@ const ExamContent: React.FC = () => {
         examData &&
         (examData.examType === "mock" || examData.examType === "live")
       ) {
-        // Wait for a short time to ensure the DOM is fully rendered
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Wait for DOM to be fully rendered
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-        try {
-          await enterFullscreen();
-        } catch (error) {
-          console.error("Failed to enter fullscreen automatically:", error);
-          // Silent failure - continue without fullscreen
-        }
+        // Try multiple times with increasing delays
+        const tryFullscreen = async (attempt: number, maxAttempts: number) => {
+          if (attempt > maxAttempts) return;
+          
+          try {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+              await elem.requestFullscreen();
+            } else if ((elem as any).webkitRequestFullscreen) {
+              await (elem as any).webkitRequestFullscreen();
+            } else if ((elem as any).mozRequestFullScreen) {
+              await (elem as any).mozRequestFullScreen();
+            } else if ((elem as any).msRequestFullscreen) {
+              await (elem as any).msRequestFullscreen();
+            }
+          } catch (error) {
+            // If fullscreen failed, try again after a delay
+            if (attempt < maxAttempts) {
+              setTimeout(() => tryFullscreen(attempt + 1, maxAttempts), 300);
+            }
+          }
+        };
+
+        tryFullscreen(1, 5);
       }
     };
 
@@ -335,18 +350,33 @@ const ExamContent: React.FC = () => {
 
   // Use custom hook to prevent navigation within the application
   usePreventNavigation(
-    examData?.examType !== "practice" && !allowNavigation,
+    !allowNavigation,
     (href?: string) => {
-      const confirmLeave = window.confirm(
-        "If you leave, your exam will be submitted. Continue?",
-      );
-
-      if (!confirmLeave) return;
-
-      // Call async function inside (not returning Promise)
-      submitExam(true, href);
+      setPendingNavigation(href);
+      setShowLeaveModal(true);
     },
   );
+
+  // Handle browser back button
+  useEffect(() => {
+    if (allowNavigation) return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      event.preventDefault();
+      setPendingNavigation(undefined);
+      setShowLeaveModal(true);
+      // Push current state again to block back navigation
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    // Push initial state to ensure we can block back
+    window.history.pushState(null, "", window.location.href);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [allowNavigation]);
 
   useEffect(() => {
     latestAnswersRef.current = userAnswers;
@@ -430,6 +460,24 @@ const ExamContent: React.FC = () => {
       document.removeEventListener("contextmenu", handleContextMenu);
     };
   }, []);
+
+  // Handle ESC key for all exam types
+  useEffect(() => {
+    if (!examData || allowNavigation) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submittingRef.current) {
+        e.preventDefault();
+        setShowFullscreenExitModal(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [examData, allowNavigation]);
 
   // Live tab switch detection
   useEffect(() => {
@@ -772,6 +820,28 @@ const ExamContent: React.FC = () => {
     <>
       <LiveExamWarningModal open={showLiveWarning} violationCount={violationCount} onClose={() => setShowLiveWarning(false)} resultDisplayTime={resultDisplayTime} />
       <LateEntryModal open={showLateEntryModal} delayMinutes={lateEntryMinutes} delaySeconds={lateEntrySeconds} onClose={() => setShowLateEntryModal(false)} />
+      <LeaveExamModal 
+        open={showLeaveModal} 
+        onConfirm={() => {
+          setShowLeaveModal(false);
+          submitExam(true, pendingNavigation);
+        }} 
+        onCancel={() => {
+          setShowLeaveModal(false);
+          setPendingNavigation(undefined);
+        }} 
+      />
+      <FullscreenExitModal
+        open={showFullscreenExitModal}
+        onConfirm={() => {
+          setShowFullscreenExitModal(false);
+          enterFullscreen();
+        }}
+        onCancel={() => {
+          setShowFullscreenExitModal(false);
+          submitExam(true);
+        }}
+      />
 
       <div className={`${styles.examContainer} ${styles.containerFull}`}>
         {/* Exam Header */}
