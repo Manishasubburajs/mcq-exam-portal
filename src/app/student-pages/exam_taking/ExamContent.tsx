@@ -65,7 +65,9 @@ const ExamContent: React.FC = () => {
   const [resultDisplayTime, setResultDisplayTime] = useState("");
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showFullscreenExitModal, setShowFullscreenExitModal] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | undefined>(undefined);
+  const [pendingNavigation, setPendingNavigation] = useState<
+    string | undefined
+  >(undefined);
   const latestAnswersRef = useRef(userAnswers);
   const latestTimeLeftRef = useRef(timeLeft);
   const latestExamDataRef = useRef(examData);
@@ -113,11 +115,7 @@ const ExamContent: React.FC = () => {
       setIsFullscreen(isCurrentlyFullscreen);
 
       // Show modal for all exam types when exiting fullscreen
-      if (
-        !isCurrentlyFullscreen &&
-        examData &&
-        !submittingRef.current
-      ) {
+      if (!isCurrentlyFullscreen && examData && !submittingRef.current) {
         setShowFullscreenExitModal(true);
       }
     };
@@ -157,7 +155,7 @@ const ExamContent: React.FC = () => {
         // Try multiple times with increasing delays
         const tryFullscreen = async (attempt: number, maxAttempts: number) => {
           if (attempt > maxAttempts) return;
-          
+
           try {
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
@@ -201,11 +199,11 @@ const ExamContent: React.FC = () => {
     if (autoSubmit === "true") {
       // Remove the flag to prevent infinite redirect loop
       sessionStorage.removeItem("autoSubmit");
-      
+
       // Restore saved answers before submitting
       const savedAnswers = sessionStorage.getItem(`exam_${examId}_userAnswers`);
       const savedTimes = sessionStorage.getItem(`exam_${examId}_questionTimes`);
-      
+
       if (savedAnswers) {
         try {
           setUserAnswers(JSON.parse(savedAnswers));
@@ -213,7 +211,7 @@ const ExamContent: React.FC = () => {
           console.error("Error parsing savedAnswers", e);
         }
       }
-      
+
       if (savedTimes) {
         try {
           questionTimeMap.current = JSON.parse(savedTimes);
@@ -221,7 +219,7 @@ const ExamContent: React.FC = () => {
           console.error("Error parsing savedTimes", e);
         }
       }
-      
+
       // Submit the exam with restored answers
       setTimeout(() => {
         submitExam(true);
@@ -349,13 +347,10 @@ const ExamContent: React.FC = () => {
   }, [examData, timeLeft]);
 
   // Use custom hook to prevent navigation within the application
-  usePreventNavigation(
-    !allowNavigation,
-    (href?: string) => {
-      setPendingNavigation(href);
-      setShowLeaveModal(true);
-    },
-  );
+  usePreventNavigation(!allowNavigation, (href?: string) => {
+    setPendingNavigation(href);
+    setShowLeaveModal(true);
+  });
 
   // Handle browser back button
   useEffect(() => {
@@ -408,11 +403,12 @@ const ExamContent: React.FC = () => {
         }
 
         // Get studentId from token
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+        const token =
+          localStorage.getItem("token") || sessionStorage.getItem("token");
         let studentId = null;
         if (token) {
           try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
+            const payload = JSON.parse(atob(token.split(".")[1]));
             studentId = payload.userId;
           } catch (e) {
             console.error("Error parsing token:", e);
@@ -495,10 +491,10 @@ const ExamContent: React.FC = () => {
           if (examData?.examType === "live" && examData.endTime) {
             const endTime = new Date(examData.endTime);
             const resultTime = new Date(endTime.getTime() + 30 * 60 * 1000); // Add 30 minutes
-            const resultTimeString = resultTime.toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              hour12: true 
+            const resultTimeString = resultTime.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
             });
             setResultDisplayTime(resultTimeString);
           }
@@ -818,18 +814,28 @@ const ExamContent: React.FC = () => {
 
   return (
     <>
-      <LiveExamWarningModal open={showLiveWarning} violationCount={violationCount} onClose={() => setShowLiveWarning(false)} resultDisplayTime={resultDisplayTime} />
-      <LateEntryModal open={showLateEntryModal} delayMinutes={lateEntryMinutes} delaySeconds={lateEntrySeconds} onClose={() => setShowLateEntryModal(false)} />
-      <LeaveExamModal 
-        open={showLeaveModal} 
+      <LiveExamWarningModal
+        open={showLiveWarning}
+        violationCount={violationCount}
+        onClose={() => setShowLiveWarning(false)}
+        resultDisplayTime={resultDisplayTime}
+      />
+      <LateEntryModal
+        open={showLateEntryModal}
+        delayMinutes={lateEntryMinutes}
+        delaySeconds={lateEntrySeconds}
+        onClose={() => setShowLateEntryModal(false)}
+      />
+      <LeaveExamModal
+        open={showLeaveModal}
         onConfirm={() => {
           setShowLeaveModal(false);
           submitExam(true, pendingNavigation);
-        }} 
+        }}
         onCancel={() => {
           setShowLeaveModal(false);
           setPendingNavigation(undefined);
-        }} 
+        }}
       />
       <FullscreenExitModal
         open={showFullscreenExitModal}
@@ -994,7 +1000,12 @@ const ExamContent: React.FC = () => {
               <div className={styles.questionContent}>
                 {currentQ ? (
                   <>
-                    <div className={styles.questionText}>{currentQ.text}</div>
+                    <div
+                      className={styles.questionText}
+                      style={{ whiteSpace: "pre-line",fontWeight: 600}}
+                    >
+                      {currentQ.text}
+                    </div>
 
                     <ul
                       className={styles.optionsList}
@@ -1022,7 +1033,10 @@ const ExamContent: React.FC = () => {
                               <div className={styles.optionMarker}>
                                 {option.id}
                               </div>
-                              <div className={styles.optionText}>
+                              <div
+                                className={styles.optionText}
+                                style={{ whiteSpace: "pre-line" }}
+                              >
                                 {option.text}
                               </div>
                             </button>
