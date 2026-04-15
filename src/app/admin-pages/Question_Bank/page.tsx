@@ -693,15 +693,20 @@ export default function QuestionBankPage() {
 
         for (let i = 1; i < rows.length; i++) {
           const values = rows[i];
-          if (!values || !Array.isArray(values) || values.length === 0) continue;
-          
-          const nonEmptyCount = values.filter((v) => v && String(v).trim() !== "").length;
+          if (!values || !Array.isArray(values) || values.length === 0)
+            continue;
+
+          const nonEmptyCount = values.filter(
+            (v) => v && String(v).trim() !== "",
+          ).length;
           if (nonEmptyCount < 3) continue;
 
           const question: any = {};
           headers.forEach((header, index) => {
             const rawValue = values[index];
-            question[header] = rawValue ? String(rawValue).replace(/^"|"$/g, "").trim() : "";
+            question[header] = rawValue
+              ? String(rawValue).replace(/^"|"$/g, "").trim()
+              : "";
           });
 
           if (
@@ -719,7 +724,7 @@ export default function QuestionBankPage() {
               option_c: question.option_c,
               option_d: question.option_d,
               correct_answer: question.correct_answer,
-              values: values
+              values: values,
             });
             errors.push(`Row ${i + 1}: Missing required fields`);
             continue;
@@ -730,15 +735,17 @@ export default function QuestionBankPage() {
             difficultyValue = "Medium";
           }
 
-          const normalizedDifficulty = String(difficultyValue).toLowerCase().trim();
-          
+          const normalizedDifficulty = String(difficultyValue)
+            .toLowerCase()
+            .trim();
+
           const validDifficulties: Record<string, string> = {
-            "easy": "Easy",
-            "medium": "Medium", 
-            "hard": "Hard",
-            "e": "Easy",
-            "m": "Medium",
-            "h": "Hard",
+            easy: "Easy",
+            medium: "Medium",
+            hard: "Hard",
+            e: "Easy",
+            m: "Medium",
+            h: "Hard",
             "1": "Easy",
             "2": "Medium",
             "3": "Hard",
@@ -746,19 +753,20 @@ export default function QuestionBankPage() {
             "ii-b": "Easy",
             "ii-c": "Easy",
             "ii-d": "Easy",
-            "iii": "Medium",
-            "iv": "Hard",
-            "v": "Hard",
-            "vi": "Hard",
-            "vii": "Hard",
-            "viii": "Hard",
-            "ix": "Hard",
-            "x": "Hard",
-            "xi": "Hard",
-            "xii": "Hard",
+            iii: "Medium",
+            iv: "Hard",
+            v: "Hard",
+            vi: "Hard",
+            vii: "Hard",
+            viii: "Hard",
+            ix: "Hard",
+            x: "Hard",
+            xi: "Hard",
+            xii: "Hard",
           };
-          
-          const finalDifficulty = validDifficulties[normalizedDifficulty] || "Medium";
+
+          const finalDifficulty =
+            validDifficulties[normalizedDifficulty] || "Medium";
 
           questions.push({
             question_text: question.question_text,
@@ -802,7 +810,11 @@ export default function QuestionBankPage() {
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as (string | number | undefined)[][];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as (
+          | string
+          | number
+          | undefined
+        )[][];
 
         if (rows.length === 0) {
           setBulkValidationErrors(["File is empty"]);
@@ -810,7 +822,7 @@ export default function QuestionBankPage() {
         }
 
         const headers = (rows[0] as (string | number)[]).map((h) =>
-          String(h).toLowerCase().trim()
+          String(h).toLowerCase().trim(),
         );
 
         const requiredFields = [
@@ -825,7 +837,7 @@ export default function QuestionBankPage() {
           "explanation",
         ];
         const missingFields = requiredFields.filter(
-          (field) => !headers.includes(field)
+          (field) => !headers.includes(field),
         );
 
         if (missingFields.length > 0) {
@@ -848,7 +860,9 @@ export default function QuestionBankPage() {
             rowData[header] = value !== undefined ? String(value).trim() : "";
           });
 
-          const hasData = Object.values(rowData).some((v) => v && v.trim() !== "");
+          const hasData = Object.values(rowData).some(
+            (v) => v && v.trim() !== "",
+          );
           if (!hasData) continue;
 
           if (
@@ -866,7 +880,7 @@ export default function QuestionBankPage() {
               option_c: rowData.option_c,
               option_d: rowData.option_d,
               correct_answer: rowData.correct_answer,
-              values: values
+              values: values,
             });
             errors.push(`Row ${i + 1}: Missing required fields`);
             continue;
@@ -877,14 +891,16 @@ export default function QuestionBankPage() {
             difficultyValue = "Medium";
           }
 
-          const normalizedDifficulty = String(difficultyValue).toLowerCase().trim();
+          const normalizedDifficulty = String(difficultyValue)
+            .toLowerCase()
+            .trim();
           const validDifficulties: Record<string, string> = {
-            "easy": "Easy",
-            "medium": "Medium",
-            "hard": "Hard",
-            "e": "Easy",
-            "m": "Medium",
-            "h": "Hard",
+            easy: "Easy",
+            medium: "Medium",
+            hard: "Hard",
+            e: "Easy",
+            m: "Medium",
+            h: "Hard",
             "1": "Easy",
             "2": "Medium",
             "3": "Hard",
@@ -892,19 +908,20 @@ export default function QuestionBankPage() {
             "ii-b": "Easy",
             "ii-c": "Easy",
             "ii-d": "Easy",
-            "iii": "Medium",
-            "iv": "Hard",
-            "v": "Hard",
-            "vi": "Hard",
-            "vii": "Hard",
-            "viii": "Hard",
-            "ix": "Hard",
-            "x": "Hard",
-            "xi": "Hard",
-            "xii": "Hard",
+            iii: "Medium",
+            iv: "Hard",
+            v: "Hard",
+            vi: "Hard",
+            vii: "Hard",
+            viii: "Hard",
+            ix: "Hard",
+            x: "Hard",
+            xi: "Hard",
+            xii: "Hard",
           };
-          
-          const finalDifficulty = validDifficulties[normalizedDifficulty] || "Medium";
+
+          const finalDifficulty =
+            validDifficulties[normalizedDifficulty] || "Medium";
 
           questions.push({
             question_text: rowData.question_text,
@@ -928,7 +945,7 @@ export default function QuestionBankPage() {
         if (questions.length > 0) {
           showSnackbar(
             `Successfully parsed ${questions.length} questions`,
-            "success"
+            "success",
           );
         }
       } catch (error) {
@@ -1081,7 +1098,7 @@ export default function QuestionBankPage() {
       `${
         format === "excel" ? "Excel" : "CSV"
       } template downloaded successfully`,
-      "success"
+      "success",
     );
   };
 
@@ -1805,14 +1822,31 @@ export default function QuestionBankPage() {
           <DialogContent dividers>
             {selectedQuestion && (
               <Box>
-                <Typography sx={{ mb: 1 }}>
-                  <b>Question:</b> {selectedQuestion.question_text}
+                {/* Question */}
+                <Typography sx={{ mb: 1, fontWeight: 600 }}>
+                  Question:
                 </Typography>
-                <Typography>A: {selectedQuestion.option_a}</Typography>
-                <Typography>B: {selectedQuestion.option_b}</Typography>
-                <Typography>C: {selectedQuestion.option_c}</Typography>
-                <Typography>D: {selectedQuestion.option_d}</Typography>
-                <Typography sx={{ mt: 2 }}>
+
+                <Typography sx={{ mb: 2, whiteSpace: "pre-wrap" }}>
+                  {selectedQuestion.question_text}
+                </Typography>
+
+                {/* Options */}
+                <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                  A. {selectedQuestion.option_a}
+                </Typography>
+                <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                  B. {selectedQuestion.option_b}
+                </Typography>
+                <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                  C. {selectedQuestion.option_c}
+                </Typography>
+                <Typography sx={{ whiteSpace: "pre-wrap", mb: 2 }}>
+                  D. {selectedQuestion.option_d}
+                </Typography>
+
+                {/* Meta Info */}
+                <Typography>
                   <b>Correct Answer:</b> {selectedQuestion.correct_answer}
                 </Typography>
                 <Typography>
@@ -1824,10 +1858,17 @@ export default function QuestionBankPage() {
                 <Typography>
                   <b>Subject:</b> {selectedQuestion.subject_name}
                 </Typography>
+
+                {/* Explanation */}
                 {selectedQuestion.explanation && (
-                  <Typography sx={{ mt: 2 }}>
-                    <b>Explanation:</b> {selectedQuestion.explanation}
-                  </Typography>
+                  <>
+                    <Typography sx={{ mt: 2, fontWeight: 600 }}>
+                      Explanation:
+                    </Typography>
+                    <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                      {selectedQuestion.explanation}
+                    </Typography>
+                  </>
                 )}
               </Box>
             )}
@@ -2432,50 +2473,68 @@ export default function QuestionBankPage() {
                           {bulkQuestions
                             .slice(
                               (bulkPreviewPage - 1) * BULK_PREVIEW_PAGE_SIZE,
-                              bulkPreviewPage * BULK_PREVIEW_PAGE_SIZE
+                              bulkPreviewPage * BULK_PREVIEW_PAGE_SIZE,
                             )
                             .map((q, index) => (
-                            <TableRow key={index}>
-                              <TableCell>
-                                {(bulkPreviewPage - 1) * BULK_PREVIEW_PAGE_SIZE + index + 1}
-                              </TableCell>
-                              <TableCell>
-                                <Tooltip title={q.question_text}>
-                                  <span>
-                                    {q.question_text?.slice(0, 60)}
-                                    {q.question_text?.length > 60 ? "..." : ""}
-                                  </span>
-                                </Tooltip>
-                              </TableCell>
-                              <TableCell>
-                                {bulkTopics.find(
-                                  (t) => t.topic_id === bulkSelectedTopicId,
-                                )?.topic_name || "Selected Topic"}
-                              </TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={q.difficulty}
-                                  color={getDifficultyColor(q.difficulty)}
-                                  size="small"
-                                />
-                              </TableCell>
-                              <TableCell>{q.points}</TableCell>
-                              <TableCell>{q.correct_answer}</TableCell>
-                              <TableCell>{q.explanation}</TableCell>
-                            </TableRow>
-                          ))}
+                              <TableRow key={index}>
+                                <TableCell>
+                                  {(bulkPreviewPage - 1) *
+                                    BULK_PREVIEW_PAGE_SIZE +
+                                    index +
+                                    1}
+                                </TableCell>
+                                <TableCell>
+                                  <Tooltip title={q.question_text}>
+                                    <span>
+                                      {q.question_text?.slice(0, 60)}
+                                      {q.question_text?.length > 60
+                                        ? "..."
+                                        : ""}
+                                    </span>
+                                  </Tooltip>
+                                </TableCell>
+                                <TableCell>
+                                  {bulkTopics.find(
+                                    (t) => t.topic_id === bulkSelectedTopicId,
+                                  )?.topic_name || "Selected Topic"}
+                                </TableCell>
+                                <TableCell>
+                                  <Chip
+                                    label={q.difficulty}
+                                    color={getDifficultyColor(q.difficulty)}
+                                    size="small"
+                                  />
+                                </TableCell>
+                                <TableCell>{q.points}</TableCell>
+                                <TableCell>{q.correct_answer}</TableCell>
+                                <TableCell>{q.explanation}</TableCell>
+                              </TableRow>
+                            ))}
                         </TableBody>
                       </Table>
                     </TableContainer>
 
-                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mt: 2,
+                      }}
+                    >
                       <Typography variant="body2">
-                        Showing {(bulkPreviewPage - 1) * BULK_PREVIEW_PAGE_SIZE + 1} to{" "}
-                        {Math.min(bulkPreviewPage * BULK_PREVIEW_PAGE_SIZE, bulkQuestions.length)} of{" "}
-                        {bulkQuestions.length} questions
+                        Showing{" "}
+                        {(bulkPreviewPage - 1) * BULK_PREVIEW_PAGE_SIZE + 1} to{" "}
+                        {Math.min(
+                          bulkPreviewPage * BULK_PREVIEW_PAGE_SIZE,
+                          bulkQuestions.length,
+                        )}{" "}
+                        of {bulkQuestions.length} questions
                       </Typography>
                       <Pagination
-                        count={Math.ceil(bulkQuestions.length / BULK_PREVIEW_PAGE_SIZE)}
+                        count={Math.ceil(
+                          bulkQuestions.length / BULK_PREVIEW_PAGE_SIZE,
+                        )}
                         page={bulkPreviewPage}
                         onChange={(event, page) => setBulkPreviewPage(page)}
                         color="primary"
