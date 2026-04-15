@@ -135,6 +135,8 @@ export default function QuestionBankPage() {
   });
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkPreviewPage, setBulkPreviewPage] = useState(1);
+  const BULK_PREVIEW_PAGE_SIZE = 10;
 
   const visibleDeletableIds = filteredQuestions
     .filter((q) => q.canDelete)
@@ -1099,6 +1101,7 @@ export default function QuestionBankPage() {
     setBulkSelectedTopicId(0);
     setBulkTopics([]);
     setIsEditMode(false);
+    setBulkPreviewPage(1);
     // Reset form
     setNewQuestion({
       question_id: 0,
@@ -2426,9 +2429,16 @@ export default function QuestionBankPage() {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {bulkQuestions.slice(0, 10).map((q, index) => (
+                          {bulkQuestions
+                            .slice(
+                              (bulkPreviewPage - 1) * BULK_PREVIEW_PAGE_SIZE,
+                              bulkPreviewPage * BULK_PREVIEW_PAGE_SIZE
+                            )
+                            .map((q, index) => (
                             <TableRow key={index}>
-                              <TableCell>{index + 1}</TableCell>
+                              <TableCell>
+                                {(bulkPreviewPage - 1) * BULK_PREVIEW_PAGE_SIZE + index + 1}
+                              </TableCell>
                               <TableCell>
                                 <Tooltip title={q.question_text}>
                                   <span>
@@ -2458,11 +2468,20 @@ export default function QuestionBankPage() {
                       </Table>
                     </TableContainer>
 
-                    {bulkQuestions.length > 10 && (
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        ... and {bulkQuestions.length - 10} more questions
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2 }}>
+                      <Typography variant="body2">
+                        Showing {(bulkPreviewPage - 1) * BULK_PREVIEW_PAGE_SIZE + 1} to{" "}
+                        {Math.min(bulkPreviewPage * BULK_PREVIEW_PAGE_SIZE, bulkQuestions.length)} of{" "}
+                        {bulkQuestions.length} questions
                       </Typography>
-                    )}
+                      <Pagination
+                        count={Math.ceil(bulkQuestions.length / BULK_PREVIEW_PAGE_SIZE)}
+                        page={bulkPreviewPage}
+                        onChange={(event, page) => setBulkPreviewPage(page)}
+                        color="primary"
+                        size="small"
+                      />
+                    </Box>
                   </Box>
                 )}
               </Box>
