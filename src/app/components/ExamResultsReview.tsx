@@ -46,9 +46,9 @@ const formatTime = (seconds: number): string => {
 const ScoreCircle = ({ score }: { score: number }) => {
   const percentage = score;
   const getScoreColor = (val: number): string => {
-    if (val >= 60) return '#28a745';
-    if (val >= 40) return '#ffc107';
-    return '#dc3545';
+    if (val >= 60) return "#28a745";
+    if (val >= 40) return "#ffc107";
+    return "#dc3545";
   };
   const color = getScoreColor(percentage);
 
@@ -94,7 +94,9 @@ export default function ExamResultsReview() {
   const [resultData, setResultData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "unanswered">("all");
+  const [filter, setFilter] = useState<
+    "all" | "correct" | "incorrect" | "unanswered"
+  >("all");
   const [timeFilter, setTimeFilter] = useState<string>("all");
 
   // Function to exit fullscreen
@@ -153,7 +155,7 @@ export default function ExamResultsReview() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-          }
+          },
         );
 
         const data = await response.json();
@@ -204,20 +206,23 @@ export default function ExamResultsReview() {
   }
 
   const { attempt, exam, questions } = resultData;
-  
+
   // Check if it's a live exam and if results should be hidden
   const isLiveExam = exam.exam_type === "live";
   const examEndTime = new Date(exam.scheduled_end);
   const resultsAvailableTime = new Date(examEndTime.getTime() + 30 * 60 * 1000); // 30 minutes after scheduled end time
   const isResultsAvailable = new Date() >= resultsAvailableTime;
-  
+
   // Format the results available time
-  const formattedResultsTime = resultsAvailableTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-  
+  const formattedResultsTime = resultsAvailableTime.toLocaleTimeString(
+    "en-US",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    },
+  );
+
   // Show message if live exam and results not available yet
   if (isLiveExam && !isResultsAvailable) {
     return (
@@ -274,7 +279,7 @@ export default function ExamResultsReview() {
               />
             </Box>
           </Box>
-          
+
           <Typography
             sx={{
               color: "#2c3e50",
@@ -285,7 +290,7 @@ export default function ExamResultsReview() {
           >
             Exam Completed Successfully! 🎉
           </Typography>
-          
+
           <Typography
             sx={{
               color: "#6c757d",
@@ -294,9 +299,11 @@ export default function ExamResultsReview() {
               mb: 4,
             }}
           >
-            You have successfully completed the live exam. Your results will be available at <strong>{formattedResultsTime}</strong>. You can view them in the Exam History. Thank you.
+            You have successfully completed the live exam. Your results will be
+            available at <strong>{formattedResultsTime}</strong>. You can view
+            them in the Exam History. Thank you.
           </Typography>
-          
+
           <Button
             variant="contained"
             onClick={handleGoToHistory}
@@ -318,7 +325,7 @@ export default function ExamResultsReview() {
       </Box>
     );
   }
-  
+
   const score = attempt.score || 0;
   const totalQuestions = exam.question_count || 0;
   const correctCount = attempt.correct_answers || 0;
@@ -327,10 +334,13 @@ export default function ExamResultsReview() {
   const accuracy = attempt.accuracy || 0;
   const result = attempt.result || "Fail";
   const totalTimeTaken = attempt.total_time_seconds || 0;
-  const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+  const percentage =
+    totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   // Time-based filter logic
-  const getTimeFilterRange = (timeFilter: string): { min: number; max: number } | null => {
+  const getTimeFilterRange = (
+    timeFilter: string,
+  ): { min: number; max: number } | null => {
     switch (timeFilter) {
       case "less30":
         return { min: 0, max: 30 };
@@ -358,7 +368,7 @@ export default function ExamResultsReview() {
   const handlePrint = () => {
     globalThis.window.print();
   };
-  
+
   return (
     <Box
       sx={{
@@ -436,79 +446,148 @@ export default function ExamResultsReview() {
         >
           Result Summary 📊
         </Typography>
-        
+
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid size={{xs:12, md:4}} sx={{ display: "flex", justifyContent: "center" }}>
+          <Grid
+            size={{ xs: 12, md: 4 }}
+            sx={{ display: "flex", justifyContent: "center" }}
+          >
             <ScoreCircle score={percentage} />
           </Grid>
-          
-          <Grid size={{xs:12, md:8}}>
+
+          <Grid size={{ xs: 12, md: 8 }}>
             <Grid container spacing={2}>
-              <Grid size={{xs:6, sm:3}}>
-                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+              <Grid size={{ xs: 6, sm: 3 }}>
+                <Card
+                  sx={{
+                    borderRadius: 2,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  }}
+                >
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
-                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}
+                    >
                       Score 🏆
                     </Typography>
-                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#28a745" }}>
+                    <Typography
+                      sx={{
+                        fontSize: "1.5rem",
+                        fontWeight: 700,
+                        color: "#28a745",
+                      }}
+                    >
                       {score}
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
-              
-              <Grid size={{xs:6, sm:3}}>
-                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+
+              <Grid size={{ xs: 6, sm: 3 }}>
+                <Card
+                  sx={{
+                    borderRadius: 2,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  }}
+                >
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
-                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}
+                    >
                       Correct ✔️
                     </Typography>
-                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#28a745" }}>
+                    <Typography
+                      sx={{
+                        fontSize: "1.5rem",
+                        fontWeight: 700,
+                        color: "#28a745",
+                      }}
+                    >
                       {correctCount}
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
-              
-              <Grid size={{xs:6, sm:3}}>
-                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+
+              <Grid size={{ xs: 6, sm: 3 }}>
+                <Card
+                  sx={{
+                    borderRadius: 2,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  }}
+                >
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
-                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}
+                    >
                       Wrong ❌
                     </Typography>
-                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#dc3545" }}>
+                    <Typography
+                      sx={{
+                        fontSize: "1.5rem",
+                        fontWeight: 700,
+                        color: "#dc3545",
+                      }}
+                    >
                       {wrongCount}
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
-              
-              <Grid size={{xs:6, sm:3}}>
-                <Card sx={{ borderRadius: 2, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+
+              <Grid size={{ xs: 6, sm: 3 }}>
+                <Card
+                  sx={{
+                    borderRadius: 2,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  }}
+                >
                   <CardContent sx={{ textAlign: "center", padding: 2 }}>
-                    <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                    <Typography
+                      sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}
+                    >
                       Unanswered ⏭️
                     </Typography>
-                    <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#ffc107" }}>
+                    <Typography
+                      sx={{
+                        fontSize: "1.5rem",
+                        fontWeight: 700,
+                        color: "#ffc107",
+                      }}
+                    >
                       {unansweredCount}
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
             </Grid>
-            
-            <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 2 }}>
+
+            <Box
+              sx={{
+                mt: 3,
+                display: "flex",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 2,
+              }}
+            >
               <Box sx={{ flex: 1, minWidth: "200px" }}>
-                <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                <Typography
+                  sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}
+                >
                   Accuracy 🎯
                 </Typography>
-                <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}>
+                <Typography
+                  sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}
+                >
                   {accuracy}%
                 </Typography>
               </Box>
-              
+
               <Box sx={{ flex: 1, minWidth: "200px" }}>
-                <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                <Typography
+                  sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}
+                >
                   Result 📜
                 </Typography>
                 <Chip
@@ -518,21 +597,25 @@ export default function ExamResultsReview() {
                   sx={{ fontSize: "1rem", padding: "0 16px" }}
                 />
               </Box>
-              
+
               <Box sx={{ flex: 1, minWidth: "200px" }}>
-                <Typography sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}>
+                <Typography
+                  sx={{ fontSize: "0.875rem", color: "#6c757d", mb: 0.5 }}
+                >
                   Total Time Taken ⏱️
                 </Typography>
-                <Typography sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}>
+                <Typography
+                  sx={{ fontSize: "1.5rem", fontWeight: 700, color: "#2c3e50" }}
+                >
                   {Math.floor(totalTimeTaken / 60)}m {totalTimeTaken % 60}s
                 </Typography>
               </Box>
             </Box>
           </Grid>
         </Grid>
-        
+
         <Divider sx={{ my: 2 }} />
-        
+
         <Typography
           sx={{
             color: "#6c757d",
@@ -540,8 +623,9 @@ export default function ExamResultsReview() {
             fontSize: { xs: "0.875rem", sm: "1rem" },
           }}
         >
-          Completed on {new Date(attempt.end_time).toLocaleDateString()} •
-          Time Spent: {Math.floor(totalTimeTaken / 60)} minutes {totalTimeTaken % 60} seconds
+          Completed on {new Date(attempt.end_time).toLocaleDateString()} • Time
+          Spent: {Math.floor(totalTimeTaken / 60)} minutes {totalTimeTaken % 60}{" "}
+          seconds
           {exam.time_limit_minutes > 0 && (
             <Box component="span" sx={{ ml: 1 }}>
               out of {exam.time_limit_minutes} minutes
@@ -578,7 +662,7 @@ export default function ExamResultsReview() {
           >
             Question Review ({filteredQuestions.length} of {questions.length})
           </Typography>
-          
+
           <Box
             sx={{
               display: "flex",
@@ -641,7 +725,7 @@ export default function ExamResultsReview() {
                 Unanswered
               </Button>
             </ButtonGroup>
-            
+
             <FormControl
               size="small"
               sx={{
@@ -664,24 +748,39 @@ export default function ExamResultsReview() {
                   fontSize: { xs: "0.8rem", sm: "0.875rem" },
                 }}
               >
-                <MenuItem value="all" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                <MenuItem
+                  value="all"
+                  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+                >
                   All Time
                 </MenuItem>
-                <MenuItem value="less30" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                <MenuItem
+                  value="less30"
+                  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+                >
                   Less than 30 sec
                 </MenuItem>
-                <MenuItem value="30to60" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                <MenuItem
+                  value="30to60"
+                  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+                >
                   30-60 sec
                 </MenuItem>
-                <MenuItem value="1to2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                <MenuItem
+                  value="1to2"
+                  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+                >
                   1-2 min
                 </MenuItem>
-                <MenuItem value="more2" sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                <MenuItem
+                  value="more2"
+                  sx={{ fontSize: { xs: "0.8rem", sm: "0.875rem" } }}
+                >
                   More than 2 min
                 </MenuItem>
               </Select>
             </FormControl>
-            
+
             <Box
               sx={{
                 display: "flex",
@@ -706,7 +805,6 @@ export default function ExamResultsReview() {
                   <PrintIcon />
                 </Box>
               </Button>
-
             </Box>
           </Box>
         </Box>
@@ -750,12 +848,18 @@ export default function ExamResultsReview() {
                 </Box>
                 <Chip
                   label={
-                    question.status === "correct" ? "Correct" : 
-                    question.status === "incorrect" ? "Incorrect" : "Unanswered"
+                    question.status === "correct"
+                      ? "Correct"
+                      : question.status === "incorrect"
+                        ? "Incorrect"
+                        : "Unanswered"
                   }
                   color={
-                    question.status === "correct" ? "success" : 
-                    question.status === "incorrect" ? "error" : "warning"
+                    question.status === "correct"
+                      ? "success"
+                      : question.status === "incorrect"
+                        ? "error"
+                        : "warning"
                   }
                   size="small"
                 />
@@ -767,11 +871,13 @@ export default function ExamResultsReview() {
                   mb: 2,
                   lineHeight: 1.5,
                   fontSize: { xs: "0.9rem", sm: "1rem" },
+                  whiteSpace: "pre-line",
+                  fontWeight: 600,
                 }}
               >
                 {question.text}
               </Typography>
-              
+
               <List>
                 {question.options.map((option: any, optIndex: number) => (
                   <ListItem
@@ -807,7 +913,13 @@ export default function ExamResultsReview() {
                     >
                       {String.fromCodePoint(65 + optIndex)}
                     </Box>
-                    <ListItemText primary={option.text} />
+                    <ListItemText
+                      primary={
+                        <Typography sx={{ whiteSpace: "pre-line" }}>
+                          {option.text}
+                        </Typography>
+                      }
+                    />
                     {option.correct && (
                       <CheckCircleIcon sx={{ color: "#28a745", ml: 1 }} />
                     )}
@@ -820,7 +932,7 @@ export default function ExamResultsReview() {
                   </ListItem>
                 ))}
               </List>
-              
+
               <Box
                 sx={{
                   mt: 2,
@@ -833,7 +945,13 @@ export default function ExamResultsReview() {
                 <Typography sx={{ fontWeight: 600, mb: 0.5, color: "#2575fc" }}>
                   Explanation:
                 </Typography>
-                <Typography sx={{ color: "#1976d2", fontWeight: 500 }}>
+                <Typography
+                  sx={{
+                    color: "#1976d2",
+                    fontWeight: 500,
+                    whiteSpace: "pre-line",
+                  }}
+                >
                   {question.explanation || "Explanation not available"}
                 </Typography>
               </Box>

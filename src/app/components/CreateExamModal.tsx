@@ -1615,15 +1615,23 @@ export default function CreateExamModal({ open, onClose, onSuccess }: Props) {
           ) : (
             previewQuestions.map((q, index) => (
               <Box key={q.question_id} mb={3}>
-                <Typography fontWeight={600}>
+                <Typography fontWeight={600} sx={{ whiteSpace: "pre-line" }}>
                   {index + 1}. {q.question_text}
                 </Typography>
 
                 <Box ml={2} mt={1}>
-                  <Typography>A. {q.option_a}</Typography>
-                  <Typography>B. {q.option_b}</Typography>
-                  <Typography>C. {q.option_c}</Typography>
-                  <Typography>D. {q.option_d}</Typography>
+                  <Typography sx={{ whiteSpace: "pre-line" }}>
+                    A. {q.option_a}
+                  </Typography>
+                  <Typography sx={{ whiteSpace: "pre-line" }}>
+                    B. {q.option_b}
+                  </Typography>
+                  <Typography sx={{ whiteSpace: "pre-line" }}>
+                    C. {q.option_c}
+                  </Typography>
+                  <Typography sx={{ whiteSpace: "pre-line" }}>
+                    D. {q.option_d}
+                  </Typography>
                 </Box>
 
                 <Divider sx={{ mt: 2 }} />
