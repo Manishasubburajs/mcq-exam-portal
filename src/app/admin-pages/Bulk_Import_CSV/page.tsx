@@ -259,16 +259,21 @@ const BulkImportCSV: React.FC = () => {
               rowData[header] = value !== undefined ? String(value) : "";
             });
 
+            const cleanText = (text: string) =>
+              text?.replace(/\r\n/g, "\n").trim();
+
             const question: CSVQuestion = {
-              question: rowData["question_text"] || rowData["question"] || "",
-              option_a: rowData["option_a"] || "",
-              option_b: rowData["option_b"] || "",
-              option_c: rowData["option_c"] || "",
-              option_d: rowData["option_d"] || "",
-              correct_answer: rowData["correct_answer"] || "",
-              category: rowData["category"] || "",
-              difficulty: rowData["difficulty"] || "",
-              points: rowData["points"] || "",
+              question: cleanText(
+                rowData["question_text"] || rowData["question"] || "",
+              ),
+              option_a: cleanText(rowData["option_a"] || ""),
+              option_b: cleanText(rowData["option_b"] || ""),
+              option_c: cleanText(rowData["option_c"] || ""),
+              option_d: cleanText(rowData["option_d"] || ""),
+              correct_answer: cleanText(rowData["correct_answer"] || ""),
+              category: cleanText(rowData["category"] || ""),
+              difficulty: cleanText(rowData["difficulty"] || ""),
+              points: cleanText(rowData["points"] || ""),
             };
             if (question.question) {
               questions.push(question);
@@ -687,9 +692,7 @@ const BulkImportCSV: React.FC = () => {
                             <Typography
                               variant="body2"
                               sx={{
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                whiteSpace: "pre-line",
                               }}
                             >
                               {question.question}
