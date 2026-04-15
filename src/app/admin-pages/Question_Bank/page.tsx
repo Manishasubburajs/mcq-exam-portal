@@ -47,6 +47,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import dynamic from "next/dynamic";
 import Sidebar from "../../components/Sidebar";
+import * as XLSX from "xlsx";
 
 const Header = dynamic(() => import("../../components/Header"), { ssr: false });
 
@@ -608,13 +609,21 @@ export default function QuestionBankPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith(".csv")) {
-      showSnackbar("Please upload a CSV file", "error");
+    const fileName = file.name.toLowerCase();
+    const isCsv = fileName.endsWith(".csv");
+    const isExcel = fileName.endsWith(".xlsx") || fileName.endsWith(".xls");
+
+    if (!isCsv && !isExcel) {
+      showSnackbar("Please upload a CSV or Excel file", "error");
       return;
     }
 
     setBulkFile(file);
-    parseCSVFile(file);
+    if (isExcel) {
+      parseExcelFile(file);
+    } else {
+      parseCSVFile(file);
+    }
   };
 
   const parseCSV = (csv: string) => {
@@ -682,14 +691,17 @@ export default function QuestionBankPage() {
 
         for (let i = 1; i < rows.length; i++) {
           const values = rows[i];
-          if (values.length < headers.length) continue;
+          if (!values || !Array.isArray(values) || values.length === 0) continue;
+          
+          const nonEmptyCount = values.filter((v) => v && String(v).trim() !== "").length;
+          if (nonEmptyCount < 3) continue;
 
           const question: any = {};
           headers.forEach((header, index) => {
-            question[header] = (values[index] || "").replace(/^"|"$/g, ""); // Remove surrounding quotes
+            const rawValue = values[index];
+            question[header] = rawValue ? String(rawValue).replace(/^"|"$/g, "").trim() : "";
           });
 
-          // Validate question
           if (
             !question.question_text ||
             !question.option_a ||
@@ -698,15 +710,53 @@ export default function QuestionBankPage() {
             !question.option_d ||
             !question.correct_answer
           ) {
+            console.log(`Row ${i + 1} missing fields:`, {
+              question_text: question.question_text,
+              option_a: question.option_a,
+              option_b: question.option_b,
+              option_c: question.option_c,
+              option_d: question.option_d,
+              correct_answer: question.correct_answer,
+              values: values
+            });
             errors.push(`Row ${i + 1}: Missing required fields`);
             continue;
           }
 
-          // Validate difficulty
-          if (!["Easy", "Medium", "Hard"].includes(question.difficulty)) {
-            errors.push(`Row ${i + 1}: Invalid difficulty level`);
-            continue;
+          let difficultyValue = question.difficulty;
+          if (!difficultyValue) {
+            difficultyValue = "Medium";
           }
+
+          const normalizedDifficulty = String(difficultyValue).toLowerCase().trim();
+          
+          const validDifficulties: Record<string, string> = {
+            "easy": "Easy",
+            "medium": "Medium", 
+            "hard": "Hard",
+            "e": "Easy",
+            "m": "Medium",
+            "h": "Hard",
+            "1": "Easy",
+            "2": "Medium",
+            "3": "Hard",
+            "ii-a": "Easy",
+            "ii-b": "Easy",
+            "ii-c": "Easy",
+            "ii-d": "Easy",
+            "iii": "Medium",
+            "iv": "Hard",
+            "v": "Hard",
+            "vi": "Hard",
+            "vii": "Hard",
+            "viii": "Hard",
+            "ix": "Hard",
+            "x": "Hard",
+            "xi": "Hard",
+            "xii": "Hard",
+          };
+          
+          const finalDifficulty = validDifficulties[normalizedDifficulty] || "Medium";
 
           questions.push({
             question_text: question.question_text,
@@ -716,9 +766,9 @@ export default function QuestionBankPage() {
             option_d: question.option_d,
             correct_answer: question.correct_answer,
             points: 2,
-            difficulty: question.difficulty,
-            subject_id: 0, // Will use pre-selected bulk subject
-            topic_id: 0, // Will use pre-selected bulk topic
+            difficulty: finalDifficulty,
+            subject_id: 0,
+            topic_id: 0,
             explanation: question.explanation || "",
           });
         }
@@ -740,6 +790,152 @@ export default function QuestionBankPage() {
       }
     };
     reader.readAsText(file);
+  };
+
+  const parseExcelFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as (string | number | undefined)[][];
+
+        if (rows.length === 0) {
+          setBulkValidationErrors(["File is empty"]);
+          return;
+        }
+
+        const headers = (rows[0] as (string | number)[]).map((h) =>
+          String(h).toLowerCase().trim()
+        );
+
+        const requiredFields = [
+          "question_text",
+          "option_a",
+          "option_b",
+          "option_c",
+          "option_d",
+          "correct_answer",
+          "points",
+          "difficulty",
+          "explanation",
+        ];
+        const missingFields = requiredFields.filter(
+          (field) => !headers.includes(field)
+        );
+
+        if (missingFields.length > 0) {
+          setBulkValidationErrors([
+            `Missing required columns: ${missingFields.join(", ")}`,
+          ]);
+          return;
+        }
+
+        const questions: any[] = [];
+        const errors: string[] = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const values = rows[i];
+          if (!values || !Array.isArray(values)) continue;
+
+          const rowData: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            const value = values[index];
+            rowData[header] = value !== undefined ? String(value).trim() : "";
+          });
+
+          const hasData = Object.values(rowData).some((v) => v && v.trim() !== "");
+          if (!hasData) continue;
+
+          if (
+            !rowData.question_text ||
+            !rowData.option_a ||
+            !rowData.option_b ||
+            !rowData.option_c ||
+            !rowData.option_d ||
+            !rowData.correct_answer
+          ) {
+            console.log(`Excel Row ${i + 1} missing fields:`, {
+              question_text: rowData.question_text,
+              option_a: rowData.option_a,
+              option_b: rowData.option_b,
+              option_c: rowData.option_c,
+              option_d: rowData.option_d,
+              correct_answer: rowData.correct_answer,
+              values: values
+            });
+            errors.push(`Row ${i + 1}: Missing required fields`);
+            continue;
+          }
+
+          let difficultyValue = rowData.difficulty;
+          if (!difficultyValue) {
+            difficultyValue = "Medium";
+          }
+
+          const normalizedDifficulty = String(difficultyValue).toLowerCase().trim();
+          const validDifficulties: Record<string, string> = {
+            "easy": "Easy",
+            "medium": "Medium",
+            "hard": "Hard",
+            "e": "Easy",
+            "m": "Medium",
+            "h": "Hard",
+            "1": "Easy",
+            "2": "Medium",
+            "3": "Hard",
+            "ii-a": "Easy",
+            "ii-b": "Easy",
+            "ii-c": "Easy",
+            "ii-d": "Easy",
+            "iii": "Medium",
+            "iv": "Hard",
+            "v": "Hard",
+            "vi": "Hard",
+            "vii": "Hard",
+            "viii": "Hard",
+            "ix": "Hard",
+            "x": "Hard",
+            "xi": "Hard",
+            "xii": "Hard",
+          };
+          
+          const finalDifficulty = validDifficulties[normalizedDifficulty] || "Medium";
+
+          questions.push({
+            question_text: rowData.question_text,
+            option_a: rowData.option_a,
+            option_b: rowData.option_b,
+            option_c: rowData.option_c,
+            option_d: rowData.option_d,
+            correct_answer: rowData.correct_answer,
+            points: 2,
+            difficulty: finalDifficulty,
+            subject_id: 0,
+            topic_id: 0,
+            explanation: rowData.explanation || "",
+          });
+        }
+
+        setBulkQuestions(questions);
+        setBulkValidationErrors(errors);
+        setShowBulkPreview(true);
+
+        if (questions.length > 0) {
+          showSnackbar(
+            `Successfully parsed ${questions.length} questions`,
+            "success"
+          );
+        }
+      } catch (error) {
+        setBulkValidationErrors([
+          "Error parsing file. Please check the format.",
+        ]);
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const handleBulkSubmit = async () => {
@@ -805,20 +1001,86 @@ export default function QuestionBankPage() {
     }
   };
 
-  const downloadTemplate = () => {
-    const csvContent = `question_text,option_a,option_b,option_c,option_d,correct_answer,points,difficulty,explanation
-"What is 2+2?","3","4","5","6","B",2,Easy,"The correct answer is 4 because 2+2 equals 4"
-"What is the capital of France?","London","Berlin","Paris","Madrid","C",2,Medium,"Paris is the capital city of France"
-"Who wrote Romeo and Juliet?","Shakespeare","Hemingway","Tolstoy","Dickens","A",2,Hard,"William Shakespeare wrote Romeo and Juliet"`;
+  const downloadTemplate = (format: "csv" | "excel" = "csv") => {
+    const templateData = [
+      {
+        question_text: "What is 2+2?",
+        option_a: "3",
+        option_b: "4",
+        option_c: "5",
+        option_d: "6",
+        correct_answer: "B",
+        points: 2,
+        difficulty: "Easy",
+        explanation: "The correct answer is 4 because 2+2 equals 4",
+      },
+      {
+        question_text: "What is the capital of France?",
+        option_a: "London",
+        option_b: "Berlin",
+        option_c: "Paris",
+        option_d: "Madrid",
+        correct_answer: "C",
+        points: 2,
+        difficulty: "Medium",
+        explanation: "Paris is the capital city of France",
+      },
+      {
+        question_text: "Who wrote Romeo and Juliet?",
+        option_a: "Shakespeare",
+        option_b: "Hemingway",
+        option_c: "Tolstoy",
+        option_d: "Dickens",
+        correct_answer: "A",
+        points: 2,
+        difficulty: "Hard",
+        explanation: "William Shakespeare wrote Romeo and Juliet",
+      },
+    ];
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "questions_template.csv";
-    link.click();
-    window.URL.revokeObjectURL(url);
-    showSnackbar("Template downloaded successfully", "success");
+    if (format === "excel") {
+      const worksheet = XLSX.utils.json_to_sheet(templateData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
+      XLSX.writeFile(workbook, "questions_template.xlsx");
+    } else {
+      const headers = [
+        "question_text",
+        "option_a",
+        "option_b",
+        "option_c",
+        "option_d",
+        "correct_answer",
+        "points",
+        "difficulty",
+        "explanation",
+      ];
+      const csvRows = [headers.join(",")];
+      templateData.forEach((row) => {
+        const values = headers.map((h) => {
+          const val = row[h as keyof typeof row];
+          if (typeof val === "string" && val.includes(",")) {
+            return `"${val}"`;
+          }
+          return val;
+        });
+        csvRows.push(values.join(","));
+      });
+      const csvContent = csvRows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "questions_template.csv";
+      link.click();
+      window.URL.revokeObjectURL(url);
+    }
+    showSnackbar(
+      `${
+        format === "excel" ? "Excel" : "CSV"
+      } template downloaded successfully`,
+      "success"
+    );
   };
 
   const paginatedQuestions = filteredQuestions.slice(
@@ -1637,7 +1899,7 @@ export default function QuestionBankPage() {
                             Bulk Upload
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            Upload multiple questions from a CSV file.
+                            Upload multiple questions from a Excel file.
                           </Typography>
                         </Box>
                       }
@@ -2032,7 +2294,7 @@ export default function QuestionBankPage() {
                 {/* Upload Instructions */}
                 <Alert severity="info" sx={{ mb: 3 }}>
                   <Typography variant="body1">
-                    Upload a CSV file containing your questions. Please ensure
+                    Upload a Excel file containing your questions. Please ensure
                     the file follows the template format.
                   </Typography>
                 </Alert>
@@ -2051,15 +2313,23 @@ export default function QuestionBankPage() {
                   </Alert>
                 )}
 
-                {/* Download Template Button */}
+                {/* Download Template Buttons */}
                 <Box sx={{ mb: 3 }}>
+                  {/* <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => downloadTemplate("csv")}
+                    sx={{ mr: 1 }}
+                  >
+                    Download CSV Template
+                  </Button> */}
                   <Button
                     variant="outlined"
                     startIcon={<DownloadIcon />}
-                    onClick={downloadTemplate}
-                    sx={{ mr: 2 }}
+                    onClick={() => downloadTemplate("excel")}
+                    sx={{ mr: 1 }}
                   >
-                    Download Sample Template
+                    Download Excel Template
                   </Button>
                 </Box>
 
@@ -2068,7 +2338,7 @@ export default function QuestionBankPage() {
                   <input
                     ref={bulkFileInputRef}
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xlsx,.xls"
                     onChange={handleFileUpload}
                     style={{ display: "none" }}
                     id="bulk-upload-input"
