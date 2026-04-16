@@ -1002,7 +1002,7 @@ const ExamContent: React.FC = () => {
                   <>
                     <div
                       className={styles.questionText}
-                      style={{ whiteSpace: "pre-line",fontWeight: 600}}
+                      style={{ whiteSpace: "pre-wrap",fontWeight: 600}}
                     >
                       {currentQ.text}
                     </div>
@@ -1035,7 +1035,7 @@ const ExamContent: React.FC = () => {
                               </div>
                               <div
                                 className={styles.optionText}
-                                style={{ whiteSpace: "pre-line" }}
+                                style={{ whiteSpace: "pre-wrap" }}
                               >
                                 {option.text}
                               </div>
