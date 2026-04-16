@@ -692,7 +692,7 @@ const BulkImportCSV: React.FC = () => {
                             <Typography
                               variant="body2"
                               sx={{
-                                whiteSpace: "pre-line",
+                                whiteSpace: "pre-wrap",
                               }}
                             >
                               {question.question}
