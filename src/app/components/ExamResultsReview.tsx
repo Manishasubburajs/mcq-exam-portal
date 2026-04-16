@@ -871,7 +871,7 @@ export default function ExamResultsReview() {
                   mb: 2,
                   lineHeight: 1.5,
                   fontSize: { xs: "0.9rem", sm: "1rem" },
-                  whiteSpace: "pre-line",
+                  whiteSpace: "pre-wrap",
                   fontWeight: 600,
                 }}
               >
@@ -915,7 +915,7 @@ export default function ExamResultsReview() {
                     </Box>
                     <ListItemText
                       primary={
-                        <Typography sx={{ whiteSpace: "pre-line" }}>
+                        <Typography sx={{ whiteSpace: "pre-wrap" }}>
                           {option.text}
                         </Typography>
                       }
@@ -949,7 +949,7 @@ export default function ExamResultsReview() {
                   sx={{
                     color: "#1976d2",
                     fontWeight: 500,
-                    whiteSpace: "pre-line",
+                    whiteSpace: "pre-wrap",
                   }}
                 >
                   {question.explanation || "Explanation not available"}
