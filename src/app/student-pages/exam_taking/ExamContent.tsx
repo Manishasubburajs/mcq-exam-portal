@@ -352,7 +352,7 @@ const ExamContent: React.FC = () => {
     setShowLeaveModal(true);
   });
 
-  // Handle browser back button
+  // Handle browser back and forward buttons
   useEffect(() => {
     if (allowNavigation) return;
 
@@ -360,16 +360,37 @@ const ExamContent: React.FC = () => {
       event.preventDefault();
       setPendingNavigation(undefined);
       setShowLeaveModal(true);
-      // Push current state again to block back navigation
+      // Push current state again to block navigation
       window.history.pushState(null, "", window.location.href);
     };
 
     window.addEventListener("popstate", handlePopState);
-    // Push initial state to ensure we can block back
+    // Push initial state to ensure we can block back/forward
     window.history.pushState(null, "", window.location.href);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
+    };
+  }, [allowNavigation]);
+
+  // Handle browser refresh (F5, Ctrl+R) - show warning modal
+  useEffect(() => {
+    if (allowNavigation) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "F5" ||
+        ((e.ctrlKey || e.metaKey) && e.key === "r")
+      ) {
+        e.preventDefault();
+        setShowLeaveModal(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [allowNavigation]);
 
@@ -385,55 +406,14 @@ const ExamContent: React.FC = () => {
     latestExamDataRef.current = examData;
   }, [examData]);
 
-  // Handle page unload and tab closure
+  // Handle page unload and tab closure - allow refresh with modal warning
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      const currentExam = latestExamDataRef.current;
+    if (allowNavigation) return;
 
-      if (currentExam && !submittingRef.current && !allowNavigation) {
-        let totalTimeTaken = 0;
-
-        if (currentExam.examType === "live") {
-          totalTimeTaken = Math.floor(
-            (Date.now() - examStartRef.current) / 1000,
-          );
-        } else {
-          totalTimeTaken =
-            currentExam.duration * 60 - latestTimeLeftRef.current;
-        }
-
-        // Get studentId from token
-        const token =
-          localStorage.getItem("token") || sessionStorage.getItem("token");
-        let studentId = null;
-        if (token) {
-          try {
-            const payload = JSON.parse(atob(token.split(".")[1]));
-            studentId = payload.userId;
-          } catch (e) {
-            console.error("Error parsing token:", e);
-          }
-        }
-
-        const payload = {
-          examId,
-          attemptId,
-          studentId,
-          answers: latestAnswersRef.current,
-          questionTimes: questionTimeMap.current,
-          totalTimeTaken,
-          examType: currentExam.examType,
-          autoSubmitted: true,
-        };
-
-        const blob = new Blob([JSON.stringify(payload)], {
-          type: "application/json",
-        });
-
-        navigator.sendBeacon("/api/students/exams/submit", blob);
-
-        sessionStorage.setItem("autoSubmit", "true");
-      }
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      setShowLeaveModal(true);
+      e.preventDefault();
+      return;
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -441,7 +421,7 @@ const ExamContent: React.FC = () => {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [examId, attemptId, allowNavigation]);
+  }, [allowNavigation]);
 
   // Prevent right-click during exam
   useEffect(() => {
