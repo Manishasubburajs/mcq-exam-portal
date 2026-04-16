@@ -677,7 +677,14 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
                               {/* BODY */}
                               <CardContent>
-                                <Typography sx={{ mb: 2 }}>
+                                <Typography
+                                  sx={{
+                                    mb: 2,
+                                    whiteSpace: "pre-wrap",
+                                    fontWeight: 600,
+                                    lineHeight: 1.5,
+                                  }}
+                                >
                                   {question.text}
                                 </Typography>
 
@@ -697,7 +704,15 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                               : "transparent",
                                         }}
                                       >
-                                        <ListItemText primary={opt.text} />
+                                        <ListItemText
+                                          primary={
+                                            <Typography
+                                              sx={{ whiteSpace: "pre-wrap" }}
+                                            >
+                                              {opt.text}
+                                            </Typography>
+                                          }
+                                        />
 
                                         {opt.correct && (
                                           <CheckCircleIcon color="success" />
@@ -717,7 +732,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                   <Typography fontWeight={600}>
                                     Explanation:
                                   </Typography>
-                                  <Typography>
+                                  <Typography sx={{ whiteSpace: "pre-wrap" }}>
                                     {question.explanation || "Not available"}
                                   </Typography>
                                 </Box>
