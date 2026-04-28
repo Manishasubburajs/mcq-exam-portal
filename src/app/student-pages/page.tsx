@@ -680,7 +680,7 @@ export default function StudentDashboard() {
         }
 
         // Fetch completed exams
-        const completedResponse = await fetch("/api/students/attempts", {
+        const completedResponse = await fetch("/api/students/attempts?latest=true", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
