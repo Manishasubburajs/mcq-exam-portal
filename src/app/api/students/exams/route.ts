@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     if (!decoded || decoded.role !== "student") {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
       if (!assignment) {
         return NextResponse.json(
           { success: false, message: "Exam not assigned or not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -99,6 +99,67 @@ export async function GET(req: Request) {
     }
 
     /* ======================================================
+   AUTO ASSIGN PYQ EXAMS
+====================================================== */
+
+    // 1. Get all PYQ exams
+    const pyqExams = await prisma.exams.findMany({
+      where: {
+        exam_title: {
+          startsWith: "[PYQ]",
+         
+        },
+      },
+    });
+      console.log("===========PYQ Exams============:", pyqExams);
+    // 2. Get already assigned exams for this student
+    const existingAssignments = await prisma.exam_assignment_students.findMany({
+      where: { student_id: studentId },
+      include: {
+        assignment: true,
+      },
+    });
+
+    // 3. Collect assigned exam IDs
+    const assignedExamIds = new Set(
+      existingAssignments.map((a) => a.assignment.exam_id),
+    );
+
+    // 4. Filter missing PYQ exams
+    const missingPYQ = pyqExams.filter(
+      (exam) => !assignedExamIds.has(exam.exam_id),
+    );
+
+    // 5. Assign missing exams
+    for (const exam of missingPYQ) {
+      // check assignment exists
+      let assignment = await prisma.exam_assignments.findFirst({
+        where: { exam_id: exam.exam_id },
+      });
+
+      // create assignment if not exists
+      if (!assignment) {
+        assignment = await prisma.exam_assignments.create({
+          data: {
+            exam_id: exam.exam_id,
+            mode: "same",
+          },
+        });
+      }
+
+      // assign student (avoid duplicate)
+      await prisma.exam_assignment_students.createMany({
+        data: [
+          {
+            assignment_id: assignment.id,
+            student_id: studentId,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    }
+
+    /* ======================================================
        AVAILABLE EXAMS LIST (My Exams page)
     ====================================================== */
     const assignedExams = await prisma.exam_assignment_students.findMany({
@@ -114,24 +175,27 @@ export async function GET(req: Request) {
 
     // Get all completed attempts for the student
     const completedAttempts = await prisma.student_exam_attempts.findMany({
-      where: { 
+      where: {
         student_id: studentId,
-        status: "completed"
+        status: "completed",
       },
-      select: { exam_id: true }
+      select: { exam_id: true },
     });
 
-    const completedExamIds = new Set(completedAttempts.map(attempt => attempt.exam_id));
+    const completedExamIds = new Set(
+      completedAttempts.map((attempt) => attempt.exam_id),
+    );
 
     const exams = assignedExams
-      .filter(a => {
+      .filter((a) => {
         const exam = a.assignment.exam;
         const state = getExamState(exam);
-        
+
         // Only show upcoming or available exams that haven't been completed
-        const isUpcomingOrAvailable = state === "upcoming" || state === "available";
+        const isUpcomingOrAvailable =
+          state === "upcoming" || state === "available";
         const notCompleted = !completedExamIds.has(exam.exam_id);
-        
+
         return isUpcomingOrAvailable && notCompleted;
       })
       .map((a) => {
@@ -160,7 +224,7 @@ export async function GET(req: Request) {
     console.error("Error fetching student exams:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch exams" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
